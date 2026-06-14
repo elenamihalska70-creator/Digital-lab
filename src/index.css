@@ -1,0 +1,36 @@
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  overflow-x: hidden;
+  background: #07010f;
+  color: #ffffff;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    radial-gradient(circle at 20% 12%, rgba(155, 109, 255, 0.08), transparent 28%),
+    radial-gradient(circle at 82% 42%, rgba(199, 168, 255, 0.055), transparent 30%),
+    repeating-radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 4px);
+  mix-blend-mode: screen;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+button,
+a {
+  font-family: inherit;
+}
