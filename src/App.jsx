@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
-import {
-  getCurrentSession,
-  isSupabaseConfigured,
-  onAuthStateChange,
-  signInWithEmail,
-  signInWithGoogle,
-  signOut,
-  signUpWithEmail,
-} from "./services/auth";
+import { useAuth } from "./context/useAuth";
+import { createContactRequest, getContactRequestsForUser } from "./services/contactRequests";
 
 const services = [
   {
@@ -461,6 +454,24 @@ const estimatorFeatures = [
   "Maintenance",
 ];
 
+const contactProjectTypes = [
+  "Site web",
+  "Réparation / amélioration",
+  "SEO & visibilité",
+  "Automatisation",
+  "Chatbot / assistant IA",
+  "MVP / prototype",
+  "Autre",
+];
+
+const initialContactForm = {
+  name: "",
+  email: "",
+  company: "",
+  projectType: contactProjectTypes[0],
+  message: "",
+};
+
 const initialEstimatorAnswers = {
   profile: "Indépendant",
   priority: "Être visible",
@@ -667,6 +678,30 @@ const handleProjectLeave = (event) => {
 };
 
 const isExternalLink = (href) => href.startsWith("http");
+
+const normalizePathname = (path) => {
+  if (!path || path === "/") {
+    return "/";
+  }
+
+  return path.replace(/\/+$/, "");
+};
+
+const getUserDisplayName = (session) => {
+  const user = session?.user;
+
+  if (!user) {
+    return "";
+  }
+
+  const metadataName = user.user_metadata?.full_name || user.user_metadata?.name;
+
+  if (metadataName) {
+    return metadataName.split(" ")[0];
+  }
+
+  return user.email?.split("@")[0] ?? "Compte";
+};
 
 function SolutionIcon({ type }) {
   const paths = {
@@ -1448,6 +1483,153 @@ function ProjectEstimator() {
   );
 }
 
+function isSupabaseAccessError(error) {
+  const message = error?.message?.toLowerCase() ?? "";
+
+  return (
+    message.includes("row-level security") ||
+    message.includes("permission denied") ||
+    message.includes("policy") ||
+    message.includes("jwt")
+  );
+}
+
+function ContactForm({ onAuthOpen }) {
+  const { session } = useAuth();
+  const [form, setForm] = useState(initialContactForm);
+  const [isSending, setIsSending] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
+  const sessionEmail = session?.user?.email ?? "";
+
+  const updateField = (event) => {
+    const { name, value } = event.target;
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setIsSending(true);
+    setSubmitStatus({ type: "", message: "" });
+
+    const email = form.email.trim() || sessionEmail;
+    const { error } = await createContactRequest({
+      userId: session?.user?.id,
+      name: form.name.trim(),
+      email,
+      company: form.company.trim(),
+      projectType: form.projectType,
+      message: form.message.trim(),
+    });
+
+    if (error) {
+      const guestNeedsLogin = !session && isSupabaseAccessError(error);
+
+      setSubmitStatus({
+        type: "error",
+        message: guestNeedsLogin
+          ? "L’envoi invité semble bloqué par la sécurité Supabase. Connectez-vous puis réessayez, ou envoyez-moi un email directement."
+          : `Impossible d’envoyer votre demande pour le moment : ${error.message}`,
+      });
+
+      if (guestNeedsLogin) {
+        onAuthOpen();
+      }
+
+      setIsSending(false);
+      return;
+    }
+
+    setSubmitStatus({
+      type: "success",
+      message: "Votre demande a bien été envoyée. Je vous répondrai sous 24–48h.",
+    });
+    setForm({ ...initialContactForm, email: sessionEmail });
+    setIsSending(false);
+  };
+
+  return (
+    <form className="contact-form reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }} onSubmit={handleSubmit}>
+      <div className="contact-form-grid">
+        <label className="contact-field" htmlFor="contact-name">
+          Nom
+          <input
+            id="contact-name"
+            name="name"
+            type="text"
+            value={form.name}
+            placeholder="Votre nom"
+            required
+            onChange={updateField}
+          />
+        </label>
+
+        <label className="contact-field" htmlFor="contact-email">
+          Email
+          <input
+            id="contact-email"
+            name="email"
+            type="email"
+            value={form.email}
+            placeholder={sessionEmail || "vous@email.com"}
+            required={!sessionEmail}
+            onChange={updateField}
+          />
+        </label>
+
+        <label className="contact-field" htmlFor="contact-company">
+          Structure
+          <input
+            id="contact-company"
+            name="company"
+            type="text"
+            value={form.company}
+            placeholder="Entreprise, association, projet..."
+            onChange={updateField}
+          />
+        </label>
+
+        <label className="contact-field" htmlFor="contact-project-type">
+          Type de projet
+          <select id="contact-project-type" name="projectType" value={form.projectType} onChange={updateField}>
+            {contactProjectTypes.map((projectType) => (
+              <option key={projectType} value={projectType}>
+                {projectType}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="contact-field is-full" htmlFor="contact-message">
+          Message
+          <textarea
+            id="contact-message"
+            name="message"
+            value={form.message}
+            placeholder="Expliquez simplement votre besoin, même s’il est encore flou."
+            required
+            onChange={updateField}
+          ></textarea>
+        </label>
+      </div>
+
+      <div className="contact-form-footer">
+        <button className="btn btn-primary contact-cta-primary" type="submit" disabled={isSending}>
+          {isSending ? "Envoi en cours..." : "Envoyer ma demande"}
+        </button>
+        {submitStatus.message && (
+          <p className={`contact-form-status is-${submitStatus.type}`} role="status">
+            {submitStatus.message}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
 function SiteFooter({ onNavigate }) {
   return (
     <footer className="footer">
@@ -1693,6 +1875,218 @@ function ProjectCasePage({ project, onNavigate }) {
   );
 }
 
+const formatRequestDate = (createdAt) => {
+  if (!createdAt) {
+    return "Date non disponible";
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(createdAt));
+};
+
+const getRequestStatusMeta = (status) => {
+  const normalizedStatus = status || "new";
+  const labels = {
+    new: "Nouvelle",
+    pending: "En attente",
+    in_progress: "En cours",
+    done: "Terminée",
+    completed: "Terminée",
+    archived: "Archivée",
+  };
+  const classNames = {
+    new: "is-new",
+    pending: "is-pending",
+    in_progress: "is-progress",
+    done: "is-done",
+    completed: "is-done",
+    archived: "is-archived",
+  };
+
+  return {
+    label: labels[normalizedStatus] ?? normalizedStatus,
+    className: classNames[normalizedStatus] ?? "is-pending",
+  };
+};
+
+function ContactRequestsPanel({ userId }) {
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequests = async () => {
+      if (!userId) {
+        setRequests([]);
+        setIsLoading(false);
+        setErrorMessage("");
+        return;
+      }
+
+      setIsLoading(true);
+      setErrorMessage("");
+
+      const { data, error } = await getContactRequestsForUser(userId);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (error) {
+        setErrorMessage(`Impossible de charger vos demandes : ${error.message}`);
+        setRequests([]);
+      } else {
+        setRequests(data ?? []);
+      }
+
+      setIsLoading(false);
+    };
+
+    loadRequests();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+
+  return (
+    <div className="dashboard-section">
+      <div>
+        <span>Demandes</span>
+        <h2>Vos demandes envoyées</h2>
+      </div>
+
+      {isLoading && (
+        <div className="dashboard-skeleton-grid" aria-label="Chargement des demandes">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      )}
+
+      {!isLoading && errorMessage && (
+        <div className="dashboard-placeholder dashboard-error" role="status">
+          <p>{errorMessage}</p>
+        </div>
+      )}
+
+      {!isLoading && !errorMessage && requests.length === 0 && (
+        <div className="dashboard-placeholder">
+          <p>
+            Aucune demande n’est encore rattachée à ce compte. Lorsque vous envoyez le formulaire de contact en étant
+            connecté, vos demandes apparaissent ici.
+          </p>
+        </div>
+      )}
+
+      {!isLoading && !errorMessage && requests.length > 0 && (
+        <div className="dashboard-requests-list">
+          {requests.map((request) => {
+            const statusMeta = getRequestStatusMeta(request.status);
+
+            return (
+              <article className="dashboard-request-card" key={request.id}>
+                <div className="request-card-header">
+                  <div>
+                    <span>{formatRequestDate(request.created_at)}</span>
+                    <h3>{request.project_type || "Projet à préciser"}</h3>
+                  </div>
+                  <strong className={`request-status ${statusMeta.className}`}>{statusMeta.label}</strong>
+                </div>
+                <p>{request.message}</p>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientAreaPage({ session, onAuthOpen, onLogout, isAuthLoading }) {
+  const userEmail = session?.user?.email;
+  const displayName = getUserDisplayName(session);
+
+  return (
+    <main className="client-page fade-in-page">
+      <section className="client-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <div className="client-panel">
+            <span>Espace client</span>
+            {isAuthLoading ? (
+              <>
+                <h1>Chargement de votre espace</h1>
+                <p>Vérification de votre session en cours.</p>
+                <div className="dashboard-skeleton-grid" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </>
+            ) : session ? (
+              <>
+                <h1>Bonjour {displayName}</h1>
+                <p>
+                  Bienvenue dans votre tableau de bord Digital Lab. Cet espace permettra de suivre vos demandes,
+                  projets, documents et prochaines étapes.
+                </p>
+
+                <div className="client-info-grid">
+                  <article>
+                    <span>Compte connecté</span>
+                    <strong>{userEmail}</strong>
+                  </article>
+                  <article>
+                    <span>Statut</span>
+                    <strong>Session active</strong>
+                  </article>
+                  <article>
+                    <span>Prochainement</span>
+                    <strong>Suivi projet, documents, messages</strong>
+                  </article>
+                </div>
+
+                <div className="dashboard-section">
+                  <div>
+                    <span>Actions rapides</span>
+                    <h2>Avancer sur votre projet</h2>
+                  </div>
+                  <div className="dashboard-actions">
+                    <a href="/#estimation">Recevoir une estimation</a>
+                    <a href="/#contact">Contacter Digital Lab</a>
+                    <button type="button" onClick={onLogout}>
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+
+                <ContactRequestsPanel userId={session.user.id} />
+              </>
+            ) : (
+              <>
+                <h1>Connectez-vous pour accéder à votre espace</h1>
+                <p>
+                  Cet espace est réservé aux utilisateurs connectés. Vous pourrez bientôt y retrouver vos projets,
+                  documents et demandes.
+                </p>
+                <button className="btn btn-primary" type="button" onClick={onAuthOpen}>
+                  Se connecter
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function ScrollProgress() {
   const [progress, setProgress] = useState(0);
 
@@ -1727,6 +2121,13 @@ function ScrollProgress() {
 }
 
 function AuthModal({ onClose }) {
+  const {
+    isSupabaseConfigured,
+    signInWithGoogle,
+    signUpWithEmail,
+    signInWithEmail,
+    showAuthToast,
+  } = useAuth();
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1768,10 +2169,12 @@ function AuthModal({ onClose }) {
 
     if (mode === "signup") {
       setMessage("Compte créé. Vérifiez votre email si la confirmation est activée dans Supabase.");
+      showAuthToast("Compte créé. Vérifiez votre email si besoin.");
       setIsLoading(false);
       return;
     }
 
+    showAuthToast("Connexion réussie.");
     setIsLoading(false);
     onClose();
   };
@@ -1876,12 +2279,51 @@ function AuthModal({ onClose }) {
   );
 }
 
-function SiteHeader({ onNavigate, pathname, session, onAuthOpen, onLogout }) {
+function AuthToast({ message, onClose }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="auth-toast" role="status">
+      <span>{message}</span>
+      <button type="button" onClick={onClose} aria-label="Fermer la notification">
+        ×
+      </button>
+    </div>
+  );
+}
+
+function LoginPage({ onAuthOpen }) {
+  return (
+    <main className="client-page login-page fade-in-page">
+      <section className="client-hero login-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <div className="client-panel login-panel">
+            <span>Connexion</span>
+            <h1>Accéder à votre espace client</h1>
+            <p>
+              Connectez-vous pour retrouver vos demandes envoyées, votre statut de compte et les prochaines étapes
+              liées à votre projet Digital Lab.
+            </p>
+            <button className="btn btn-primary" type="button" onClick={onAuthOpen}>
+              Ouvrir la connexion
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function SiteHeader({ onNavigate, pathname, session, onLogout }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("");
   const visibleActiveHref = pathname === "/" ? activeHref : "";
   const userEmail = session?.user?.email;
+  const userDisplayName = getUserDisplayName(session);
 
   const handleNavigate = (event, target) => {
     event.preventDefault();
@@ -1985,28 +2427,51 @@ function SiteHeader({ onNavigate, pathname, session, onAuthOpen, onLogout }) {
           </a>
           {session ? (
             <div className="navbar-auth-state">
-              <span>{userEmail}</span>
+              <span title={userEmail}>{userDisplayName}</span>
               <button
+                className="navbar-client-button"
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onNavigate("/dashboard");
+                }}
+              >
+                Espace client
+              </button>
+              <button
+                className="navbar-logout-button"
                 type="button"
                 onClick={() => {
                   setIsMenuOpen(false);
                   onLogout();
                 }}
               >
-                Logout
+                Déconnexion
               </button>
             </div>
           ) : (
-            <button
-              className="navbar-auth-button"
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                onAuthOpen();
-              }}
-            >
-              Connexion
-            </button>
+            <div className="navbar-auth-state is-guest">
+              <button
+                className="navbar-client-button"
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onNavigate("/login");
+                }}
+              >
+                Espace client
+              </button>
+              <button
+                className="navbar-auth-button"
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onNavigate("/login");
+                }}
+              >
+                Connexion
+              </button>
+            </div>
           )}
         </nav>
       </header>
@@ -2015,10 +2480,11 @@ function SiteHeader({ onNavigate, pathname, session, onAuthOpen, onLogout }) {
 }
 
 function App() {
-  const [pathname, setPathname] = useState(() => window.location.pathname);
+  const { session, isAuthLoading, authToast, clearAuthToast, logout } = useAuth();
+  const [pathname, setPathname] = useState(() => normalizePathname(window.location.pathname));
   const [selectedProject, setSelectedProject] = useState(null);
-  const [session, setSession] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const previousPageRef = useRef("/");
   const activeProject = getProjectFromPath(pathname);
 
   const navigate = (target) => {
@@ -2028,7 +2494,7 @@ function App() {
     }
 
     window.history.pushState({}, "", target);
-    setPathname(window.location.pathname);
+    setPathname(normalizePathname(window.location.pathname));
 
     if (target.includes("#") && window.location.hash) {
       window.setTimeout(() => {
@@ -2041,39 +2507,70 @@ function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setPathname(window.location.pathname);
+      setPathname(normalizePathname(window.location.pathname));
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    getCurrentSession().then(({ data }) => {
-      if (isMounted) {
-        setSession(data?.session ?? null);
-      }
-    });
-
-    const subscription = onAuthStateChange((nextSession) => {
-      setSession(nextSession);
-      if (nextSession) {
-        setIsAuthOpen(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription?.unsubscribe();
-    };
-  }, []);
-
   const handleLogout = async () => {
-    await signOut();
-    setSession(null);
+    await logout();
+    if (pathname === "/dashboard" || pathname === "/espace-client") {
+      navigate("/");
+    }
   };
+
+  const isDashboardPath = pathname === "/dashboard" || pathname === "/espace-client";
+  const isLoginPath = pathname === "/login";
+
+  const closeAuthModal = () => {
+    setIsAuthOpen(false);
+
+    if (isLoginPath && !session) {
+      navigate(previousPageRef.current || "/");
+    }
+  };
+
+  useEffect(() => {
+    let redirectTimer = 0;
+
+    if (!isAuthLoading && isDashboardPath && !session) {
+      window.history.replaceState({}, "", "/login");
+      redirectTimer = window.setTimeout(() => {
+        setPathname("/login");
+        setIsAuthOpen(true);
+      }, 0);
+    }
+
+    if (!isAuthLoading && isLoginPath && session) {
+      window.history.replaceState({}, "", "/dashboard");
+      redirectTimer = window.setTimeout(() => {
+        setPathname("/dashboard");
+        setIsAuthOpen(false);
+      }, 0);
+    }
+
+    return () => window.clearTimeout(redirectTimer);
+  }, [isAuthLoading, isDashboardPath, isLoginPath, session]);
+
+  useEffect(() => {
+    if (!isLoginPath && !isDashboardPath) {
+      previousPageRef.current = pathname;
+    }
+  }, [isDashboardPath, isLoginPath, pathname]);
+
+  useEffect(() => {
+    let modalTimer = 0;
+
+    if (!isAuthLoading && isLoginPath && !session) {
+      modalTimer = window.setTimeout(() => {
+        setIsAuthOpen(true);
+      }, 0);
+    }
+
+    return () => window.clearTimeout(modalTimer);
+  }, [isAuthLoading, isLoginPath, session]);
 
   useEffect(() => {
     const revealItems = document.querySelectorAll(".reveal-on-scroll");
@@ -2120,7 +2617,8 @@ function App() {
         <ProjectCasePage project={activeProject} onNavigate={navigate} />
 
         <SiteFooter onNavigate={navigate} />
-        {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
       </>
     );
   }
@@ -2139,7 +2637,53 @@ function App() {
         <LegalNoticePage onNavigate={navigate} />
 
         <SiteFooter onNavigate={navigate} />
-        {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
+  if (isDashboardPath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <ClientAreaPage
+          session={session}
+          isAuthLoading={isAuthLoading}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
+  if (isLoginPath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <LoginPage onAuthOpen={() => setIsAuthOpen(true)} />
+
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
       </>
     );
   }
@@ -2622,9 +3166,11 @@ function App() {
               </span>
             </div>
 
+            <ContactForm onAuthOpen={() => setIsAuthOpen(true)} />
+
             <div className="contact-actions">
               <a className="btn btn-primary contact-cta-primary" href="mailto:elenamihalska70@gmail.com?subject=Demande%20de%20projet%20Digital%20Lab">
-                Recevoir une première piste
+                Envoyer un email
               </a>
               <a className="btn btn-secondary contact-cta-secondary" href="mailto:elenamihalska70@gmail.com?subject=Discuter%20d’un%20projet%20Digital%20Lab">
                 Discuter du projet
@@ -2637,7 +3183,8 @@ function App() {
       </main>
 
       <SiteFooter onNavigate={navigate} />
-      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
+      {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+      <AuthToast message={authToast} onClose={clearAuthToast} />
     </>
   );
 }
