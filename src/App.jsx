@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import {
+  getCurrentSession,
+  isSupabaseConfigured,
+  onAuthStateChange,
+  signInWithEmail,
+  signInWithGoogle,
+  signOut,
+  signUpWithEmail,
+} from "./services/auth";
 
 const services = [
   {
@@ -1717,11 +1726,162 @@ function ScrollProgress() {
   );
 }
 
-function SiteHeader({ onNavigate, pathname }) {
+function AuthModal({ onClose }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  const runAuthAction = async (action) => {
+    setIsLoading(true);
+    setMessage("");
+
+    const { error } = await action();
+
+    if (error) {
+      setMessage(error.message);
+      setIsLoading(false);
+      return;
+    }
+
+    if (mode === "signup") {
+      setMessage("Compte créé. Vérifiez votre email si la confirmation est activée dans Supabase.");
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(false);
+    onClose();
+  };
+
+  const handleEmailSubmit = (event) => {
+    event.preventDefault();
+
+    runAuthAction(() =>
+      mode === "signup"
+        ? signUpWithEmail({ email, password })
+        : signInWithEmail({ email, password }),
+    );
+  };
+
+  const handleGoogleSignIn = () => {
+    runAuthAction(signInWithGoogle);
+  };
+
+  return (
+    <div className="auth-modal-overlay" onMouseDown={onClose}>
+      <section
+        className="auth-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          className="auth-modal-close"
+          type="button"
+          aria-label="Fermer la connexion"
+          onClick={onClose}
+          ref={closeButtonRef}
+        >
+          ×
+        </button>
+
+        <span>Accès client</span>
+        <h2 id="auth-modal-title">{mode === "signup" ? "Créer un compte" : "Connexion"}</h2>
+        <p>Connectez-vous pour accéder aux futurs espaces privés Digital Lab.</p>
+
+        {!isSupabaseConfigured && (
+          <div className="auth-message is-error">
+            Ajoutez `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` pour activer Supabase Auth.
+          </div>
+        )}
+
+        <button className="auth-google-button" type="button" onClick={handleGoogleSignIn} disabled={isLoading}>
+          <span aria-hidden="true">G</span>
+          Sign in with Google
+        </button>
+
+        <div className="auth-divider">
+          <span>ou</span>
+        </div>
+
+        <form className="auth-form" onSubmit={handleEmailSubmit}>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="vous@email.com"
+              autoComplete="email"
+              required
+            />
+          </label>
+
+          <label>
+            Mot de passe
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              minLength={6}
+              required
+            />
+          </label>
+
+          <button className="btn btn-primary auth-submit" type="submit" disabled={isLoading}>
+            {isLoading ? "Traitement..." : mode === "signup" ? "Créer mon compte" : "Se connecter"}
+          </button>
+        </form>
+
+        {message && <div className="auth-message">{message}</div>}
+
+        <button
+          className="auth-switch"
+          type="button"
+          onClick={() => {
+            setMode((currentMode) => (currentMode === "signup" ? "login" : "signup"));
+            setMessage("");
+          }}
+        >
+          {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte email"}
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function SiteHeader({ onNavigate, pathname, session, onAuthOpen, onLogout }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("");
   const visibleActiveHref = pathname === "/" ? activeHref : "";
+  const userEmail = session?.user?.email;
 
   const handleNavigate = (event, target) => {
     event.preventDefault();
@@ -1823,6 +1983,31 @@ function SiteHeader({ onNavigate, pathname }) {
           <a className="navbar-cta" href="/#contact" onClick={(event) => handleNavigate(event, "/#contact")}>
             Parler de mon projet
           </a>
+          {session ? (
+            <div className="navbar-auth-state">
+              <span>{userEmail}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onLogout();
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <button
+              className="navbar-auth-button"
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                onAuthOpen();
+              }}
+            >
+              Connexion
+            </button>
+          )}
         </nav>
       </header>
     </>
@@ -1832,6 +2017,8 @@ function SiteHeader({ onNavigate, pathname }) {
 function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [session, setSession] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const activeProject = getProjectFromPath(pathname);
 
   const navigate = (target) => {
@@ -1860,6 +2047,33 @@ function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getCurrentSession().then(({ data }) => {
+      if (isMounted) {
+        setSession(data?.session ?? null);
+      }
+    });
+
+    const subscription = onAuthStateChange((nextSession) => {
+      setSession(nextSession);
+      if (nextSession) {
+        setIsAuthOpen(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut();
+    setSession(null);
+  };
 
   useEffect(() => {
     const revealItems = document.querySelectorAll(".reveal-on-scroll");
@@ -1895,11 +2109,18 @@ function App() {
   if (pathname.startsWith("/projects/")) {
     return (
       <>
-        <SiteHeader onNavigate={navigate} pathname={pathname} />
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
 
         <ProjectCasePage project={activeProject} onNavigate={navigate} />
 
         <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
       </>
     );
   }
@@ -1907,18 +2128,31 @@ function App() {
   if (pathname === "/mentions-legales") {
     return (
       <>
-        <SiteHeader onNavigate={navigate} pathname={pathname} />
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
 
         <LegalNoticePage onNavigate={navigate} />
 
         <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
       </>
     );
   }
 
   return (
     <>
-      <SiteHeader onNavigate={navigate} pathname={pathname} />
+      <SiteHeader
+        onNavigate={navigate}
+        pathname={pathname}
+        session={session}
+        onAuthOpen={() => setIsAuthOpen(true)}
+        onLogout={handleLogout}
+      />
 
       <main>
         <section className="hero">
@@ -2403,6 +2637,7 @@ function App() {
       </main>
 
       <SiteFooter onNavigate={navigate} />
+      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
     </>
   );
 }
