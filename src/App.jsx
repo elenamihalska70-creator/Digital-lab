@@ -19,21 +19,17 @@ const services = [
   {
     icon: "site",
     title: "Création de sites web",
-    summary: "Sites vitrines, landing pages, sites associatifs et pages professionnelles.",
-    problem:
-      "Vous avez besoin d’une présence professionnelle en ligne, mais vous ne savez pas par où commencer.",
-    canDo:
-      "Je peux travailler avec WordPress, créer un site custom, partir d’une maquette, m’inspirer d’un exemple existant ou proposer une structure claire si vous ne savez pas encore ce que vous voulez. Site vitrine, landing page, pages claires, formulaire de contact et responsive mobile/tablette.",
-    expectedResult: "Un site clair, moderne, facile à partager et adapté à votre activité.",
+    summary: "Créer une présence qui inspire confiance.",
+    problem: "Votre activité manque d’un point d’entrée fiable pour inspirer confiance et recevoir des demandes.",
+    canDo: "Je structure vos pages, clarifie votre message et crée un parcours fluide jusqu’au contact.",
+    expectedResult: "Un site prêt à partager, lisible sur tous les écrans et aligné avec vos objectifs commerciaux.",
     details: [
-      "Création de site vitrine",
-      "Landing page pour une offre ou un service",
-      "Site associatif ou événementiel",
-      "Site WordPress",
-      "Structure claire des pages",
-      "Formulaire de contact",
-      "Version responsive mobile/tablette",
-      "Mise en ligne et configuration de base",
+      "Site vitrine",
+      "Landing page",
+      "WordPress",
+      "Formulaire",
+      "Responsive",
+      "Mise en ligne",
     ],
     examples:
       "Sites vitrines, landing pages, sites associatifs, sites événementiels, WordPress, sites custom HTML/CSS/JS/PHP, intégration de maquettes, responsive, formulaires, pages professionnelles, etc.",
@@ -60,21 +56,18 @@ const services = [
   {
     icon: "repair",
     title: "Réparation & restauration de site",
-    summary: "Correction de bugs, amélioration mobile, vitesse, structure et contenus.",
+    summary: "Retrouver un site fiable et agréable à utiliser.",
     problem:
-      "Votre site est lent, cassé, mal affiché ou devenu difficile à gérer après des erreurs, mises à jour ou problèmes techniques.",
-    canDo:
-      "Correction de bugs, pages cassées, menus, formulaires, affichage mobile, sauvegardes, mises à jour, plugins, OVH, FTP, sécurité de base.",
-    expectedResult: "Un site plus propre, plus fiable et plus facile à utiliser.",
+      "Votre site est lent, instable, mal affiché ou difficile à gérer au quotidien.",
+    canDo: "J’identifie les points bloquants, corrige les parcours et remets les bases techniques au propre.",
+    expectedResult: "Un site plus stable, plus fluide et plus rassurant pour vos visiteurs.",
     details: [
-      "Correction de pages cassées",
-      "Menus, liens, boutons et formulaires",
-      "Problèmes d’affichage mobile",
-      "Nettoyage de structure",
-      "Sauvegardes et mises à jour",
-      "Optimisation vitesse",
-      "Vérification sécurité de base",
-      "Amélioration UX/UI",
+      "Bugs",
+      "Mobile",
+      "Formulaires",
+      "Vitesse",
+      "Sauvegardes",
+      "Sécurité",
     ],
     examples:
       "WordPress, sites custom, OVH, FTP, bases de données, menus, formulaires, plugins, responsive mobile, optimisation vitesse, sauvegardes, sécurité de base, etc.",
@@ -103,20 +96,17 @@ const services = [
   {
     icon: "seo",
     title: "SEO & visibilité",
-    summary: "Optimisation pour être mieux trouvé et mieux compris par Google.",
-    problem: "Votre site existe, mais il est peu visible ou mal compris par Google.",
-    canDo:
-      "Titres SEO, meta descriptions, structure H1/H2, textes optimisés, images ALT, maillage interne, performance Lighthouse, Google Business Profile.",
-    expectedResult: "Un site mieux structuré, plus clair pour Google et plus crédible pour les visiteurs.",
+    summary: "Aider les bonnes personnes à vous trouver.",
+    problem: "Votre site existe, mais il ne capte pas assez de trafic qualifié.",
+    canDo: "Je clarifie la structure, les pages clés et les contenus pour mieux présenter votre offre.",
+    expectedResult: "Un site plus lisible pour vos visiteurs et mieux préparé pour Google.",
     details: [
-      "Titres SEO et meta descriptions",
-      "Structure H1/H2/H3",
-      "Textes optimisés",
+      "Balises SEO",
+      "Structure Hn",
+      "Textes",
       "Images ALT",
-      "Maillage interne",
-      "Performance Lighthouse",
-      "Google Business Profile",
-      "Préparation de contenus pour réseaux sociaux",
+      "Maillage",
+      "Performance",
     ],
     examples:
       "Audit SEO, optimisation technique, structure Hn, textes optimisés, balises meta, images ALT, Lighthouse, Google Business Profile, suivi KPI, etc.",
@@ -144,20 +134,17 @@ const services = [
   {
     icon: "connect",
     title: "Automatisation & outils connectés",
-    summary: "Automatiser les tâches répétitives et connecter vos outils.",
-    problem: "Vous perdez du temps avec des tâches répétitives, des messages manuels ou des fichiers dispersés.",
-    canDo:
-      "Formulaires intelligents, emails automatiques, Google Sheets, CRM léger, notifications, simulateurs, calculateurs, dashboards.",
-    expectedResult: "Moins de tâches manuelles, plus de suivi et une meilleure organisation.",
+    summary: "Libérer du temps pour l’essentiel.",
+    problem: "Votre suivi repose sur trop de copier-coller, de messages manuels ou de fichiers dispersés.",
+    canDo: "Je connecte les étapes importantes pour centraliser les demandes et fiabiliser le suivi.",
+    expectedResult: "Moins de temps perdu, moins d’oublis et une organisation plus durable.",
     details: [
-      "Formulaires intelligents",
-      "Emails automatiques",
-      "Google Sheets",
-      "CRM pratique",
+      "Formulaires",
       "Notifications",
-      "Simulateurs et calculateurs",
-      "Tableaux de bord",
-      "Suivi de demandes clients",
+      "CRM léger",
+      "Google Sheets",
+      "Dashboards",
+      "Suivi client",
     ],
     examples:
       "Simulateurs, calculateurs, formulaires intelligents, emails automatiques, Google Sheets, CRM adapté, dashboards, notifications, suivi client, etc.",
@@ -185,20 +172,17 @@ const services = [
   {
     icon: "feature",
     title: "Chatbots & assistants IA",
-    summary: "Répondre automatiquement aux premières demandes clients.",
-    problem: "Vous recevez souvent les mêmes questions ou demandes, et vous ne pouvez pas répondre tout le temps.",
-    canDo:
-      "Assistant de réservation, FAQ automatisée, collecte de demandes, préqualification client, intégration sur site, scénarios conversationnels clairs.",
-    expectedResult: "Des réponses disponibles 24h/24 et des demandes mieux organisées.",
+    summary: "Guider vos visiteurs avant même le premier échange.",
+    problem: "Vous recevez des questions répétitives et certaines demandes se perdent faute de réponse rapide.",
+    canDo: "Je conçois un assistant utile, sobre et centré sur les besoins réels de vos clients.",
+    expectedResult: "Des visiteurs mieux guidés et des demandes plus faciles à traiter.",
     details: [
-      "Assistant de réservation",
-      "FAQ automatisée",
-      "Collecte de demandes",
-      "Préqualification client",
-      "Intégration sur site",
-      "Scénarios conversationnels clairs",
-      "Réponses 24h/24",
-      "Workflow configurable",
+      "FAQ",
+      "Préqualification",
+      "Réservation",
+      "Collecte",
+      "Scénarios",
+      "Intégration",
     ],
     examples:
       "Assistant de réservation, chatbot de contact, FAQ automatisée, préqualification client, collecte de demandes, scénarios conversationnels, intégration site, etc.",
@@ -226,20 +210,17 @@ const services = [
   {
     icon: "mvp",
     title: "MVP & prototypes web",
-    summary: "Tester rapidement une idée avant d’investir dans un grand développement.",
-    problem: "Vous avez une idée, mais vous ne voulez pas investir trop avant de la tester.",
-    canDo:
-      "Prototype SaaS, plateforme locale, dashboard B2B, espace utilisateur, version démonstration, parcours utilisateur.",
-    expectedResult: "Une première version testable pour valider l’idée rapidement.",
+    summary: "Tester rapidement avant d’investir davantage.",
+    problem: "Vous avez une idée, mais vous devez la rendre concrète avant d’investir davantage.",
+    canDo: "Je construis une version ciblée pour montrer, tester et ajuster rapidement le concept.",
+    expectedResult: "Un prototype concret pour décider des prochaines étapes avec plus de confiance.",
     details: [
-      "Prototype SaaS",
-      "Plateforme locale",
-      "Dashboard B2B",
-      "Espace utilisateur",
-      "Pages de test",
-      "Version démonstration",
-      "Parcours utilisateur",
-      "Préparation pour amélioration future",
+      "Prototype",
+      "Dashboard",
+      "Espace client",
+      "Parcours",
+      "Démo",
+      "Itérations",
     ],
     examples:
       "Prototype SaaS, plateforme locale, dashboard B2B, espace utilisateur, application web testable, parcours utilisateur, version démo, etc.",
@@ -281,72 +262,72 @@ const missionSteps = [
     number: "01",
     icon: "↗",
     title: "Échange clair",
-    text: "Vous expliquez votre besoin avec vos mots, même si votre idée n’est pas encore claire.",
+    text: "Tout part de votre réalité métier, pas d’un cahier des charges figé.",
   },
   {
     number: "02",
     icon: "◎",
-    title: "Première piste concrète",
-    text: "Je vous propose une structure claire, des fonctionnalités adaptées et une estimation réaliste.",
+    title: "Direction utile",
+    text: "La solution est cadrée autour de vos priorités, de votre budget et de vos clients.",
   },
   {
     number: "03",
     icon: "▣",
-    title: "Prototype ou première version",
-    text: "Vous voyez rapidement une première démo pour valider la direction du projet.",
+    title: "Première version",
+    text: "Vous validez rapidement un support concret avant d’aller plus loin.",
   },
   {
     number: "04",
     icon: "✓",
-    title: "Ajustements et mise en ligne",
-    text: "Nous améliorons ensemble les détails avant la mise en ligne finale.",
+    title: "Mise en ligne",
+    text: "Les derniers ajustements sécurisent une livraison fiable et utilisable.",
   },
   {
     number: "05",
     icon: "+",
-    title: "Suivi et évolutions",
-    text: "Le projet peut évoluer ensuite : SEO, automatisation, nouvelles pages, maintenance, etc.",
+    title: "Évolution",
+    text: "Le projet reste pensé pour accompagner votre activité dans le temps.",
   },
 ];
 
 const methodBadges = [
-  "Sans jargon technique",
-  "Explications claires",
-  "Solutions adaptées au budget",
-  "Possibilité d’évolution progressive",
-  "Compatible petites structures & associations",
+  "Sans jargon",
+  "Budget maîtrisé",
+  "Décisions lisibles",
+  "Évolution progressive",
+  "Suivi dans la durée",
 ];
 
 const improvementCards = [
   {
     icon: "↗",
-    title: "Recevoir plus facilement des demandes",
-    text: "Un formulaire clair, un meilleur parcours et une structure efficace peuvent aider les visiteurs à vous contacter plus facilement.",
+    title: "Recevoir des demandes plus qualifiées",
+    text: "Un parcours mieux pensé aide les visiteurs à comprendre votre offre et à passer à l’action.",
   },
   {
     icon: "⌁",
-    title: "Gagner du temps",
-    text: "Certaines tâches répétitives peuvent être allégées grâce à des automatisations adaptées et des outils pratiques.",
+    title: "Consacrer moins de temps aux tâches répétitives",
+    text: "Les étapes manuelles sont allégées pour garder votre énergie sur les décisions importantes.",
   },
   {
     icon: "✦",
-    title: "Avoir une image plus professionnelle",
-    text: "Un site clair et moderne inspire davantage confiance et valorise votre activité.",
+    title: "Inspirer confiance dès les premières secondes",
+    text: "Votre présence digitale transmet une impression fiable, cohérente et professionnelle.",
   },
   {
     icon: "▣",
-    title: "Mieux organiser son activité",
-    text: "Centraliser les informations, demandes ou contenus permet souvent de travailler plus sereinement.",
+    title: "Mieux suivre vos demandes",
+    text: "Les informations importantes sont regroupées pour éviter les oublis et les échanges dispersés.",
   },
   {
     icon: "◎",
-    title: "Améliorer sa visibilité",
-    text: "Une meilleure structure SEO et un contenu plus clair peuvent aider votre activité à être mieux trouvée.",
+    title: "Être plus facile à trouver",
+    text: "Une structure lisible renforce votre visibilité et aide Google à comprendre votre activité.",
   },
   {
     icon: "+",
-    title: "Faire évoluer son projet progressivement",
-    text: "Le projet peut démarrer de façon légère puis évoluer selon les besoins et le budget.",
+    title: "Construire une base durable",
+    text: "Le projet peut démarrer simplement puis évoluer avec vos besoins réels.",
   },
 ];
 
@@ -354,55 +335,55 @@ const includedProjectItems = [
   {
     icon: "◎",
     title: "SEO de base",
-    text: "Balises essentielles, structure optimisée et bonnes pratiques pour améliorer la visibilité sur Google.",
+    text: "Balises essentielles et structure lisible.",
   },
   {
     icon: "▱",
     title: "Responsive",
-    text: "Votre site fonctionne parfaitement sur ordinateur, tablette et mobile.",
+    text: "Une expérience fluide sur tous les écrans.",
   },
   {
     icon: "↯",
     title: "Performance",
-    text: "Images optimisées, chargement rapide et navigation fluide.",
+    text: "Chargement rapide et navigation confortable.",
   },
   {
     icon: "◈",
     title: "Sécurité",
-    text: "Configuration selon les bonnes pratiques afin de protéger votre site et vos données.",
+    text: "Bases configurées avec soin.",
   },
   {
     icon: "+",
     title: "Évolutif",
-    text: "Le projet est conçu pour pouvoir évoluer facilement avec vos futurs besoins.",
+    text: "Une fondation prête à grandir.",
   },
   {
     icon: "✓",
     title: "Accompagnement",
-    text: "Je reste disponible après la livraison pour répondre à vos questions et vous accompagner.",
+    text: "Des réponses après la livraison.",
   },
 ];
 
 const trustCards = [
   {
     icon: "✓",
-    title: "Pas besoin de langage technique",
-    text: "Je traduis les besoins en solutions claires et compréhensibles.",
+    title: "Un langage business avant la technique",
+    text: "Les choix sont expliqués selon leur impact concret sur votre activité.",
   },
   {
     icon: "↯",
-    title: "Premières versions rapides",
-    text: "Une première démo ou structure peut être proposée rapidement pour avancer concrètement.",
+    title: "Des décisions plus rapides",
+    text: "Une première version permet de valider la direction sans perdre des semaines.",
   },
   {
     icon: "▦",
-    title: "Vision globale",
-    text: "Site web, SEO, automatisation, UX, dashboard ou prototype : les outils sont choisis selon le besoin réel.",
+    title: "Une vision d’ensemble",
+    text: "Site, outil, automatisation ou assistant : chaque élément sert un objectif précis.",
   },
   {
     icon: "◈",
-    title: "Échange humain et flexible",
-    text: "Le projet peut évoluer progressivement selon les priorités, le budget et les retours.",
+    title: "Une relation de confiance",
+    text: "Un accompagnement construit avec méthode, écoute et continuité.",
   },
 ];
 
@@ -423,7 +404,7 @@ const proofStats = [
     icon: "+",
     value: null,
     label: "Projet sur mesure",
-    text: "Chaque solution est pensée selon votre activité, vos objectifs et votre budget.",
+    text: "Une solution pensée selon votre activité, vos objectifs et votre budget.",
   },
   { icon: "▦", value: null, label: "Création web & automatisation" },
   { icon: "◎", value: null, label: "UX/UI, SEO & dashboards" },
@@ -882,56 +863,24 @@ function ServiceAccordionCard({ service }) {
         <div className="solution-detail-copy">
           <div className="service-sales-grid">
             <article>
-              <span>Problème client</span>
+              <span>Votre problème</span>
               <p>{service.problem}</p>
             </article>
             <article>
-              <span>Ce que je peux faire</span>
+              <span>Notre solution</span>
               <p>{service.canDo}</p>
             </article>
             <article>
-              <span>Résultat attendu</span>
+              <span>Résultat concret</span>
               <p>{service.expectedResult}</p>
             </article>
-            <article>
-              <span>Exemples possibles</span>
-              <p>{service.examples}</p>
-            </article>
           </div>
 
-          <div className="service-transformation-grid">
-            <article className="service-transformation-card">
-              <span className="service-transformation-label">
-                <span aria-hidden="true">×</span>
-                Avant
-              </span>
-              <ul>
-                {service.transformation.before.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="service-transformation-card is-after">
-              <span className="service-transformation-label">
-                <span aria-hidden="true">✓</span>
-                Après
-              </span>
-              <ul>
-                {service.transformation.after.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="service-transformation-card is-result">
-              <span className="service-transformation-label">
-                <span aria-hidden="true">→</span>
-                Résultat concret
-              </span>
-              <p>{service.transformation.result}</p>
-            </article>
-          </div>
+          <ul>
+            {service.details.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+          </ul>
         </div>
         <ServiceGallery isOpen={isOpen} service={service} />
       </div>
@@ -4215,21 +4164,20 @@ function App() {
         
             <div className="badge">
               <span></span>
-              Solutions digitales pour petites structures
+              Studio digital pour entrepreneurs
             </div>
 
             <h1 className="hero-title">
-              <span className="hero-title-line">Des solutions digitales</span>
+              <span className="hero-title-line">Transformons vos idées</span>
               <span className="hero-title-line">
-                claires pour <span className="hero-title-accent">développer</span>
+                en <span className="hero-title-accent">solutions digitales</span>.
               </span>
-              <span className="hero-title-line">votre activité</span>
             </h1>
             
 
             <p>
-              Sites web, automatisation, IA et outils digitaux pour indépendants,
-              associations et petites entreprises.
+              L’objectif est de créer des sites, automatisations, assistants IA et outils métiers qui rendent le
+              quotidien des entrepreneurs plus fluide.
             </p>
 
             <div className="hero-buttons">
@@ -4245,12 +4193,35 @@ function App() {
           </div>
         </section>
 
+        <section className="section brand-story-section reveal-on-scroll reveal-section">
+          <div className="section-inner about-layout">
+            <div className="section-heading">
+              <span>Pourquoi Digital Lab ?</span>
+              <h2>Le numérique doit simplifier le travail, pas le compliquer.</h2>
+            </div>
+
+            <div className="about-content glass-card reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
+              <p>
+                Beaucoup d’entrepreneurs passent plus de temps à gérer leurs outils qu’à développer leur activité.
+              </p>
+              <p>
+                Digital Lab est né d’une conviction simple : un outil numérique doit aider à décider, organiser et
+                avancer avec plus de sérénité.
+              </p>
+              <p>
+                L’accompagnement est pensé pour durer, avec des bases fiables et une évolution progressive selon vos
+                besoins.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <section className="section services-section reveal-on-scroll reveal-section" id="services">
           <div className="section-inner">
             <div className="section-heading">
               <span>Services</span>
-              <h2>Ce que je peux faire pour vous</h2>
-              <p>Création, réparation, optimisation et automatisation de vos outils digitaux.</p>
+              <h2>Des outils pensés pour votre activité</h2>
+              <p>Chaque service répond à un besoin concret : être visible, gagner du temps ou mieux piloter votre projet.</p>
             </div>
 
             <div className="services-accordion">
@@ -4358,8 +4329,8 @@ function App() {
           <div className="section-inner">
             <div className="section-heading">
               <span>Méthode</span>
-              <h2>Comment se déroule une mission ?</h2>
-              <p>Une méthode fluide pour passer d’une idée floue à une solution concrète.</p>
+              <h2>Une méthode pensée pour décider sereinement</h2>
+              <p>Chaque étape transforme une idée en choix concrets, sans jargon inutile.</p>
             </div>
 
             <div className="method-timeline">
@@ -4392,8 +4363,7 @@ function App() {
             <div className="method-reassurance">
               <span aria-hidden="true">✓</span>
               <p>
-                Vous n’avez pas besoin de connaître la technique. Je traduis votre besoin en solution claire,
-                étape par étape.
+                Digital Lab existe pour rendre le numérique plus utile, plus fiable et plus durable pour les entrepreneurs.
               </p>
             </div>
           </div>
@@ -4403,21 +4373,24 @@ function App() {
           <div className="section-inner about-layout">
             <div className="section-heading">
               <span>À propos</span>
-              <h2>Pourquoi Digital Lab ?</h2>
+              <h2>Un studio né d’une expérience entrepreneuriale réelle</h2>
             </div>
 
             <div className="about-content glass-card reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
               <p>
-                Ancienne entrepreneure devenue cheffe de projet digital, je combine vision business et compétences
-                techniques pour créer des outils utiles, accessibles et évolutifs.
+                Avant Digital Lab, il y a plus de 25 ans d’entrepreneuriat : des clients à comprendre, des budgets à
+                arbitrer, des priorités qui changent, des décisions à prendre vite.
+              </p>
+              <p>
+                Cette expérience nourrit aujourd’hui une approche de cheffe de projet digital : créer des solutions
+                concrètes, utiles au quotidien, capables d’accompagner une activité dans le temps.
               </p>
 
               <ul className="about-list">
-                <li>Vision entrepreneuriale réelle</li>
-                <li>Solutions claires et concrètes</li>
-                <li>Développement rapide de MVP</li>
-                <li>Communication claire, sans jargon</li>
-                <li>Approche humaine et flexible</li>
+                <li>Compréhension des enjeux terrain</li>
+                <li>Décisions guidées par l’usage réel</li>
+                <li>Solutions pratiques, fiables et évolutives</li>
+                <li>Relation humaine et suivie</li>
               </ul>
             </div>
           </div>
@@ -4427,10 +4400,9 @@ function App() {
           <div className="section-inner">
             <div className="section-heading">
               <span>Confiance</span>
-              <h2>Une approche claire, concrète et orientée résultat</h2>
+              <h2>Une approche centrée sur votre réalité métier</h2>
               <p>
-                Je combine gestion de projet digital, création web, automatisation et expérience terrain pour proposer
-                des solutions adaptées aux petites structures.
+                La technologie n’est jamais le point de départ. Elle sert votre organisation, vos clients et votre croissance.
               </p>
             </div>
 
@@ -4468,10 +4440,9 @@ function App() {
           <div className="section-inner">
             <div className="section-heading">
               <span>Preuves & confiance</span>
-              <h2>Une expérience concrète, pensée pour avancer avec clarté</h2>
+              <h2>Une expérience concrète, pensée pour avancer avec justesse</h2>
               <p>
-                Des projets web, outils digitaux et automatisations créés pour rendre les idées plus claires, plus
-                visibles et plus faciles à gérer.
+                Des projets conçus pour rendre les idées plus lisibles, les échanges plus fluides et les décisions plus sûres.
               </p>
             </div>
 
@@ -4499,8 +4470,8 @@ function App() {
 
             <div className="proof-stack-panel reveal-on-scroll reveal-card" style={{ "--reveal-delay": "220ms" }}>
               <div>
-                <span>Stack & outils</span>
-                <h3>Des outils choisis selon le besoin réel</h3>
+                <span>Outils</span>
+                <h3>Une stack discrète, choisie selon le besoin</h3>
               </div>
               <div className="proof-stack">
                 {proofStack.map((tool) => (
@@ -4526,8 +4497,7 @@ function App() {
             <div className="proof-highlight reveal-on-scroll reveal-card" style={{ "--reveal-delay": "260ms" }}>
               <span aria-hidden="true">✓</span>
               <p>
-                Associations, indépendants, commerces locaux, projets en création : des solutions accessibles,
-                évolutives et adaptées.
+                J’accompagne les entrepreneurs qui veulent avancer avec méthode, sans complexité inutile.
               </p>
             </div>
           </div>
@@ -4544,48 +4514,42 @@ function App() {
               <details className="faq-item reveal-on-scroll reveal-card" style={{ "--reveal-delay": "0ms" }}>
                 <summary>Je ne sais pas exactement ce qu’il me faut.</summary>
                 <p>
-                  Ce n’est pas un problème. Beaucoup de projets commencent avec une idée encore floue. Nous pouvons
-                  clarifier ensemble les besoins, les priorités et les solutions possibles.
+                  C’est fréquent. Je vous aide à clarifier le besoin, les priorités et la meilleure première étape.
                 </p>
               </details>
 
               <details className="faq-item reveal-on-scroll reveal-card" style={{ "--reveal-delay": "80ms" }}>
                 <summary>Travaillez-vous avec des petits budgets ?</summary>
                 <p>
-                  Oui. L’objectif est de proposer une solution adaptée à votre activité et à vos moyens. Il est possible
-                  de démarrer léger puis de faire évoluer le projet progressivement.
+                  Oui. Le projet peut démarrer avec une version ciblée, puis évoluer selon vos moyens et vos retours.
                 </p>
               </details>
 
               <details className="faq-item reveal-on-scroll reveal-card" style={{ "--reveal-delay": "160ms" }}>
                 <summary>Pouvez-vous reprendre un site existant ?</summary>
                 <p>
-                  Oui. Je peux intervenir sur un site WordPress ou un site existant pour corriger des bugs, améliorer
-                  le mobile, optimiser le SEO, réparer certains problèmes ou moderniser la structure.
+                  Oui. Je peux corriger, réorganiser ou améliorer un site déjà en ligne.
                 </p>
               </details>
 
               <details className="faq-item reveal-on-scroll reveal-card" style={{ "--reveal-delay": "240ms" }}>
                 <summary>Combien de temps faut-il pour créer un projet ?</summary>
                 <p>
-                  Cela dépend du type de projet. Une première version ciblée peut parfois être réalisée rapidement,
-                  tandis qu’un projet plus avancé demande plusieurs étapes et ajustements.
+                  Cela dépend du périmètre. Une première version ciblée permet souvent d’avancer rapidement.
                 </p>
               </details>
 
               <details className="faq-item reveal-on-scroll reveal-card" style={{ "--reveal-delay": "320ms" }}>
                 <summary>Peut-on commencer petit puis ajouter des fonctionnalités plus tard ?</summary>
                 <p>
-                  Oui. Beaucoup de projets évoluent progressivement : nouvelles pages, automatisation, espace client,
-                  SEO, dashboard, chatbot, etc.
+                  Oui. L’objectif est de construire une base fiable, puis d’ajouter ce qui devient utile.
                 </p>
               </details>
 
               <details className="faq-item reveal-on-scroll reveal-card" style={{ "--reveal-delay": "400ms" }}>
                 <summary>Travaillez-vous avec des associations et petites structures ?</summary>
                 <p>
-                  Oui. Les solutions proposées sont pensées pour être claires, accessibles et adaptées aux petites
-                  structures, indépendants, associations ou projets locaux.
+                  Oui. J’accompagne les entrepreneurs, associations et projets locaux qui veulent avancer avec méthode.
                 </p>
               </details>
             </div>
@@ -4598,8 +4562,7 @@ function App() {
               <span>Impact</span>
               <h2>Ce que votre projet peut améliorer</h2>
               <p>
-                Un site ou un outil ne sert pas seulement à être joli. Il peut aussi simplifier votre activité au
-                quotidien.
+                Un bon outil digital doit soutenir votre activité, pas seulement exister en ligne.
               </p>
             </div>
 
@@ -4627,7 +4590,7 @@ function App() {
               <span>Inclus</span>
               <h2>Ce qui est inclus dans chaque projet</h2>
               <p>
-                Chaque projet est livré prêt à être utilisé, avec les bonnes pratiques essentielles déjà intégrées.
+                Les bases essentielles sont intégrées dès la livraison.
               </p>
             </div>
 
@@ -4653,7 +4616,7 @@ function App() {
                 <span>✓ Bonnes pratiques intégrées</span>
                 <span>✓ Solution prête à évoluer</span>
               </div>
-              <p>Vous recevez une solution professionnelle pensée pour durer, et non simplement une page web.</p>
+              <p>Vous recevez une solution pensée pour durer, pas simplement une page web.</p>
             </div>
           </div>
         </section>
@@ -4662,40 +4625,39 @@ function App() {
           <div className="section-inner contact-panel reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
             <div className="contact-copy">
               <span>Contact</span>
-              <h2>Vous avez une idée, un besoin ou un site à améliorer ?</h2>
+              <h2>Parlons de votre projet.</h2>
               <p>
-                Je peux vous aider à clarifier votre projet, créer une première version, améliorer un site existant
-                ou automatiser certaines tâches. Même si votre besoin n’est pas encore totalement défini.
+                Même si votre idée est encore floue, un premier échange peut aider à clarifier la bonne direction.
               </p>
             </div>
 
             <ul className="contact-points">
               <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "200ms" }}>
-                création ou refonte de site
+                site ou refonte
               </li>
               <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "260ms" }}>
-                réparation et amélioration
+                amélioration d’un existant
               </li>
               <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "320ms" }}>
                 SEO & visibilité
               </li>
               <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "380ms" }}>
-                automatisation pratique
+                automatisation utile
               </li>
               <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "440ms" }}>
-                prototype ou MVP rapide
+                prototype ou MVP
               </li>
             </ul>
 
             <div className="contact-badges" aria-label="Informations rassurantes">
               <span className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "520ms" }}>
-                ✓ Réponse claire et sans jargon
+                ✓ Premier échange sans jargon
               </span>
               <span className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "580ms" }}>
-                ✓ Premier échange gratuit
+                ✓ Cadrage concret
               </span>
               <span className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "640ms" }}>
-                ✓ Adapté aux petites structures
+                ✓ Relation suivie
               </span>
             </div>
 
