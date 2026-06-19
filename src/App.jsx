@@ -1,7 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import { RequestConversation } from "./components/RequestConversation";
+import { RequestDocuments } from "./components/RequestDocuments";
+import { RequestQuotes } from "./components/RequestQuotes";
 import { useAuth } from "./context/useAuth";
-import { createContactRequest, getContactRequestsForUser } from "./services/contactRequests";
+import { getUnreadMessageCounts } from "./services/requestMessages";
+import { getLatestQuotesForRequests } from "./services/quotes";
+import {
+  createContactRequest,
+  getAllContactRequests,
+  getContactRequestsForUser,
+  updateContactRequestStatus,
+} from "./services/contactRequests";
+import { getCurrentSession, supabase } from "./services/auth";
+import { getProfileForUser } from "./services/profiles";
 
 const services = [
   {
@@ -338,6 +350,39 @@ const improvementCards = [
   },
 ];
 
+const includedProjectItems = [
+  {
+    icon: "◎",
+    title: "SEO de base",
+    text: "Balises essentielles, structure optimisée et bonnes pratiques pour améliorer la visibilité sur Google.",
+  },
+  {
+    icon: "▱",
+    title: "Responsive",
+    text: "Votre site fonctionne parfaitement sur ordinateur, tablette et mobile.",
+  },
+  {
+    icon: "↯",
+    title: "Performance",
+    text: "Images optimisées, chargement rapide et navigation fluide.",
+  },
+  {
+    icon: "◈",
+    title: "Sécurité",
+    text: "Configuration selon les bonnes pratiques afin de protéger votre site et vos données.",
+  },
+  {
+    icon: "+",
+    title: "Évolutif",
+    text: "Le projet est conçu pour pouvoir évoluer facilement avec vos futurs besoins.",
+  },
+  {
+    icon: "✓",
+    title: "Accompagnement",
+    text: "Je reste disponible après la livraison pour répondre à vos questions et vous accompagner.",
+  },
+];
+
 const trustCards = [
   {
     icon: "✓",
@@ -374,7 +419,12 @@ const trustBadges = [
 ];
 
 const proofStats = [
-  { icon: "+", value: 10, suffix: "+", label: "projets réalisés" },
+  {
+    icon: "+",
+    value: null,
+    label: "Projet sur mesure",
+    text: "Chaque solution est pensée selon votre activité, vos objectifs et votre budget.",
+  },
   { icon: "▦", value: null, label: "Création web & automatisation" },
   { icon: "◎", value: null, label: "UX/UI, SEO & dashboards" },
   { icon: "✓", value: null, label: "Approche claire, orientée résultat" },
@@ -685,6 +735,21 @@ const normalizePathname = (path) => {
   }
 
   return path.replace(/\/+$/, "");
+};
+
+const scrollToElementWithHeaderOffset = (selectorOrElement) => {
+  const element =
+    typeof selectorOrElement === "string" ? document.querySelector(selectorOrElement) : selectorOrElement;
+
+  if (!element) {
+    return;
+  }
+
+  const headerOffset = 104;
+  const elementTop = element.getBoundingClientRect().top + window.scrollY;
+  const targetTop = Math.max(0, elementTop - headerOffset);
+
+  window.scrollTo({ top: targetTop, behavior: "smooth" });
 };
 
 const getUserDisplayName = (session) => {
@@ -1499,6 +1564,7 @@ function ContactForm({ onAuthOpen }) {
   const [form, setForm] = useState(initialContactForm);
   const [isSending, setIsSending] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
+  const statusRef = useRef(null);
   const sessionEmail = session?.user?.email ?? "";
 
   const updateField = (event) => {
@@ -1531,8 +1597,8 @@ function ContactForm({ onAuthOpen }) {
       setSubmitStatus({
         type: "error",
         message: guestNeedsLogin
-          ? "L’envoi invité semble bloqué par la sécurité Supabase. Connectez-vous puis réessayez, ou envoyez-moi un email directement."
-          : `Impossible d’envoyer votre demande pour le moment : ${error.message}`,
+          ? "Connectez-vous puis réessayez, ou envoyez-moi un email directement."
+          : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants.",
       });
 
       if (guestNeedsLogin) {
@@ -1549,6 +1615,10 @@ function ContactForm({ onAuthOpen }) {
     });
     setForm({ ...initialContactForm, email: sessionEmail });
     setIsSending(false);
+    window.setTimeout(() => {
+      statusRef.current?.focus();
+      statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
   };
 
   return (
@@ -1621,7 +1691,7 @@ function ContactForm({ onAuthOpen }) {
           {isSending ? "Envoi en cours..." : "Envoyer ma demande"}
         </button>
         {submitStatus.message && (
-          <p className={`contact-form-status is-${submitStatus.type}`} role="status">
+          <p className={`contact-form-status is-${submitStatus.type}`} role="status" tabIndex={-1} ref={statusRef}>
             {submitStatus.message}
           </p>
         )}
@@ -1887,6 +1957,17 @@ const formatRequestDate = (createdAt) => {
   }).format(new Date(createdAt));
 };
 
+const getProjectReference = (request, index = 0) => {
+  if (request?.reference) {
+    return request.reference;
+  }
+
+  const source = request?.id ? String(request.id).replace(/\D/g, "") : "";
+  const numericPart = source ? Number(source.slice(-4)) : index + 1;
+
+  return `DL-2026-${String(numericPart || index + 1).padStart(4, "0")}`;
+};
+
 const getRequestStatusMeta = (status) => {
   const normalizedStatus = status || "new";
   const labels = {
@@ -1912,10 +1993,360 @@ const getRequestStatusMeta = (status) => {
   };
 };
 
-function ContactRequestsPanel({ userId }) {
+const getQuoteStatusLabel = (status) => {
+  const labels = {
+    draft: "Brouillon",
+    sent: "Envoyé",
+    accepted: "Accepté",
+    refused: "Refusé",
+    expired: "Expiré",
+  };
+
+  return labels[status] ?? "Aucun devis";
+};
+
+function QuoteBadge({ quote }) {
+  const status = quote?.status || "none";
+
+  return (
+    <span className={`quote-card-badge is-${status}`}>
+      {quote ? getQuoteStatusLabel(status) : "Aucun devis"}
+    </span>
+  );
+}
+
+function QuoteNotificationBadge({ quote, role }) {
+  if (role === "client") {
+    if (quote?.status === "sent") {
+      return <span className="quote-notification-badge is-sent">Nouveau devis</span>;
+    }
+
+    return null;
+  }
+
+  if (quote?.status === "accepted") {
+    return <span className="quote-notification-badge is-accepted">Nouveau devis accepté</span>;
+  }
+
+  if (quote?.status === "refused") {
+    return <span className="quote-notification-badge is-refused">Devis refusé</span>;
+  }
+
+  if (quote?.status === "sent") {
+    return <span className="quote-notification-badge is-sent">Devis envoyé</span>;
+  }
+
+  return null;
+}
+
+const getProjectTimeline = (status, quoteStatus) => {
+  const activeStatus = status || "new";
+  const quoteProgress = quoteStatus === "accepted" ? 3 : quoteStatus === "sent" || quoteStatus === "refused" ? 2 : -1;
+  const statusProgress = activeStatus === "completed" ? 4 : activeStatus === "in_progress" ? 1 : 0;
+  const completedIndex = Math.max(statusProgress, quoteProgress);
+
+  return ["Demande reçue", "Analyse", "Proposition", "Développement", "Livraison"].map((label, index) => ({
+    label,
+    isDone: index <= completedIndex,
+  }));
+};
+
+const getNextActionText = (status, quoteStatus) => {
+  if (quoteStatus === "accepted") {
+    return "Le devis est accepté. Le projet peut passer en phase de développement.";
+  }
+
+  if (quoteStatus === "sent") {
+    return "Le devis a été envoyé. La prochaine étape consiste à valider ou ajuster la proposition.";
+  }
+
+  if (status === "completed") {
+    return "Le projet est terminé. Vous pouvez me contacter pour une évolution, un suivi ou une nouvelle demande.";
+  }
+
+  if (status === "in_progress") {
+    return "Votre projet est en cours. Nous préparons les prochaines étapes et les éléments utiles pour avancer.";
+  }
+
+  return "Votre projet est actuellement en cours d’analyse. Je prépare une première piste claire pour vous répondre.";
+};
+
+function UnreadMessageBadge({ count }) {
+  if (!count) {
+    return null;
+  }
+
+  return (
+    <span className="unread-message-badge">
+      Nouveau message
+    </span>
+  );
+}
+
+const getDossierTabs = (role) => [
+  { id: "summary", label: "Résumé" },
+  { id: "conversation", label: role === "admin" ? "Conversation" : "Messages" },
+  { id: "documents", label: "Documents" },
+  { id: "quote", label: "Devis" },
+];
+
+function RequestSummaryPanel({ activeQuote, request, role }) {
+  const statusMeta = getRequestStatusMeta(request.status);
+  const quoteStatus = activeQuote?.status;
+
+  return (
+    <div className="dossier-summary">
+      <div className="project-detail-heading">
+        <div>
+          <span>{getProjectReference(request)}</span>
+          <h2>{request.project_type || "Projet à préciser"}</h2>
+          <p>{formatRequestDate(request.created_at)}</p>
+        </div>
+        <strong className={`request-status ${statusMeta.className}`}>{statusMeta.label}</strong>
+      </div>
+
+      <div className="project-detail-grid">
+        <article className="project-message-card">
+          <span>Message initial</span>
+          <p>{request.message}</p>
+        </article>
+        <article>
+          <span>Projet</span>
+          <p>
+            {request.project_type || "Projet à préciser"}
+            <br />
+            {getProjectReference(request)}
+          </p>
+        </article>
+        <article>
+          <span>{role === "admin" ? "Client" : "Contact"}</span>
+          <p>
+            {request.name || "Nom non renseigné"}
+            <br />
+            {request.email || "Email non renseigné"}
+          </p>
+        </article>
+        <article>
+          <span>Structure</span>
+          <p>{request.company || "Non renseignée"}</p>
+        </article>
+      </div>
+
+      <div className="next-action-card">
+        <span>Prochaine action</span>
+        <p>{getNextActionText(request.status, quoteStatus)}</p>
+      </div>
+
+      <div className="client-timeline" aria-label="Avancement du projet">
+        {getProjectTimeline(request.status, quoteStatus).map((step) => (
+          <div className={step.isDone ? "is-done" : ""} key={step.label}>
+            <span>{step.isDone ? "✓" : "○"}</span>
+            <p>{step.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RequestDossierPanel({ request, role, session, focusTab, focusKey, onMessagesRead, onQuoteChange }) {
+  const [activeTab, setActiveTab] = useState("summary");
+  const [activeQuote, setActiveQuote] = useState(null);
+  const dossierPanelRef = useRef(null);
+  const tabs = getDossierTabs(role);
+  const hasAvailableQuote = role === "client" && activeQuote?.status === "sent";
+
+  useEffect(() => {
+    setActiveTab("summary");
+    setActiveQuote(null);
+  }, [request?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadActiveQuote = async () => {
+      if (!request?.id) {
+        return;
+      }
+
+      const { data, error } = await getLatestQuotesForRequests([request.id]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (!error) {
+        const nextQuote = data?.[request.id] ?? null;
+        setActiveQuote(role === "client" && nextQuote?.status === "draft" ? null : nextQuote);
+      }
+    };
+
+    loadActiveQuote();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [request?.id, role]);
+
+  useEffect(() => {
+    if (!request?.id || !focusTab) {
+      return;
+    }
+
+    setActiveTab(focusTab);
+
+    window.setTimeout(() => {
+      const conversationBlock = dossierPanelRef.current?.querySelector(".request-conversation");
+      scrollToElementWithHeaderOffset(conversationBlock || dossierPanelRef.current);
+    }, 120);
+  }, [focusKey, focusTab, request?.id]);
+
+  const activateTab = (tabId) => {
+    setActiveTab(tabId);
+
+    window.setTimeout(() => {
+      const target =
+        tabId === "conversation"
+          ? dossierPanelRef.current?.querySelector(".request-conversation")
+          : dossierPanelRef.current?.querySelector(".dossier-tab-panel");
+
+      scrollToElementWithHeaderOffset(target || dossierPanelRef.current);
+      target?.querySelector("textarea, button, a, input, select")?.focus();
+    }, 80);
+  };
+
+  if (!request?.id) {
+    return (
+      <section className="dashboard-section request-dossier-panel">
+        <div className="dossier-empty">
+          <span>Dossier</span>
+          <h2>Sélectionnez une demande</h2>
+          <p>Ouvrez un dossier pour consulter le résumé, les messages, les documents et les devis.</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="dashboard-section request-dossier-panel client-project-detail" ref={dossierPanelRef}>
+      <div className="dossier-panel-heading">
+        <div>
+          <span>Dossier de demande</span>
+          <h2>{getProjectReference(request)}</h2>
+        </div>
+        <strong className={`request-status ${getRequestStatusMeta(request.status).className}`}>
+          {getRequestStatusMeta(request.status).label}
+        </strong>
+      </div>
+
+      <div className="dossier-tabs" role="tablist" aria-label="Sections du dossier">
+        {tabs.map((tab) => (
+          <button
+            aria-selected={activeTab === tab.id}
+            className={`${activeTab === tab.id ? "is-active" : ""}${
+              hasAvailableQuote && tab.id === "quote" ? " has-notification" : ""
+            }`.trim()}
+            key={tab.id}
+            role="tab"
+            type="button"
+            onClick={() => activateTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {hasAvailableQuote && <p className="dossier-quote-hint">Votre devis est disponible.</p>}
+
+      <div className="dossier-tab-panel" role="tabpanel">
+        {activeTab === "summary" && <RequestSummaryPanel activeQuote={activeQuote} request={request} role={role} />}
+        {activeTab === "conversation" && (
+          <RequestConversation
+            request={request}
+            senderId={session?.user?.id}
+            senderRole={role}
+            onMessagesRead={onMessagesRead}
+          />
+        )}
+        {activeTab === "documents" && <RequestDocuments request={request} role={role} userId={session?.user?.id} />}
+        {activeTab === "quote" && (
+          <RequestQuotes
+            request={request}
+            role={role}
+            session={session}
+            onQuoteChange={(quote) => {
+              setActiveQuote(quote);
+              onQuoteChange?.(request.id, quote);
+            }}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ContactRequestsPanel({ session, userId, messageFocus, onUnreadCountChange }) {
   const [requests, setRequests] = useState([]);
+  const [selectedRequestId, setSelectedRequestId] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [quoteByRequestId, setQuoteByRequestId] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const dossierRef = useRef(null);
+
+  const loadUnreadCounts = useCallback(async (nextRequests) => {
+    const requestIds = nextRequests.map((request) => request.id).filter(Boolean);
+
+    if (requestIds.length === 0) {
+      setUnreadCounts({});
+      return;
+    }
+
+    const { data, error } = await getUnreadMessageCounts({ requestIds, viewerRole: "client" });
+
+    if (error) {
+      console.warn("CLIENT UNREAD MESSAGES ERROR:", error);
+      setUnreadCounts({});
+      return;
+    }
+
+    setUnreadCounts(data ?? {});
+  }, []);
+
+  const clearUnreadForRequest = useCallback(
+    (requestId) => {
+      setUnreadCounts((currentCounts) => ({ ...currentCounts, [requestId]: 0 }));
+      loadUnreadCounts(requests);
+    },
+    [loadUnreadCounts, requests],
+  );
+
+  useEffect(() => {
+    const totalUnread = Object.values(unreadCounts).reduce((total, count) => total + (Number(count) || 0), 0);
+    onUnreadCountChange?.(totalUnread);
+  }, [onUnreadCountChange, unreadCounts]);
+
+  const loadQuoteBadges = useCallback(async (nextRequests) => {
+    const requestIds = nextRequests.map((request) => request.id).filter(Boolean);
+
+    if (requestIds.length === 0) {
+      setQuoteByRequestId({});
+      return;
+    }
+
+    const { data, error } = await getLatestQuotesForRequests(requestIds);
+
+    if (error) {
+      console.warn("CLIENT QUOTES ERROR:", error);
+      return;
+    }
+
+    const visibleQuotes = Object.fromEntries(
+      Object.entries(data ?? {}).filter(([, quote]) => quote?.status !== "draft"),
+    );
+
+    setQuoteByRequestId(visibleQuotes);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1938,10 +2369,14 @@ function ContactRequestsPanel({ userId }) {
       }
 
       if (error) {
-        setErrorMessage(`Impossible de charger vos demandes : ${error.message}`);
+        console.error("CLIENT REQUESTS LOAD ERROR:", error);
+        setErrorMessage("Vos demandes n’ont pas pu être chargées pour le moment.");
         setRequests([]);
       } else {
-        setRequests(data ?? []);
+        const nextRequests = data ?? [];
+        setRequests(nextRequests);
+        loadUnreadCounts(nextRequests);
+        loadQuoteBadges(nextRequests);
       }
 
       setIsLoading(false);
@@ -1952,17 +2387,505 @@ function ContactRequestsPanel({ userId }) {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [loadQuoteBadges, loadUnreadCounts, userId]);
+
+  useEffect(() => {
+    if (!supabase || requests.length === 0) {
+      return undefined;
+    }
+
+    const requestIds = new Set(requests.map((request) => request.id));
+    const channel = supabase
+      .channel(`client-unread-messages:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "request_messages" },
+        (payload) => {
+          const requestId = payload.new?.request_id ?? payload.old?.request_id;
+
+          if (requestIds.has(requestId)) {
+            loadUnreadCounts(requests);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadUnreadCounts, requests, userId]);
+
+  useEffect(() => {
+    if (!supabase || requests.length === 0) {
+      return undefined;
+    }
+
+    const requestIds = new Set(requests.map((request) => request.id));
+    const channel = supabase
+      .channel(`client-quote-badges:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quotes" },
+        (payload) => {
+          const requestId = payload.new?.request_id ?? payload.old?.request_id;
+
+          if (requestIds.has(requestId)) {
+            loadQuoteBadges(requests);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadQuoteBadges, requests, userId]);
+
+  useEffect(() => {
+    if (!messageFocus?.requestId || requests.length === 0) {
+      return;
+    }
+
+    if (requests.some((request) => request.id === messageFocus.requestId)) {
+      setSelectedRequestId(messageFocus.requestId);
+    }
+  }, [messageFocus?.key, messageFocus?.requestId, requests]);
+
+  const selectedRequest = requests.find((request) => request.id === selectedRequestId);
+
+  useEffect(() => {
+    if (!selectedRequest?.id) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      scrollToElementWithHeaderOffset(dossierRef.current);
+    }, 80);
+  }, [selectedRequest?.id]);
 
   return (
-    <div className="dashboard-section">
-      <div>
-        <span>Demandes</span>
-        <h2>Vos demandes envoyées</h2>
+    <div className="client-project-space">
+      <section className="dashboard-section">
+        <div>
+          <span>Espace client</span>
+          <h2>Mes demandes envoyées</h2>
+        </div>
+
+        {isLoading && (
+          <div className="dashboard-skeleton-grid" aria-label="Chargement des demandes">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        )}
+
+        {!isLoading && errorMessage && (
+          <div className="dashboard-placeholder dashboard-error" role="status">
+            <p>{errorMessage}</p>
+          </div>
+        )}
+
+        {!isLoading && !errorMessage && requests.length === 0 && (
+          <div className="dashboard-placeholder client-empty-state">
+            <div className="client-empty-illustration" aria-hidden="true">DL</div>
+            <h3>Aucune demande n’est encore rattachée à ce compte.</h3>
+            <p>Créez une demande pour transformer une idée, un besoin ou un site existant en projet suivi.</p>
+            <a className="btn btn-primary" href="/#contact">Créer une demande</a>
+          </div>
+        )}
+
+        {!isLoading && !errorMessage && requests.length > 0 && (
+          <div className="dashboard-requests-list">
+            {requests.map((request, index) => {
+              const statusMeta = getRequestStatusMeta(request.status);
+
+              return (
+                <button
+                  className={`dashboard-request-card client-project-card${
+                    selectedRequestId === request.id ? " is-active" : ""
+                  }`}
+                  key={request.id}
+                  type="button"
+                  onClick={() => setSelectedRequestId(request.id)}
+                >
+                  <div className="request-card-header">
+                    <div>
+                      <span>{getProjectReference(request, index)}</span>
+                      <h3>{request.project_type || "Projet à préciser"}</h3>
+                      <small>{formatRequestDate(request.created_at)}</small>
+                    </div>
+                    <div className="request-card-badges">
+                      <UnreadMessageBadge count={unreadCounts[request.id]} />
+                      <QuoteNotificationBadge quote={quoteByRequestId[request.id]} role="client" />
+                      <strong className={`request-status ${statusMeta.className}`}>{statusMeta.label}</strong>
+                    </div>
+                  </div>
+                  <p>{request.message}</p>
+                  <div className="request-mini-timeline" aria-label="Avancement de la demande">
+                    {getProjectTimeline(request.status).map((step) => (
+                      <span className={step.isDone ? "is-done" : ""} key={step.label}>
+                        {step.label}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="client-detail-link">Voir le dossier</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {selectedRequest && (
+        <div ref={dossierRef}>
+          <RequestDossierPanel
+            request={selectedRequest}
+            role="client"
+            session={session}
+            focusTab={selectedRequest.id === messageFocus?.requestId ? messageFocus?.tab || "conversation" : ""}
+            focusKey={messageFocus?.key}
+            onMessagesRead={clearUnreadForRequest}
+            onQuoteChange={(requestId, quote) => {
+              setQuoteByRequestId((currentQuotes) => ({ ...currentQuotes, [requestId]: quote }));
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+const adminStatuses = ["new", "in_progress", "completed"];
+
+function AdminRequestsPanel({ session, messageFocus, onUnreadCountChange }) {
+  const [requests, setRequests] = useState([]);
+  const [selectedRequestId, setSelectedRequestId] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [quoteByRequestId, setQuoteByRequestId] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
+  const [updatingStatus, setUpdatingStatus] = useState("");
+  const dossierRef = useRef(null);
+
+  const loadUnreadCounts = useCallback(async (nextRequests) => {
+    const requestIds = nextRequests.map((request) => request.id).filter(Boolean);
+
+    if (requestIds.length === 0) {
+      setUnreadCounts({});
+      return;
+    }
+
+    const { data, error } = await getUnreadMessageCounts({ requestIds, viewerRole: "admin" });
+
+    if (error) {
+      console.warn("ADMIN UNREAD MESSAGES ERROR:", error);
+      setUnreadCounts({});
+      return;
+    }
+
+    setUnreadCounts(data ?? {});
+  }, []);
+
+  const clearUnreadForRequest = useCallback(
+    (requestId) => {
+      setUnreadCounts((currentCounts) => ({ ...currentCounts, [requestId]: 0 }));
+      loadUnreadCounts(requests);
+    },
+    [loadUnreadCounts, requests],
+  );
+
+  useEffect(() => {
+    const totalUnread = Object.values(unreadCounts).reduce((total, count) => total + (Number(count) || 0), 0);
+    onUnreadCountChange?.(totalUnread);
+  }, [onUnreadCountChange, unreadCounts]);
+
+  const loadQuoteBadges = useCallback(async (nextRequests) => {
+    const requestIds = nextRequests.map((request) => request.id).filter(Boolean);
+
+    if (requestIds.length === 0) {
+      setQuoteByRequestId({});
+      return;
+    }
+
+    const { data, error } = await getLatestQuotesForRequests(requestIds);
+
+    if (error) {
+      console.warn("ADMIN QUOTES ERROR:", error);
+      return;
+    }
+
+    setQuoteByRequestId(data ?? {});
+  }, []);
+
+  const loadRequests = async () => {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    const { data, error } = await getAllContactRequests();
+
+    if (error) {
+      console.error("ADMIN REQUESTS LOAD ERROR:", error);
+      setErrorMessage("Les demandes n’ont pas pu être chargées pour le moment.");
+      setRequests([]);
+    } else {
+      const nextRequests = data ?? [];
+      setRequests(nextRequests);
+      loadUnreadCounts(nextRequests);
+      loadQuoteBadges(nextRequests);
+    }
+
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      loadRequests();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
+  }, [loadQuoteBadges, loadUnreadCounts]);
+
+  useEffect(() => {
+    if (!supabase || requests.length === 0) {
+      return undefined;
+    }
+
+    const requestIds = new Set(requests.map((request) => request.id));
+    const channel = supabase
+      .channel("admin-unread-messages")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "request_messages" },
+        (payload) => {
+          const requestId = payload.new?.request_id ?? payload.old?.request_id;
+
+          if (requestIds.has(requestId)) {
+            loadUnreadCounts(requests);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadUnreadCounts, requests]);
+
+  useEffect(() => {
+    if (!supabase || requests.length === 0) {
+      return undefined;
+    }
+
+    const requestIds = new Set(requests.map((request) => request.id));
+    const channel = supabase
+      .channel("admin-quote-badges")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "quotes" },
+        (payload) => {
+          const requestId = payload.new?.request_id ?? payload.old?.request_id;
+
+          if (requestIds.has(requestId)) {
+            loadQuoteBadges(requests);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadQuoteBadges, requests]);
+
+  const updateStatus = async (requestId, status) => {
+    setUpdatingId(requestId);
+    setUpdatingStatus(status);
+    setErrorMessage("");
+
+    const { error } = await updateContactRequestStatus({ requestId, status });
+
+    if (error) {
+      console.error(error);
+      setErrorMessage("Le statut n’a pas pu être mis à jour.");
+      setToastMessage("Le statut n’a pas pu être mis à jour.");
+    } else {
+      setRequests((currentRequests) =>
+        currentRequests.map((request) => (request.id === requestId ? { ...request, status } : request)),
+      );
+    }
+
+    setUpdatingId("");
+    setUpdatingStatus("");
+  };
+
+  const stats = {
+    total: requests.length,
+    new: requests.filter((request) => (request.status || "new") === "new").length,
+    in_progress: requests.filter((request) => request.status === "in_progress").length,
+    completed: requests.filter((request) => request.status === "completed").length,
+  };
+  const filteredRequests = requests
+    .filter((request) => {
+      const searchableContent = [request.name, request.email, request.company, request.project_type, request.message]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const matchesSearch = searchableContent.includes(searchTerm.trim().toLowerCase());
+      const matchesStatus = statusFilter === "all" || (request.status || "new") === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((firstRequest, secondRequest) => {
+      const firstDate = new Date(firstRequest.created_at).getTime();
+      const secondDate = new Date(secondRequest.created_at).getTime();
+
+      if (sortOrder === "asc") {
+        return firstDate - secondDate;
+      }
+
+      if (sortOrder === "client") {
+        return (firstRequest.name || "").localeCompare(secondRequest.name || "", "fr", { sensitivity: "base" });
+      }
+
+      if (sortOrder === "project") {
+        return (firstRequest.project_type || "").localeCompare(secondRequest.project_type || "", "fr", {
+          sensitivity: "base",
+        });
+      }
+
+      if (sortOrder === "status") {
+        return (firstRequest.status || "new").localeCompare(secondRequest.status || "new", "fr", {
+          sensitivity: "base",
+        });
+      }
+
+      return secondDate - firstDate;
+    });
+  const requestsPerPage = 10;
+  const totalPages = Math.ceil(filteredRequests.length / requestsPerPage);
+  const visibleRequests = filteredRequests.slice((currentPage - 1) * requestsPerPage, currentPage * requestsPerPage);
+  const selectedRequest = requests.find((request) => request.id === selectedRequestId);
+  const activeMessageFocusTab =
+    selectedRequest?.id && selectedRequest.id === messageFocus?.requestId ? messageFocus?.tab || "conversation" : "";
+  const openDossier = (requestId) => {
+    setSelectedRequestId(requestId);
+    window.setTimeout(() => {
+      dossierRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  useEffect(() => {
+    if (!messageFocus?.requestId || requests.length === 0) {
+      return;
+    }
+
+    if (requests.some((request) => request.id === messageFocus.requestId)) {
+      openDossier(messageFocus.requestId);
+    }
+  }, [messageFocus?.key, messageFocus?.requestId, requests]);
+
+  return (
+    <div className="dashboard-section admin-requests-section">
+      {toastMessage && (
+        <div className="admin-inline-toast" role="status">
+          <span>{toastMessage}</span>
+          <button type="button" onClick={() => setToastMessage("")} aria-label="Fermer l’erreur">
+            ×
+          </button>
+        </div>
+      )}
+
+      <div className="admin-section-heading">
+        <div>
+          <span>Demandes clients</span>
+          <h2>Toutes les demandes reçues</h2>
+        </div>
+        <button className="dashboard-refresh-button" type="button" onClick={loadRequests} disabled={isLoading}>
+          Actualiser
+        </button>
+      </div>
+
+      <div className="admin-stats-grid">
+        <article>
+          <span>Total demandes</span>
+          <strong>{stats.total}</strong>
+        </article>
+        <article>
+          <span>Nouvelles</span>
+          <strong>{stats.new}</strong>
+        </article>
+        <article>
+          <span>En cours</span>
+          <strong>{stats.in_progress}</strong>
+        </article>
+        <article>
+          <span>Terminées</span>
+          <strong>{stats.completed}</strong>
+        </article>
+      </div>
+
+      <div className="admin-crm-controls">
+        <label>
+          Recherche rapide
+          <input
+            type="search"
+            value={searchTerm}
+            placeholder="Rechercher un client, un email ou un projet..."
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </label>
+        <div className="admin-filter-group">
+          <span>Filtrer par statut</span>
+          <div className="admin-filter-tabs" aria-label="Filtrer par statut">
+            {[
+              ["all", "Toutes"],
+              ["new", "Nouvelles"],
+              ["in_progress", "En cours"],
+              ["completed", "Terminées"],
+            ].map(([value, label]) => (
+              <button
+                className={statusFilter === value ? "is-selected" : ""}
+              key={value}
+              type="button"
+              onClick={() => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}
+            >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label>
+          Tri
+          <select
+            value={sortOrder}
+            onChange={(event) => {
+              setSortOrder(event.target.value);
+              setCurrentPage(1);
+            }}
+          >
+            <option value="desc">Plus récentes</option>
+            <option value="asc">Plus anciennes</option>
+            <option value="client">Nom du client</option>
+            <option value="project">Projet</option>
+            <option value="status">Statut</option>
+          </select>
+        </label>
       </div>
 
       {isLoading && (
-        <div className="dashboard-skeleton-grid" aria-label="Chargement des demandes">
+        <div className="dashboard-skeleton-grid" aria-label="Chargement des demandes admin">
           <span></span>
           <span></span>
           <span></span>
@@ -1977,40 +2900,193 @@ function ContactRequestsPanel({ userId }) {
 
       {!isLoading && !errorMessage && requests.length === 0 && (
         <div className="dashboard-placeholder">
-          <p>
-            Aucune demande n’est encore rattachée à ce compte. Lorsque vous envoyez le formulaire de contact en étant
-            connecté, vos demandes apparaissent ici.
-          </p>
+          <p>Aucune demande client n’a encore été envoyée.</p>
         </div>
       )}
 
-      {!isLoading && !errorMessage && requests.length > 0 && (
-        <div className="dashboard-requests-list">
-          {requests.map((request) => {
-            const statusMeta = getRequestStatusMeta(request.status);
+      {!isLoading && !errorMessage && requests.length > 0 && filteredRequests.length === 0 && (
+        <div className="dashboard-placeholder">
+          <p>Aucune demande ne correspond à ces critères.</p>
+        </div>
+      )}
 
-            return (
-              <article className="dashboard-request-card" key={request.id}>
-                <div className="request-card-header">
-                  <div>
-                    <span>{formatRequestDate(request.created_at)}</span>
-                    <h3>{request.project_type || "Projet à préciser"}</h3>
+      {!isLoading && filteredRequests.length > 0 && (
+        <div className="admin-crm-workspace">
+          <div className="admin-requests-list">
+            {visibleRequests.map((request, index) => {
+              const statusMeta = getRequestStatusMeta(request.status);
+
+              return (
+                <article
+                  className={`admin-request-card${selectedRequestId === request.id ? " is-active" : ""}`}
+                  key={request.id}
+                >
+                  <div className="admin-request-main">
+                    <div className="request-card-header">
+                      <div>
+                        <span>{getProjectReference(request, index + (currentPage - 1) * requestsPerPage)}</span>
+                        <h3>{request.project_type || "Projet à préciser"}</h3>
+                        <small>{formatRequestDate(request.created_at)}</small>
+                      </div>
+                      <div className="request-card-badges">
+                        <UnreadMessageBadge count={unreadCounts[request.id]} />
+                        <QuoteNotificationBadge quote={quoteByRequestId[request.id]} role="admin" />
+                        <QuoteBadge quote={quoteByRequestId[request.id]} />
+                        <strong className={`request-status ${statusMeta.className}`}>{statusMeta.label}</strong>
+                      </div>
+                    </div>
+
+                    <p>{request.message}</p>
                   </div>
-                  <strong className={`request-status ${statusMeta.className}`}>{statusMeta.label}</strong>
-                </div>
-                <p>{request.message}</p>
-              </article>
-            );
-          })}
+
+                  <div className="admin-request-meta">
+                    <div>
+                      <span>Client</span>
+                      <strong>{request.name || "Nom non renseigné"}</strong>
+                    </div>
+                    <div>
+                      <span>Email</span>
+                      <a href={`mailto:${request.email}`}>{request.email || "Email non renseigné"}</a>
+                    </div>
+                    {request.company && (
+                      <div>
+                        <span>Structure</span>
+                        <strong>{request.company}</strong>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="admin-status-actions" aria-label={`Changer le statut de ${request.name || "la demande"}`}>
+                    <button className="admin-open-dossier" type="button" onClick={() => openDossier(request.id)}>
+                      Ouvrir le dossier
+                    </button>
+                    {adminStatuses.map((status) => (
+                    <button
+                      className={request.status === status ? "is-selected" : ""}
+                      key={status}
+                      type="button"
+                      disabled={updatingId === request.id}
+                      onClick={() => updateStatus(request.id, status)}
+                    >
+                      {updatingId === request.id && updatingStatus === status
+                        ? "Mise à jour..."
+                        : getRequestStatusMeta(status).label}
+                    </button>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
       )}
+
+      {totalPages > 1 && (
+        <nav className="admin-pagination" aria-label="Pagination demandes admin">
+          <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage((page) => page - 1)}>
+            &lt; Précédent
+          </button>
+          {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
+            <button
+              className={currentPage === page ? "is-selected" : ""}
+              key={page}
+              type="button"
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            type="button"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((page) => page + 1)}
+          >
+            Suivant &gt;
+          </button>
+        </nav>
+      )}
+
+      <div className="admin-dossier-anchor" ref={dossierRef}>
+        <RequestDossierPanel
+          request={selectedRequest}
+          role="admin"
+          session={session}
+          focusTab={activeMessageFocusTab}
+          focusKey={messageFocus?.key}
+          onMessagesRead={clearUnreadForRequest}
+          onQuoteChange={(requestId, quote) => {
+            setQuoteByRequestId((currentQuotes) => ({ ...currentQuotes, [requestId]: quote }));
+          }}
+        />
+      </div>
     </div>
   );
 }
 
-function ClientAreaPage({ session, onAuthOpen, onLogout, isAuthLoading }) {
+function AdminDashboardPage({ session, isAuthLoading, profileError, messageFocus, onUnreadCountChange }) {
+  const displayName = getUserDisplayName(session);
+
+  return (
+    <main className="client-page admin-page fade-in-page">
+      <section className="client-hero admin-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <div className="client-panel admin-panel">
+            <span>Administration</span>
+            {isAuthLoading ? (
+              <>
+                <h1>Chargement de l’espace admin...</h1>
+                <p>Vérification de votre session et de vos permissions.</p>
+                <div className="dashboard-skeleton-grid" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </>
+            ) : profileError ? (
+              <>
+                <h1>Accès admin à vérifier</h1>
+                <p>
+                  La lecture du profil a échoué. Vérifiez que la policy RLS autorise l’utilisateur connecté à lire sa
+                  ligne dans `profiles`.
+                </p>
+                <div className="dashboard-placeholder dashboard-error" role="status">
+                  <p>{profileError}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1>Bonjour {displayName}</h1>
+                <p>
+                  Gérez les demandes envoyées depuis le site Digital Lab, suivez leur statut et priorisez les réponses
+                  clients.
+                </p>
+                <AdminRequestsPanel
+                  session={session}
+                  messageFocus={messageFocus}
+                  onUnreadCountChange={onUnreadCountChange}
+                />
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function ClientAreaPage({ session, onAuthOpen, onLogout, isAuthLoading, messageFocus, onUnreadCountChange }) {
+  const [clientUnreadMessageCount, setClientUnreadMessageCount] = useState(0);
   const userEmail = session?.user?.email;
   const displayName = getUserDisplayName(session);
+  const updateClientUnreadMessageCount = useCallback(
+    (count) => {
+      const nextCount = Number(count) || 0;
+      setClientUnreadMessageCount(nextCount);
+      onUnreadCountChange?.(nextCount);
+    },
+    [onUnreadCountChange],
+  );
 
   return (
     <main className="client-page fade-in-page">
@@ -2033,8 +3109,8 @@ function ClientAreaPage({ session, onAuthOpen, onLogout, isAuthLoading }) {
               <>
                 <h1>Bonjour {displayName}</h1>
                 <p>
-                  Bienvenue dans votre tableau de bord Digital Lab. Cet espace permettra de suivre vos demandes,
-                  projets, documents et prochaines étapes.
+                  Bienvenue dans votre espace Digital Lab. Vous pouvez suivre chaque étape de vos projets, consulter
+                  les prochaines actions et retrouver vos demandes au même endroit.
                 </p>
 
                 <div className="client-info-grid">
@@ -2066,7 +3142,12 @@ function ClientAreaPage({ session, onAuthOpen, onLogout, isAuthLoading }) {
                   </div>
                 </div>
 
-                <ContactRequestsPanel userId={session.user.id} />
+                <ContactRequestsPanel
+                  session={session}
+                  userId={session.user.id}
+                  messageFocus={messageFocus}
+                  onUnreadCountChange={updateClientUnreadMessageCount}
+                />
               </>
             ) : (
               <>
@@ -2168,7 +3249,7 @@ function AuthModal({ onClose }) {
     }
 
     if (mode === "signup") {
-      setMessage("Compte créé. Vérifiez votre email si la confirmation est activée dans Supabase.");
+      setMessage("Compte créé. Vérifiez votre email si une confirmation vous est demandée.");
       showAuthToast("Compte créé. Vérifiez votre email si besoin.");
       setIsLoading(false);
       return;
@@ -2218,13 +3299,13 @@ function AuthModal({ onClose }) {
 
         {!isSupabaseConfigured && (
           <div className="auth-message is-error">
-            Ajoutez `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` pour activer Supabase Auth.
+            La connexion n’est pas disponible pour le moment.
           </div>
         )}
 
         <button className="auth-google-button" type="button" onClick={handleGoogleSignIn} disabled={isLoading}>
           <span aria-hidden="true">G</span>
-          Sign in with Google
+          Continuer avec Google
         </button>
 
         <div className="auth-divider">
@@ -2258,7 +3339,7 @@ function AuthModal({ onClose }) {
           </label>
 
           <button className="btn btn-primary auth-submit" type="submit" disabled={isLoading}>
-            {isLoading ? "Traitement..." : mode === "signup" ? "Créer mon compte" : "Se connecter"}
+            {isLoading ? "Connexion en cours..." : mode === "signup" ? "Créer mon compte" : "Se connecter"}
           </button>
         </form>
 
@@ -2317,13 +3398,33 @@ function LoginPage({ onAuthOpen }) {
   );
 }
 
-function SiteHeader({ onNavigate, pathname, session, onLogout }) {
+function SiteHeader({
+  onNavigate,
+  pathname,
+  session,
+  isAdmin,
+  clientUnreadMessageCount = 0,
+  adminUnreadMessageCount = 0,
+  onClientUnreadBadgeClick,
+  onAdminUnreadBadgeClick,
+  onLogout,
+}) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("");
   const visibleActiveHref = pathname === "/" ? activeHref : "";
   const userEmail = session?.user?.email;
   const userDisplayName = getUserDisplayName(session);
+  const hasClientUnreadMessages = Boolean(session && !isAdmin && clientUnreadMessageCount > 0);
+  const hasAdminUnreadMessages = Boolean(session && isAdmin && adminUnreadMessageCount > 0);
+  const clientUnreadTooltip =
+    clientUnreadMessageCount > 1
+      ? `Vous avez ${clientUnreadMessageCount} nouveaux messages`
+      : "Vous avez 1 nouveau message";
+  const adminUnreadTooltip =
+    adminUnreadMessageCount > 1
+      ? `${adminUnreadMessageCount} nouveaux messages client`
+      : "1 nouveau message client";
 
   const handleNavigate = (event, target) => {
     event.preventDefault();
@@ -2429,15 +3530,75 @@ function SiteHeader({ onNavigate, pathname, session, onLogout }) {
             <div className="navbar-auth-state">
               <span title={userEmail}>{userDisplayName}</span>
               <button
-                className="navbar-client-button"
+                className={`navbar-client-button${hasClientUnreadMessages ? " has-unread" : ""}`}
                 type="button"
+                title={hasClientUnreadMessages ? clientUnreadTooltip : undefined}
                 onClick={() => {
                   setIsMenuOpen(false);
                   onNavigate("/dashboard");
                 }}
               >
                 Espace client
+                {hasClientUnreadMessages && (
+                  <span
+                    className="navbar-notification-badge is-clickable"
+                    aria-label={clientUnreadTooltip}
+                    role="button"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIsMenuOpen(false);
+                      onClientUnreadBadgeClick?.();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setIsMenuOpen(false);
+                        onClientUnreadBadgeClick?.();
+                      }
+                    }}
+                  >
+                    {clientUnreadMessageCount > 9 ? "9+" : clientUnreadMessageCount}
+                  </span>
+                )}
               </button>
+              {isAdmin && (
+                <button
+                  className={`navbar-admin-button${hasAdminUnreadMessages ? " has-unread" : ""}`}
+                  type="button"
+                  title={hasAdminUnreadMessages ? adminUnreadTooltip : undefined}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onNavigate("/admin");
+                  }}
+                >
+                  Admin
+                  {hasAdminUnreadMessages && (
+                    <span
+                      className="navbar-notification-badge is-clickable"
+                      aria-label={adminUnreadTooltip}
+                      role="button"
+                      tabIndex={0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setIsMenuOpen(false);
+                        onAdminUnreadBadgeClick?.();
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setIsMenuOpen(false);
+                          onAdminUnreadBadgeClick?.();
+                        }
+                      }}
+                    >
+                      {adminUnreadMessageCount > 9 ? "9+" : adminUnreadMessageCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
                 className="navbar-logout-button"
                 type="button"
@@ -2484,8 +3645,97 @@ function App() {
   const [pathname, setPathname] = useState(() => normalizePathname(window.location.pathname));
   const [selectedProject, setSelectedProject] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [profileRole, setProfileRole] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [clientUnreadMessageCount, setClientUnreadMessageCount] = useState(0);
+  const [clientUnreadRequestId, setClientUnreadRequestId] = useState("");
+  const [clientMessageFocus, setClientMessageFocus] = useState(null);
+  const [adminUnreadMessageCount, setAdminUnreadMessageCount] = useState(0);
+  const [adminUnreadRequestId, setAdminUnreadRequestId] = useState("");
+  const [adminMessageFocus, setAdminMessageFocus] = useState(null);
+  const [isMobileCtaVisible, setIsMobileCtaVisible] = useState(false);
   const previousPageRef = useRef("/");
   const activeProject = getProjectFromPath(pathname);
+  const isAdmin = profileRole === "admin";
+
+  const loadClientUnreadMessageCount = useCallback(async () => {
+    if (!session?.user?.id || isAdmin) {
+      setClientUnreadMessageCount(0);
+      setClientUnreadRequestId("");
+      return;
+    }
+
+    const { data: clientRequests, error: requestsError } = await getContactRequestsForUser(session.user.id);
+
+    if (requestsError) {
+      console.warn("CLIENT NAV UNREAD REQUESTS ERROR:", requestsError);
+      setClientUnreadMessageCount(0);
+      setClientUnreadRequestId("");
+      return;
+    }
+
+    const requestIds = (clientRequests ?? []).map((request) => request.id).filter(Boolean);
+
+    if (requestIds.length === 0) {
+      setClientUnreadMessageCount(0);
+      setClientUnreadRequestId("");
+      return;
+    }
+
+    const { data, error } = await getUnreadMessageCounts({ requestIds, viewerRole: "client" });
+
+    if (error) {
+      console.warn("CLIENT NAV UNREAD MESSAGES ERROR:", error);
+      setClientUnreadMessageCount(0);
+      setClientUnreadRequestId("");
+      return;
+    }
+
+    const totalUnread = Object.values(data ?? {}).reduce((total, count) => total + (Number(count) || 0), 0);
+    const firstUnreadRequestId = requestIds.find((requestId) => Number(data?.[requestId]) > 0) ?? "";
+    setClientUnreadMessageCount(totalUnread);
+    setClientUnreadRequestId(firstUnreadRequestId);
+  }, [isAdmin, session?.user?.id]);
+
+  const loadAdminUnreadMessageCount = useCallback(async () => {
+    if (!session?.user?.id || !isAdmin) {
+      setAdminUnreadMessageCount(0);
+      setAdminUnreadRequestId("");
+      return;
+    }
+
+    const { data: allRequests, error: requestsError } = await getAllContactRequests();
+
+    if (requestsError) {
+      console.warn("ADMIN NAV UNREAD REQUESTS ERROR:", requestsError);
+      setAdminUnreadMessageCount(0);
+      setAdminUnreadRequestId("");
+      return;
+    }
+
+    const requestIds = (allRequests ?? []).map((request) => request.id).filter(Boolean);
+
+    if (requestIds.length === 0) {
+      setAdminUnreadMessageCount(0);
+      setAdminUnreadRequestId("");
+      return;
+    }
+
+    const { data, error } = await getUnreadMessageCounts({ requestIds, viewerRole: "admin" });
+
+    if (error) {
+      console.warn("ADMIN NAV UNREAD MESSAGES ERROR:", error);
+      setAdminUnreadMessageCount(0);
+      setAdminUnreadRequestId("");
+      return;
+    }
+
+    const totalUnread = Object.values(data ?? {}).reduce((total, count) => total + (Number(count) || 0), 0);
+    const firstUnreadRequestId = requestIds.find((requestId) => Number(data?.[requestId]) > 0) ?? "";
+    setAdminUnreadMessageCount(totalUnread);
+    setAdminUnreadRequestId(firstUnreadRequestId);
+  }, [isAdmin, session?.user?.id]);
 
   const navigate = (target) => {
     if (isExternalLink(target)) {
@@ -2498,12 +3748,38 @@ function App() {
 
     if (target.includes("#") && window.location.hash) {
       window.setTimeout(() => {
-        document.querySelector(window.location.hash)?.scrollIntoView({ behavior: "smooth" });
+        scrollToElementWithHeaderOffset(window.location.hash);
       }, 0);
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+
+  const openClientUnreadMessages = useCallback(() => {
+    if (!clientUnreadRequestId) {
+      return;
+    }
+
+    setClientMessageFocus({
+      requestId: clientUnreadRequestId,
+      tab: "conversation",
+      key: Date.now(),
+    });
+    navigate("/dashboard");
+  }, [clientUnreadRequestId]);
+
+  const openAdminUnreadMessages = useCallback(() => {
+    if (!adminUnreadRequestId) {
+      return;
+    }
+
+    setAdminMessageFocus({
+      requestId: adminUnreadRequestId,
+      tab: "conversation",
+      key: Date.now(),
+    });
+    navigate("/admin");
+  }, [adminUnreadRequestId]);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -2516,13 +3792,110 @@ function App() {
 
   const handleLogout = async () => {
     await logout();
-    if (pathname === "/dashboard" || pathname === "/espace-client") {
+    if (pathname === "/dashboard" || pathname === "/espace-client" || pathname === "/admin") {
       navigate("/");
     }
   };
 
   const isDashboardPath = pathname === "/dashboard" || pathname === "/espace-client";
   const isLoginPath = pathname === "/login";
+  const isAdminPath = pathname === "/admin";
+
+  useEffect(() => {
+    let isMounted = true;
+    let profileTimer = 0;
+
+    profileTimer = window.setTimeout(async () => {
+      setIsProfileLoading(true);
+
+      const { data: sessionData, error: sessionError } = await getCurrentSession();
+      const currentSession = sessionData?.session ?? session;
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (sessionError || !currentSession?.user?.id) {
+        console.log("ADMIN CHECK user id:", currentSession?.user?.id ?? "none");
+        console.log("ADMIN CHECK email:", currentSession?.user?.email ?? "none");
+        console.log("ADMIN CHECK profile:", null);
+        console.log("ADMIN CHECK role:", undefined);
+        setProfileRole("");
+        setProfileError(sessionError?.message ?? "");
+        setIsProfileLoading(false);
+        return;
+      }
+
+      const { data, error } = await getProfileForUser(currentSession.user.id);
+
+      if (!isMounted) {
+        return;
+      }
+
+      const profile = error ? null : data;
+      const nextRole = profile?.role ?? "";
+
+      console.log("ADMIN CHECK user id:", currentSession.user.id);
+      console.log("ADMIN CHECK email:", currentSession.user.email);
+      console.log("ADMIN CHECK profile:", profile);
+      console.log("ADMIN CHECK role:", profile?.role);
+
+      if (error) {
+        console.error("Profile role fetch failed:", error.message);
+      }
+
+      setProfileRole(nextRole);
+      setProfileError(error?.message ?? "");
+      setIsProfileLoading(false);
+    }, 0);
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(profileTimer);
+    };
+  }, [isAdminPath, session]);
+
+  useEffect(() => {
+    loadClientUnreadMessageCount();
+  }, [loadClientUnreadMessageCount]);
+
+  useEffect(() => {
+    loadAdminUnreadMessageCount();
+  }, [loadAdminUnreadMessageCount]);
+
+  useEffect(() => {
+    if (!supabase || !session?.user?.id || isAdmin) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel(`client-nav-unread-messages:${session.user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "request_messages" }, () => {
+        loadClientUnreadMessageCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, loadClientUnreadMessageCount, session?.user?.id]);
+
+  useEffect(() => {
+    if (!supabase || !session?.user?.id || !isAdmin) {
+      return undefined;
+    }
+
+    const channel = supabase
+      .channel(`admin-nav-unread-messages:${session.user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "request_messages" }, () => {
+        loadAdminUnreadMessageCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, loadAdminUnreadMessageCount, session?.user?.id]);
 
   const closeAuthModal = () => {
     setIsAuthOpen(false);
@@ -2551,14 +3924,29 @@ function App() {
       }, 0);
     }
 
+    if (!isAuthLoading && !isProfileLoading && isAdminPath && !session) {
+      window.history.replaceState({}, "", "/login");
+      redirectTimer = window.setTimeout(() => {
+        setPathname("/login");
+        setIsAuthOpen(true);
+      }, 0);
+    }
+
+    if (!isAuthLoading && !isProfileLoading && isAdminPath && session && !profileError && !isAdmin) {
+      window.history.replaceState({}, "", "/dashboard");
+      redirectTimer = window.setTimeout(() => {
+        setPathname("/dashboard");
+      }, 0);
+    }
+
     return () => window.clearTimeout(redirectTimer);
-  }, [isAuthLoading, isDashboardPath, isLoginPath, session]);
+  }, [isAdmin, isAdminPath, isAuthLoading, isDashboardPath, isLoginPath, isProfileLoading, profileError, session]);
 
   useEffect(() => {
-    if (!isLoginPath && !isDashboardPath) {
+    if (!isLoginPath && !isDashboardPath && !isAdminPath) {
       previousPageRef.current = pathname;
     }
-  }, [isDashboardPath, isLoginPath, pathname]);
+  }, [isAdminPath, isDashboardPath, isLoginPath, pathname]);
 
   useEffect(() => {
     let modalTimer = 0;
@@ -2603,6 +3991,45 @@ function App() {
     return () => observer.disconnect();
   }, [pathname]);
 
+  useEffect(() => {
+    if (pathname !== "/") {
+      setIsMobileCtaVisible(false);
+      return undefined;
+    }
+
+    let animationFrame = 0;
+
+    const updateMobileCta = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        const hero = document.querySelector(".hero");
+        const contact = document.getElementById("contact");
+
+        if (!hero || !contact || window.innerWidth > 768) {
+          setIsMobileCtaVisible(false);
+          return;
+        }
+
+        const heroBottom = hero.getBoundingClientRect().bottom;
+        const contactTop = contact.getBoundingClientRect().top;
+        const hasPassedHero = heroBottom < window.innerHeight * 0.72;
+        const isNearContact = contactTop < window.innerHeight * 0.78;
+
+        setIsMobileCtaVisible(hasPassedHero && !isNearContact);
+      });
+    };
+
+    updateMobileCta();
+    window.addEventListener("scroll", updateMobileCta, { passive: true });
+    window.addEventListener("resize", updateMobileCta);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("scroll", updateMobileCta);
+      window.removeEventListener("resize", updateMobileCta);
+    };
+  }, [pathname]);
+
   if (pathname.startsWith("/projects/")) {
     return (
       <>
@@ -2610,6 +4037,11 @@ function App() {
           onNavigate={navigate}
           pathname={pathname}
           session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
           onAuthOpen={() => setIsAuthOpen(true)}
           onLogout={handleLogout}
         />
@@ -2630,11 +4062,58 @@ function App() {
           onNavigate={navigate}
           pathname={pathname}
           session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
           onAuthOpen={() => setIsAuthOpen(true)}
           onLogout={handleLogout}
         />
 
         <LegalNoticePage onNavigate={navigate} />
+
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
+  if (isAdminPath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        {isAdmin || isAuthLoading || isProfileLoading || profileError ? (
+          <AdminDashboardPage
+            session={session}
+            isAuthLoading={isAuthLoading || isProfileLoading}
+            profileError={profileError}
+            messageFocus={adminMessageFocus}
+            onUnreadCountChange={setAdminUnreadMessageCount}
+          />
+        ) : (
+          <ClientAreaPage
+            session={session}
+            isAuthLoading={isAuthLoading}
+            messageFocus={clientMessageFocus}
+            onUnreadCountChange={setClientUnreadMessageCount}
+            onAuthOpen={() => setIsAuthOpen(true)}
+            onLogout={handleLogout}
+          />
+        )}
 
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
@@ -2650,6 +4129,11 @@ function App() {
           onNavigate={navigate}
           pathname={pathname}
           session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
           onAuthOpen={() => setIsAuthOpen(true)}
           onLogout={handleLogout}
         />
@@ -2657,6 +4141,8 @@ function App() {
         <ClientAreaPage
           session={session}
           isAuthLoading={isAuthLoading}
+          messageFocus={clientMessageFocus}
+          onUnreadCountChange={setClientUnreadMessageCount}
           onAuthOpen={() => setIsAuthOpen(true)}
           onLogout={handleLogout}
         />
@@ -2675,6 +4161,11 @@ function App() {
           onNavigate={navigate}
           pathname={pathname}
           session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
           onAuthOpen={() => setIsAuthOpen(true)}
           onLogout={handleLogout}
         />
@@ -2694,6 +4185,11 @@ function App() {
         onNavigate={navigate}
         pathname={pathname}
         session={session}
+        isAdmin={isAdmin}
+        clientUnreadMessageCount={clientUnreadMessageCount}
+        adminUnreadMessageCount={adminUnreadMessageCount}
+        onClientUnreadBadgeClick={openClientUnreadMessages}
+        onAdminUnreadBadgeClick={openAdminUnreadMessages}
         onAuthOpen={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
       />
@@ -2996,7 +4492,7 @@ function App() {
                       stat.label
                     )}
                   </strong>
-                  {typeof stat.value === "number" && <p>{stat.label}</p>}
+                  {(stat.text || typeof stat.value === "number") && <p>{stat.text || stat.label}</p>}
                 </article>
               ))}
             </div>
@@ -3125,6 +4621,43 @@ function App() {
           </div>
         </section>
 
+        <section className="section included-section reveal-on-scroll reveal-section">
+          <div className="section-inner">
+            <div className="section-heading">
+              <span>Inclus</span>
+              <h2>Ce qui est inclus dans chaque projet</h2>
+              <p>
+                Chaque projet est livré prêt à être utilisé, avec les bonnes pratiques essentielles déjà intégrées.
+              </p>
+            </div>
+
+            <div className="included-grid">
+              {includedProjectItems.map((item, index) => (
+                <article
+                  className="included-card reveal-on-scroll reveal-card"
+                  key={item.title}
+                  style={{ "--reveal-delay": `${index * 70}ms` }}
+                >
+                  <span className="included-icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="included-reassurance reveal-on-scroll reveal-card" style={{ "--reveal-delay": "420ms" }}>
+              <div aria-label="Garanties incluses">
+                <span>✓ Pas de coûts cachés</span>
+                <span>✓ Bonnes pratiques intégrées</span>
+                <span>✓ Solution prête à évoluer</span>
+              </div>
+              <p>Vous recevez une solution professionnelle pensée pour durer, et non simplement une page web.</p>
+            </div>
+          </div>
+        </section>
+
         <section className="section contact-section reveal-on-scroll reveal-section" id="contact">
           <div className="section-inner contact-panel reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
             <div className="contact-copy">
@@ -3181,6 +4714,17 @@ function App() {
           </div>
         </section>
       </main>
+
+      <a
+        className={`mobile-sticky-cta${isMobileCtaVisible ? " is-visible" : ""}`}
+        href="/#contact"
+        onClick={(event) => {
+          event.preventDefault();
+          navigate("/#contact");
+        }}
+      >
+        Parler de mon projet
+      </a>
 
       <SiteFooter onNavigate={navigate} />
       {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
