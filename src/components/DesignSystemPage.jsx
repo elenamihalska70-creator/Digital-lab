@@ -37,6 +37,34 @@ const backgroundPreviews = [
   { title: "Gradient hero background", className: "is-hero-gradient" },
 ];
 
+const glowLibrary = [
+  {
+    title: "Hero Glow XL",
+    size: "1600 × 900 px",
+    className: "is-hero-xl",
+  },
+  {
+    title: "Hero Glow Medium",
+    size: "900 × 520 px",
+    className: "is-hero-medium",
+  },
+  {
+    title: "Card Glow",
+    size: "520 × 360 px",
+    className: "is-card-glow",
+  },
+  {
+    title: "Button Glow",
+    size: "420 × 180 px",
+    className: "is-button-glow",
+  },
+  {
+    title: "Background Ambient Glow",
+    size: "1920 × 1080 px",
+    className: "is-ambient-glow",
+  },
+];
+
 const socialAssets = [
   {
     title: "LinkedIn carousel cover",
@@ -171,6 +199,20 @@ export function DesignSystemPage() {
             {backgroundPreviews.map((preview) => (
               <article className={`design-system-background-preview ${preview.className}`} key={preview.title}>
                 <span>{preview.title}</span>
+              </article>
+            ))}
+          </div>
+        </DesignSystemSection>
+
+        <DesignSystemSection eyebrow="Export backgrounds" title="Glow Library">
+          <div className="design-system-glow-grid">
+            {glowLibrary.map((glow) => (
+              <article className="design-system-glow-card" key={glow.title}>
+                <div className={`design-system-glow-preview ${glow.className}`} aria-hidden="true"></div>
+                <div>
+                  <h3>{glow.title}</h3>
+                  <p>{glow.size}</p>
+                </div>
               </article>
             ))}
           </div>

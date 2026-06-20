@@ -117,6 +117,7 @@
 .design-system-color-card,
 .design-system-type-card,
 .design-system-background-preview,
+.design-system-glow-card,
 .design-system-social-preview,
 .design-system-export-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -300,6 +301,78 @@
     linear-gradient(180deg, #07030f, #141022);
 }
 
+.design-system-glow-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.design-system-glow-card {
+  display: grid;
+  gap: 16px;
+  min-height: 290px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.design-system-glow-preview {
+  min-height: 190px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background-color: #07030f;
+  background-repeat: no-repeat;
+}
+
+.design-system-glow-preview.is-hero-xl {
+  background-image:
+    radial-gradient(circle at 50% 44%, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.1) 22%, transparent 62%);
+  background-size: 160% 140%;
+  background-position: center;
+}
+
+.design-system-glow-preview.is-hero-medium {
+  background-image:
+    radial-gradient(circle at 50% 48%, rgba(139, 92, 246, 0.18) 0%, rgba(168, 85, 247, 0.08) 24%, transparent 58%);
+  background-size: 115% 100%;
+  background-position: center;
+}
+
+.design-system-glow-preview.is-card-glow {
+  background-image:
+    radial-gradient(circle at 50% 56%, rgba(139, 92, 246, 0.14) 0%, rgba(168, 85, 247, 0.06) 22%, transparent 54%);
+  background-size: 90% 76%;
+  background-position: center;
+}
+
+.design-system-glow-preview.is-button-glow {
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(139, 92, 246, 0.22) 0%, rgba(168, 85, 247, 0.12) 24%, transparent 62%);
+  background-size: 92% 42%;
+  background-position: center;
+}
+
+.design-system-glow-preview.is-ambient-glow {
+  background-image:
+    radial-gradient(circle at 44% 46%, rgba(139, 92, 246, 0.12) 0%, rgba(168, 85, 247, 0.07) 32%, transparent 76%);
+  background-size: 210% 180%;
+  background-position: center;
+}
+
+.design-system-glow-card h3 {
+  margin: 0 0 7px;
+  color: #ffffff;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.design-system-glow-card p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .design-system-social-grid {
   display: grid;
   grid-template-columns: 1.35fr 1fr 0.72fr;
@@ -410,6 +483,7 @@
 
   .design-system-color-grid,
   .design-system-preview-grid,
+  .design-system-glow-grid,
   .design-system-export-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -450,6 +524,7 @@
 
   .design-system-color-grid,
   .design-system-preview-grid,
+  .design-system-glow-grid,
   .design-system-export-grid {
     grid-template-columns: 1fr;
   }
@@ -461,6 +536,14 @@
 
   .design-system-background-preview {
     min-height: 180px;
+  }
+
+  .design-system-glow-card {
+    min-height: 250px;
+  }
+
+  .design-system-glow-preview {
+    min-height: 166px;
   }
 
   .design-system-social-preview,
