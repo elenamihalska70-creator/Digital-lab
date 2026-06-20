@@ -3,6 +3,7 @@ import "./App.css";
 import { RequestConversation } from "./components/RequestConversation";
 import { RequestDocuments } from "./components/RequestDocuments";
 import { RequestQuotes } from "./components/RequestQuotes";
+import { DesignSystemPage } from "./components/DesignSystemPage";
 import { useAuth } from "./context/useAuth";
 import { getUnreadMessageCounts } from "./services/requestMessages";
 import { getLatestQuotesForRequests } from "./services/quotes";
@@ -3749,6 +3750,7 @@ function App() {
   const isDashboardPath = pathname === "/dashboard" || pathname === "/espace-client";
   const isLoginPath = pathname === "/login";
   const isAdminPath = pathname === "/admin";
+  const isDesignSystemPath = pathname === "/design-system";
 
   useEffect(() => {
     let isMounted = true;
@@ -4021,6 +4023,31 @@ function App() {
         />
 
         <LegalNoticePage onNavigate={navigate} />
+
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
+  if (isDesignSystemPath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <DesignSystemPage />
 
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
