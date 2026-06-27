@@ -3912,7 +3912,7 @@ function App() {
   }, [isAuthLoading, isLoginPath, session]);
 
   useEffect(() => {
-    const revealItems = document.querySelectorAll(".reveal-on-scroll");
+    const revealItems = document.querySelectorAll(".reveal-on-scroll:not(.proof-reveal-item)");
 
     if (revealItems.length === 0) {
       return undefined;
@@ -3925,14 +3925,16 @@ function App() {
       return undefined;
     }
 
+    const revealItem = (entry, observer) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    };
+
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          }
-        });
+        entries.forEach((entry) => revealItem(entry, observer));
       },
       { threshold: 0.18 },
     );
@@ -3940,6 +3942,57 @@ function App() {
     revealItems.forEach((item) => observer.observe(item));
 
     return () => observer.disconnect();
+  }, [pathname]);
+
+  useEffect(() => {
+    const proofSection = document.querySelector(".proof-reveal-section");
+    const proofRevealItems = proofSection
+      ? [proofSection, ...proofSection.querySelectorAll(".proof-reveal-item")]
+      : [];
+
+    if (!proofSection || proofRevealItems.length === 0) {
+      return undefined;
+    }
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      proofRevealItems.forEach((item) => item.classList.add("is-visible"));
+      return undefined;
+    }
+
+    let revealTimer = 0;
+    let isRevealScheduled = false;
+
+    const revealProofSection = () => {
+      if (isRevealScheduled) {
+        return;
+      }
+
+      isRevealScheduled = true;
+      revealTimer = window.setTimeout(() => {
+        proofRevealItems.forEach((item) => item.classList.add("is-visible"));
+      }, 200);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            revealProofSection();
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.01 },
+    );
+
+    observer.observe(proofSection);
+
+    return () => {
+      window.clearTimeout(revealTimer);
+      observer.disconnect();
+    };
   }, [pathname]);
 
   useEffect(() => {
@@ -4463,9 +4516,15 @@ function App() {
           </div>
         </section>
 
-        <section className="section proof-section reveal-on-scroll reveal-section">
+        <section
+          className="section proof-section proof-reveal-section reveal-on-scroll reveal-section proof-reveal-item"
+          style={{ "--reveal-delay": "0ms" }}
+        >
           <div className="section-inner">
-            <div className="section-heading">
+            <div
+              className="section-heading reveal-on-scroll reveal-section proof-reveal-item"
+              style={{ "--reveal-delay": "0ms" }}
+            >
               <span>Preuves & confiance</span>
               <h2>Une expérience concrète, pensée pour avancer avec justesse</h2>
               <p>
@@ -4476,9 +4535,9 @@ function App() {
             <div className="proof-stats">
               {proofStats.map((stat, index) => (
                 <article
-                  className="proof-stat-card reveal-on-scroll reveal-card"
+                  className="proof-stat-card reveal-on-scroll reveal-card proof-reveal-item"
                   key={stat.label}
-                  style={{ "--reveal-delay": `${index * 70}ms` }}
+                  style={{ "--reveal-delay": `${140 + index * 70}ms` }}
                 >
                   <span className="proof-icon" aria-hidden="true">
                     {stat.icon}
@@ -4495,7 +4554,10 @@ function App() {
               ))}
             </div>
 
-            <div className="proof-stack-panel reveal-on-scroll reveal-card" style={{ "--reveal-delay": "220ms" }}>
+            <div
+              className="proof-stack-panel reveal-on-scroll reveal-card proof-reveal-item"
+              style={{ "--reveal-delay": "480ms" }}
+            >
               <div>
                 <span>Outils</span>
                 <h3>Une stack discrète, choisie selon le besoin</h3>
@@ -4510,9 +4572,9 @@ function App() {
             <div className="proof-workflow" aria-label="Mini workflow réel">
               {proofWorkflow.map((step, index) => (
                 <article
-                  className="proof-workflow-step reveal-on-scroll reveal-card"
+                  className="proof-workflow-step reveal-on-scroll reveal-card proof-reveal-item"
                   key={step.title}
-                  style={{ "--reveal-delay": `${index * 70}ms` }}
+                  style={{ "--reveal-delay": `${620 + index * 70}ms` }}
                 >
                   <span aria-hidden="true">{step.icon}</span>
                   <h3>{step.title}</h3>
@@ -4521,7 +4583,10 @@ function App() {
               ))}
             </div>
 
-            <div className="proof-highlight reveal-on-scroll reveal-card" style={{ "--reveal-delay": "260ms" }}>
+            <div
+              className="proof-highlight reveal-on-scroll reveal-card proof-reveal-item"
+              style={{ "--reveal-delay": "1040ms" }}
+            >
               <span aria-hidden="true">✓</span>
               <p>
                 J’accompagne les entrepreneurs qui veulent avancer avec méthode, sans complexité inutile.
