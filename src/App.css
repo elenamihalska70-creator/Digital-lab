@@ -663,6 +663,9 @@
 
 .btn {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   min-width: 220px;
   padding: 20px 32px;
@@ -671,6 +674,7 @@
   text-decoration: none;
   font-size: 18px;
   font-weight: 600;
+  line-height: 1.2;
   isolation: isolate;
   transition:
     transform 300ms ease,
