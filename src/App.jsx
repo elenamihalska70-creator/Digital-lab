@@ -15,6 +15,7 @@ import {
 } from "./services/contactRequests";
 import { getCurrentSession, supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
+import { getEstimatorResult } from "./utils/estimator";
 
 const services = [
   {
@@ -520,7 +521,8 @@ const projects = [
     slug: "microassist",
     title: "MicroAssist — Assistant fiscal SaaS",
     subtitle: "Assistant SaaS pour simplifier les démarches administratives.",
-    description: "SaaS pour alléger les tâches administratives des indépendants.",
+    description:
+      "Assistant IA pour micro-entrepreneurs : suivi d’activité, génération documentaire et simplification des démarches administratives.",
     caseStudy: {
       problem: "Démarches fiscales peu claires pour les micro-entrepreneurs.",
       solution: "Profil fiscal, espace fiscal, alertes, factures et suivi clair.",
@@ -537,7 +539,7 @@ const projects = [
     stack: ["React", "Vite", "SaaS", "Dashboard", "Automatisation"],
     objective:
       "Valider un produit digital capable de réduire la charge administrative et de créer une expérience plus fluide pour les indépendants.",
-    tags: ["SaaS", "MVP", "Dashboard", "Automatisation"],
+    tags: ["SaaS", "IA", "Automatisation", "Dashboard"],
     link: "/projects/microassist",
     image: "/projects/microassist.png",
     video: "/videos/microassist.mp4",
@@ -559,7 +561,8 @@ const projects = [
     slug: "socle-local",
     title: "Socle Local — Plateforme locale",
     subtitle: "Plateforme communautaire pour connecter une vie locale.",
-    description: "Plateforme locale pour annonces, associations et entraide.",
+    description:
+      "Plateforme collaborative destinée aux habitants, associations et commerces locaux pour faciliter les échanges et les services de proximité.",
     caseStudy: {
       problem: "Annonces et initiatives locales dispersées.",
       solution: "Plateforme par catégories, communautés et annonces locales.",
@@ -576,7 +579,7 @@ const projects = [
     stack: ["React", "Vite", "UX/UI", "Responsive", "Plateforme"],
     objective:
       "Créer un socle efficace pour renforcer la visibilité des initiatives locales et faciliter les échanges entre acteurs d’un territoire.",
-    tags: ["Plateforme", "UX/UI", "Responsive"],
+    tags: ["Plateforme", "UX/UI", "Responsive", "Communauté"],
     link: "/projects/socle-local",
     image: "/projects/socle-local.png",
     video: "/videos/socle-local.mp4",
@@ -598,7 +601,8 @@ const projects = [
     slug: "microassist-expert",
     title: "MicroAssist Expert — Suivi B2B",
     subtitle: "Suivi multi-clients pour professionnels et experts.",
-    description: "Dashboard B2B pour suivre clients, alertes et priorités.",
+    description:
+      "Plateforme B2B avec tableaux de bord, alertes, priorités et automatisation du suivi multi-clients.",
     caseStudy: {
       problem: "Suivi multi-clients difficile pour les professionnels.",
       solution: "Dashboard, alertes, priorités et fiches clients.",
@@ -615,7 +619,7 @@ const projects = [
     stack: ["React", "Dashboard", "B2B", "Prototype", "Workflow"],
     objective:
       "Aider les professionnels à garder une vision claire de leurs clients, des urgences et des tâches à prioriser.",
-    tags: ["Dashboard", "B2B", "Prototype"],
+    tags: ["B2B", "Dashboard", "Automatisation", "Prototype"],
     link: "/projects/microassist-expert",
     image: "/projects/microassist-expert.png",
     video: "/videos/microassist-expert.mp4",
@@ -638,7 +642,7 @@ const projects = [
     title: "Assistant de réservation IA",
     subtitle: "Assistant conversationnel pour réservations et demandes clients.",
     description:
-      "Assistant conversationnel pour réservations, demandes clients et workflows automatisés.",
+      "Assistant conversationnel pour qualifier les demandes clients, automatiser les réservations et orchestrer des workflows métier.",
     caseStudy: {
       problem: "Demandes répétitives et réservations manuelles.",
       solution: "Assistant conversationnel, QR code, collecte de demandes.",
@@ -655,7 +659,7 @@ const projects = [
     stack: ["IA", "Automatisation", "Chatbot", "Workflow", "Interface web"],
     objective:
       "Réduire le temps passé à répondre aux demandes répétitives tout en gardant une expérience claire et humaine pour les clients.",
-    tags: ["IA", "Automatisation", "Chatbot", "Workflow"],
+    tags: ["IA", "Chatbot", "Automatisation", "Workflow"],
     link: "https://reservation-bot-demo.pages.dev/",
     image: "/projects/automatisation.png",
     video: "/videos/automatisation.mp4",
@@ -1145,7 +1149,7 @@ function BlogCarousel() {
         <div className="articles-carousel" ref={trackRef} onScroll={handleScroll}>
           {articles.map((article, index) => (
             <article
-              className="article-card reveal-on-scroll reveal-card"
+              className="article-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
               key={article.title}
               style={{ "--reveal-delay": `${index * 80}ms` }}
             >
@@ -1183,63 +1187,6 @@ function BlogCarousel() {
       <ArticleSoonModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
     </section>
   );
-}
-
-function getEstimatorResult(answers) {
-  let score = 0;
-
-  if (answers.complexity.startsWith("Standard")) {
-    score += 1;
-  }
-
-  if (answers.complexity.startsWith("Avancé")) {
-    score += 2;
-  }
-
-  if (
-    answers.need.includes("automatisation") ||
-    answers.need.includes("chatbot") ||
-    answers.need.includes("MVP")
-  ) {
-    score += 1;
-  }
-
-  if (answers.features.length >= 3) {
-    score += 1;
-  }
-
-  if (answers.features.some((feature) => ["Dashboard", "Paiement", "Chatbot", "Google Sheets / CRM"].includes(feature))) {
-    score += 1;
-  }
-
-  if (answers.urgency === "Urgent") {
-    score += 1;
-  }
-
-  if (score <= 1) {
-    return {
-      type: "Simple",
-      budget: "à partir de 300€",
-      delay: "3–5 jours",
-      message: "Votre besoin semble ciblé. Une intervention courte peut probablement suffire pour avancer vite.",
-    };
-  }
-
-  if (score <= 3) {
-    return {
-      type: "Intermédiaire",
-      budget: "à partir de 800€",
-      delay: "1–2 semaines",
-      message: "Votre projet demande plusieurs éléments à coordonner. Une première version claire peut être créée rapidement.",
-    };
-  }
-
-  return {
-    type: "Avancé",
-    budget: "à partir de 1500€",
-    delay: "3–4 semaines",
-    message: "Votre projet implique plusieurs fonctionnalités ou workflows. Un cadrage précis permettra de sécuriser le budget et les étapes.",
-  };
 }
 
 function ProjectEstimator() {
@@ -4280,7 +4227,7 @@ function App() {
               <h2>Le numérique doit simplifier le travail, pas le compliquer.</h2>
             </div>
 
-            <div className="about-content glass-card reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
+            <div className="about-content glass-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
               <p>
                 Beaucoup d’entrepreneurs passent plus de temps à gérer leurs outils qu’à développer leur activité.
               </p>
@@ -4325,10 +4272,27 @@ function App() {
               <h2>Mes projets phares</h2>
             </div>
 
+            <div className="ai-lab-intro glass-section premium-card premium-card-hero gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "80ms" }}>
+              <div className="ai-lab-intro-copy">
+                <span className="ai-lab-kicker">Laboratoire &amp; expérimentation</span>
+                <h3>AI Innovation Lab</h3>
+                <p>
+                  Ces projets constituent mon laboratoire d’innovation autour de l’intelligence artificielle appliquée
+                  aux entreprises. J’y conçois et développe des solutions SaaS, des assistants IA, des outils métiers
+                  et des automatisations destinés à améliorer les processus opérationnels.
+                </p>
+              </div>
+              <p className="ai-lab-technologies" aria-label="Technologies utilisées">
+                Claude <span>•</span> ChatGPT <span>•</span> Cursor <span>•</span> Lovable <span>•</span> React
+                <span>•</span> Supabase <span>•</span> APIs <span>•</span> WordPress <span>•</span> JavaScript
+                <span>•</span> GitHub <span>•</span> Vercel
+              </p>
+            </div>
+
             <div className="cards-grid project-grid">
               {projects.map((project, index) => (
                 <article
-                  className="glass-card project-card reveal-on-scroll reveal-card"
+                  className="glass-card project-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={project.title}
                   style={{ "--reveal-delay": `${index * 90}ms` }}
                   onMouseEnter={handleProjectEnter}
@@ -4386,6 +4350,26 @@ function App() {
               ))}
             </div>
 
+            <div className="ai-roadmap glass-section premium-card premium-card-subtle gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
+              <div className="ai-roadmap-heading">
+                <span>Roadmap IA</span>
+                <h3>En développement</h3>
+                <p>
+                  De nouveaux modules sont en cours de conception pour renforcer l’écosystème Digital Lab autour de
+                  l’automatisation, de l’IA générative et de l’accompagnement des entreprises.
+                </p>
+              </div>
+              <ul className="ai-roadmap-list">
+                <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Website Transformation</strong><span>Refonte de sites web assistée par IA</span></li>
+                <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Growth Engine</strong><span>Automatisation de contenus SEO et marketing</span></li>
+                <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Workforce</strong><span>Architecture d’agents IA spécialisés</span></li>
+              </ul>
+              <p className="ai-roadmap-note">
+                Ces projets sont actuellement en phase de conception ou de prototypage et seront publiés
+                progressivement.
+              </p>
+            </div>
+
             <div className="projects-more">
               <a
                 className="btn btn-secondary"
@@ -4423,7 +4407,7 @@ function App() {
                   <div className="method-step-marker">
                     <span>{step.number}</span>
                   </div>
-                  <div className="method-step-card">
+                  <div className="method-step-card premium-card gradient-border soft-hover">
                     <span className="method-step-icon" aria-hidden="true">
                       {step.icon}
                     </span>
@@ -4436,11 +4420,11 @@ function App() {
 
             <div className="method-badges" aria-label="Garanties de méthode">
               {methodBadges.map((badge) => (
-                <span key={badge}>✓ {badge}</span>
+                <span className="badge-pill" key={badge}>✓ {badge}</span>
               ))}
             </div>
 
-            <div className="method-reassurance">
+            <div className="method-reassurance glass-section premium-card premium-card-subtle gradient-border soft-hover reveal-on-scroll reveal-card">
               <span aria-hidden="true">✓</span>
               <p>
                 Digital Lab existe pour rendre le numérique plus utile, plus fiable et plus durable pour les entrepreneurs.
@@ -4456,7 +4440,7 @@ function App() {
               <h2>Un studio né d’une expérience entrepreneuriale réelle</h2>
             </div>
 
-            <div className="about-content glass-card reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
+            <div className="about-content glass-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
               <p>
                 Avant Digital Lab, il y a plus de 25 ans d’entrepreneuriat : des clients à comprendre, des budgets à
                 arbitrer, des priorités qui changent, des décisions à prendre vite.
@@ -4489,7 +4473,7 @@ function App() {
             <div className="trust-grid">
               {trustCards.map((card, index) => (
                 <article
-                  className="trust-card reveal-on-scroll reveal-card"
+                  className="trust-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={card.title}
                   style={{ "--reveal-delay": `${index * 80}ms` }}
                 >
@@ -4505,7 +4489,7 @@ function App() {
             <div className="trust-badges" aria-label="Compétences et outils">
               {trustBadges.map((badge, index) => (
                 <span
-                  className="reveal-on-scroll reveal-card"
+                  className="badge-pill reveal-on-scroll reveal-card"
                   key={badge}
                   style={{ "--reveal-delay": `${index * 45}ms` }}
                 >
@@ -4535,7 +4519,7 @@ function App() {
             <div className="proof-stats">
               {proofStats.map((stat, index) => (
                 <article
-                  className="proof-stat-card reveal-on-scroll reveal-card proof-reveal-item"
+                  className="proof-stat-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card proof-reveal-item"
                   key={stat.label}
                   style={{ "--reveal-delay": `${140 + index * 70}ms` }}
                 >
@@ -4555,7 +4539,7 @@ function App() {
             </div>
 
             <div
-              className="proof-stack-panel reveal-on-scroll reveal-card proof-reveal-item"
+              className="proof-stack-panel premium-card gradient-border soft-hover reveal-on-scroll reveal-card proof-reveal-item"
               style={{ "--reveal-delay": "480ms" }}
             >
               <div>
@@ -4572,7 +4556,7 @@ function App() {
             <div className="proof-workflow" aria-label="Mini workflow réel">
               {proofWorkflow.map((step, index) => (
                 <article
-                  className="proof-workflow-step reveal-on-scroll reveal-card proof-reveal-item"
+                  className="proof-workflow-step premium-card gradient-border soft-hover reveal-on-scroll reveal-card proof-reveal-item"
                   key={step.title}
                   style={{ "--reveal-delay": `${620 + index * 70}ms` }}
                 >
@@ -4584,7 +4568,7 @@ function App() {
             </div>
 
             <div
-              className="proof-highlight reveal-on-scroll reveal-card proof-reveal-item"
+              className="proof-highlight premium-card premium-card-subtle gradient-border soft-hover reveal-on-scroll reveal-card proof-reveal-item"
               style={{ "--reveal-delay": "1040ms" }}
             >
               <span aria-hidden="true">✓</span>
@@ -4661,7 +4645,7 @@ function App() {
             <div className="improvements-grid">
               {improvementCards.map((card, index) => (
                 <article
-                  className="improvement-card reveal-on-scroll reveal-card"
+                  className="improvement-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={card.title}
                   style={{ "--reveal-delay": `${index * 80}ms` }}
                 >
@@ -4689,7 +4673,7 @@ function App() {
             <div className="included-grid">
               {includedProjectItems.map((item, index) => (
                 <article
-                  className="included-card reveal-on-scroll reveal-card"
+                  className="included-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={item.title}
                   style={{ "--reveal-delay": `${index * 70}ms` }}
                 >
