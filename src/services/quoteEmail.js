@@ -1,6 +1,6 @@
 import { supabase } from "./auth";
 
-// Email sending is paused until a professional domain/email is configured.
+// Email sending is paused from the quote publish flow while quote notifications are finalized.
 // Keep this service for the future Resend/Supabase Edge Function flow, but do not call it from quotes for now.
 export const sendQuoteEmail = async ({ quoteId, clientEmail, clientName }) => {
   if (!quoteId || !clientEmail) {

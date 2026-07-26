@@ -464,7 +464,53 @@ const articles = [
   },
 ];
 
-const footerStack = ["WordPress", "React", "Vite", "Supabase", "SEO", "Automatisation"];
+const footerExpertise = ["IA", "Automatisation", "WordPress", "SEO", "UX/UI", "Développement Web"];
+
+const businessContact = {
+  name: "Olena Mykhalska",
+  role: "Cheffe de projet digital • IA • Automatisation",
+  brand: "Digital Lab",
+  positioning: "Solutions digitales pour PME",
+  expertise: "WordPress • IA • SEO • Automatisation",
+  founderLabel: "Fondatrice",
+  email: "contact@digitallab.studio",
+  phoneDisplay: "+33 7 66 78 43 31",
+  phoneHref: "tel:+33766784331",
+  telephone: "+33766784331",
+  siteDisplay: "www.digitallab.studio",
+  url: "https://www.digitallab.studio",
+  linkedin: "https://www.linkedin.com/in/olena-mykhalska/",
+  github: "https://github.com/ElenaMihalska70-Creator",
+  instagram: "https://www.instagram.com/digital.lab.fr/",
+  facebook: "https://www.facebook.com/profile.php?id=61570761385765",
+};
+
+const socialLinks = [
+  {
+    key: "linkedin",
+    href: businessContact.linkedin,
+    label: "Voir le profil LinkedIn de Digital Lab",
+    title: "Profil LinkedIn Digital Lab",
+  },
+  {
+    key: "github",
+    href: businessContact.github,
+    label: "Voir le profil GitHub de Digital Lab",
+    title: "Profil GitHub Digital Lab",
+  },
+  {
+    key: "instagram",
+    href: businessContact.instagram,
+    label: "Voir le compte Instagram de Digital Lab",
+    title: "Compte Instagram Digital Lab",
+  },
+  {
+    key: "facebook",
+    href: businessContact.facebook,
+    label: "Voir la page Facebook de Digital Lab",
+    title: "Page Facebook Digital Lab",
+  },
+];
 
 const estimatorNeeds = [
   "Créer un site web",
@@ -767,6 +813,53 @@ function SolutionIcon({ type }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d={paths[type]} />
+    </svg>
+  );
+}
+
+function ContactIcon({ type }) {
+  const paths = {
+    mail: [
+      "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z",
+      "m22 6-10 7L2 6",
+    ],
+    phone: [
+      "M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z",
+    ],
+    globe: [
+      "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z",
+      "M2 12h20",
+      "M12 2a15.3 15.3 0 0 1 0 20",
+      "M12 2a15.3 15.3 0 0 0 0 20",
+    ],
+    mapPin: [
+      "M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z",
+      "M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z",
+    ],
+    linkedin: [
+      "M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z",
+      "M2 9h4v12H2z",
+      "M4 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z",
+    ],
+    github: [
+      "M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4",
+      "M9 18c-4.51 2-5-2-7-2",
+    ],
+    instagram: [
+      "M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Z",
+      "M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37Z",
+      "M17.5 6.5h.01",
+    ],
+    facebook: [
+      "M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3Z",
+    ],
+  };
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {paths[type].map((path) => (
+        <path d={path} key={path} />
+      ))}
     </svg>
   );
 }
@@ -1221,7 +1314,7 @@ function ProjectEstimator() {
     "",
     "Pouvez-vous me proposer une première piste ?",
   ].join("\n");
-  const mailtoHref = `mailto:elenamihalska70@gmail.com?subject=${encodeURIComponent(
+  const mailtoHref = `mailto:${businessContact.email}?subject=${encodeURIComponent(
     "Demande de projet Digital Lab",
   )}&body=${encodeURIComponent(emailBody)}`;
 
@@ -1445,6 +1538,83 @@ function ProjectEstimator() {
   );
 }
 
+function AIWebsiteTransformationSection() {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return undefined;
+    }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion) {
+      video.pause();
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { rootMargin: "160px 0px", threshold: 0.28 },
+    );
+
+    observer.observe(video);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section className="section ai-transformation-section reveal-on-scroll reveal-section">
+      <div className="section-inner">
+        <div className="ai-transformation-panel reveal-on-scroll reveal-card">
+          <div className="ai-transformation-copy">
+            <span className="ai-transformation-eyebrow">AI Website Transformation</span>
+            <h2>
+              Same business.
+              <br />
+              Different perception.
+            </h2>
+            <p>
+              Transform existing websites into digital experiences that change how customers perceive your brand.
+            </p>
+
+            <div className="ai-transformation-actions">
+              <a className="btn btn-primary" href="#ai-website-transformation-video">
+                ▶ Watch the transformation
+              </a>
+              <a className="ai-transformation-link" href="#contact">
+                See the full case
+              </a>
+            </div>
+          </div>
+
+          <div className="ai-transformation-visual">
+            <div className="ai-transformation-video-frame" id="ai-website-transformation-video">
+              <video
+                ref={videoRef}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                src="/videos/AI_Website_Transformation.mp4"
+                aria-label="Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
+              ></video>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function isSupabaseAccessError(error) {
   const message = error?.message?.toLowerCase() ?? "";
 
@@ -1479,13 +1649,20 @@ function ContactForm({ onAuthOpen }) {
     setSubmitStatus({ type: "", message: "" });
 
     const email = form.email.trim() || sessionEmail;
-    const { error } = await createContactRequest({
-      userId: session?.user?.id,
+    const contactPayload = {
       name: form.name.trim(),
       email,
       company: form.company.trim(),
       projectType: form.projectType,
       message: form.message.trim(),
+    };
+    const { error } = await createContactRequest({
+      userId: session?.user?.id,
+      name: contactPayload.name,
+      email,
+      company: contactPayload.company,
+      projectType: contactPayload.projectType,
+      message: contactPayload.message,
     });
 
     if (error) {
@@ -1504,6 +1681,18 @@ function ContactForm({ onAuthOpen }) {
 
       setIsSending(false);
       return;
+    }
+
+    try {
+      await fetch("/api/send-contact-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(contactPayload),
+      });
+    } catch (notificationError) {
+      console.error("CONTACT EMAIL ERROR:", notificationError);
     }
 
     setSubmitStatus({
@@ -1610,7 +1799,7 @@ function SiteFooter({ onNavigate }) {
             <img src="/logo-digital-lab.png" alt="Digital Lab" />
             <span>Digital Lab</span>
           </a>
-          <p>Solutions web, automatisation et outils digitaux pour petites structures.</p>
+          <p>Transformation digitale, IA & automatisation pour PME, indépendants et associations.</p>
         </div>
 
         <div className="footer-column">
@@ -1631,25 +1820,54 @@ function SiteFooter({ onNavigate }) {
           </nav>
         </div>
 
-        <div className="footer-column">
+        <div className="footer-column footer-contact-column">
           <h3>Contact</h3>
           <div className="footer-links">
-            <a href="mailto:elenamihalska70@gmail.com">Email</a>
-            <a href="https://www.linkedin.com/in/olena-mykhalska-90ab5730b/" target="_blank" rel="noreferrer">
-              LinkedIn
+            <a className="footer-contact-link" href={`mailto:${businessContact.email}`} aria-label="Envoyer un e-mail à Digital Lab">
+              <ContactIcon type="mail" />
+              <span>{businessContact.email}</span>
             </a>
-            <a href="https://github.com/elenamihalska70-creator/" target="_blank" rel="noreferrer">
-              GitHub
+            <a className="footer-contact-link" href={businessContact.phoneHref} aria-label="Appeler Digital Lab">
+              <ContactIcon type="phone" />
+              <span>{businessContact.phoneDisplay}</span>
             </a>
-            <span>Belfort, France</span>
-            <span>SIRET : 10575928600013</span>
+            <a
+              className="footer-contact-link"
+              href={businessContact.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Ouvrir le site Digital Lab"
+            >
+              <ContactIcon type="globe" />
+              <span>{businessContact.siteDisplay}</span>
+            </a>
+            <div className="footer-social-links" aria-label="Réseaux sociaux Digital Lab">
+              {socialLinks.map((socialLink) => (
+                <a
+                  className="social-icon-link"
+                  href={socialLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={socialLink.label}
+                  title={socialLink.title}
+                  key={socialLink.key}
+                >
+                  <ContactIcon type={socialLink.key} />
+                </a>
+              ))}
+            </div>
+            <span className="footer-contact-link footer-contact-static">
+              <ContactIcon type="mapPin" />
+              <span>Belfort, France</span>
+            </span>
+            <span className="footer-siret">SIRET : 10575928600013</span>
           </div>
         </div>
 
         <div className="footer-column">
-          <h3>Stack</h3>
-          <div className="footer-stack" aria-label="Stack technique">
-            {footerStack.map((tool) => (
+          <h3>Nos expertises</h3>
+          <div className="footer-stack" aria-label="Expertises Digital Lab">
+            {footerExpertise.map((tool) => (
               <span key={tool}>{tool}</span>
             ))}
           </div>
@@ -1689,7 +1907,9 @@ function LegalNoticePage({ onNavigate }) {
                 <p>Olena Mykhalska — Digital Lab</p>
                 <p>Entrepreneure individuelle / Micro-entreprise</p>
                 <p>SIREN/SIRET : 10575928600013</p>
-                <p>Email : <a href="mailto:elenamihalska70@gmail.com">elenamihalska70@gmail.com</a></p>
+                <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+                <p>Téléphone : <a href={businessContact.phoneHref}>{businessContact.phoneDisplay}</a></p>
+                <p>Site : <a href={businessContact.url}>{businessContact.url}</a></p>
               </article>
 
               <article>
@@ -1755,7 +1975,7 @@ function ProjectCasePage({ project, onNavigate }) {
               <h1>{project.title}</h1>
               <p>{project.subtitle}</p>
               <div className="case-actions">
-                <a className="btn btn-primary" href="mailto:elenamihalska70@gmail.com">
+                <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
                   {project.cta}
                 </a>
                 <a className="btn btn-secondary" href="/#projets" onClick={(event) => {
@@ -1832,7 +2052,7 @@ function ProjectCasePage({ project, onNavigate }) {
             <span>Votre projet</span>
             <h2>Créer une version claire, utile et testable.</h2>
             <p>Parlez-moi de votre idée : je vous répondrai avec une première piste claire et concrète.</p>
-            <a className="btn btn-primary" href="mailto:elenamihalska70@gmail.com">
+            <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
               Demander une démo
             </a>
           </div>
@@ -4265,6 +4485,8 @@ function App() {
           </div>
         </section>
 
+        <AIWebsiteTransformationSection />
+
         <section className="section projects-section reveal-on-scroll reveal-section" id="projets">
           <div className="section-inner">
             <div className="section-heading">
@@ -4737,13 +4959,61 @@ function App() {
               </span>
             </div>
 
+            <address className="contact-details reveal-on-scroll reveal-card" style={{ "--reveal-delay": "660ms" }}>
+              <div className="contact-brand-block">
+                <strong>{businessContact.brand}</strong>
+                <span>Transformation digitale • IA • Automatisation</span>
+              </div>
+
+              <div className="contact-founder-block">
+                <strong>{businessContact.name}</strong>
+                <span>Fondatrice & Cheffe de projet digitale</span>
+              </div>
+
+              <div className="contact-link-list" aria-label="Coordonnées Digital Lab">
+                <a href={`mailto:${businessContact.email}`} aria-label="Envoyer un e-mail à Digital Lab">
+                  <ContactIcon type="mail" />
+                  <span>{businessContact.email}</span>
+                </a>
+                <a href={businessContact.phoneHref} aria-label="Appeler Digital Lab">
+                  <ContactIcon type="phone" />
+                  <span>{businessContact.phoneDisplay}</span>
+                </a>
+                <a
+                  href={businessContact.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Ouvrir le site Digital Lab"
+                >
+                  <ContactIcon type="globe" />
+                  <span>{businessContact.siteDisplay}</span>
+                </a>
+              </div>
+
+              <div className="contact-social-links" aria-label="Profils professionnels">
+                {socialLinks.map((socialLink) => (
+                  <a
+                    className="social-icon-link"
+                    href={socialLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={socialLink.label}
+                    title={socialLink.title}
+                    key={socialLink.key}
+                  >
+                    <ContactIcon type={socialLink.key} />
+                  </a>
+                ))}
+              </div>
+            </address>
+
             <ContactForm onAuthOpen={() => setIsAuthOpen(true)} />
 
             <div className="contact-actions">
-              <a className="btn btn-primary contact-cta-primary" href="mailto:elenamihalska70@gmail.com?subject=Demande%20de%20projet%20Digital%20Lab">
+              <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Demande%20de%20projet%20Digital%20Lab`}>
                 Envoyer un email
               </a>
-              <a className="btn btn-secondary contact-cta-secondary" href="mailto:elenamihalska70@gmail.com?subject=Discuter%20d’un%20projet%20Digital%20Lab">
+              <a className="btn btn-secondary contact-cta-secondary" href={`mailto:${businessContact.email}?subject=Discuter%20d’un%20projet%20Digital%20Lab`}>
                 Discuter du projet
               </a>
             </div>

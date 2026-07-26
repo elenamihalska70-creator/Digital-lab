@@ -534,7 +534,7 @@ export function RequestQuotes({ request, role, session, onQuoteChange }) {
     }
 
     console.log("Quote updated");
-    // Email sending is paused until a professional domain/email is configured.
+    // Email sending is paused from the quote publish flow while quote notifications are finalized.
     // Publishing the quote makes it visible in the client dashboard.
     setEmailMessage("Le devis est disponible dans l'espace client.");
 

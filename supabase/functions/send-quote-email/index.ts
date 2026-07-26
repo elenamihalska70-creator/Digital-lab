@@ -1,7 +1,8 @@
-// Email sending is paused from the quote workflow until a professional domain/email is configured.
+// Email sending is paused from the quote workflow while quote notifications are finalized.
 // This Edge Function is kept for future use and is not called by the current quote publish flow.
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "Digital Lab <onboarding@resend.dev>";
+const REPLY_TO_EMAIL = Deno.env.get("CONTACT_REPLY_TO_EMAIL") || "contact@digitallab.studio";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,6 +115,7 @@ Deno.serve(async (request) => {
       body: JSON.stringify({
         from: FROM_EMAIL,
         to: [payload.to],
+        reply_to: REPLY_TO_EMAIL,
         subject: "Votre devis Digital Lab est prêt",
         html: buildEmailHtml(payload),
       }),

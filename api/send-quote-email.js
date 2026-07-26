@@ -1,4 +1,4 @@
-// Email sending is paused from the quote workflow until a professional domain/email is configured.
+// Email sending is paused from the quote workflow while quote notifications are finalized.
 // This Vercel route is kept for future use and is not called by the current quote publish flow.
 const buildDashboardUrl = (request) => {
   const configuredUrl = process.env.VITE_APP_URL || process.env.VITE_PUBLIC_SITE_URL || process.env.PUBLIC_SITE_URL;
@@ -87,6 +87,7 @@ export default async function handler(request, response) {
       from: process.env.RESEND_FROM_EMAIL || "Digital Lab <onboarding@resend.dev>",
       to: [clientEmail],
       subject: "Votre devis Digital Lab est prêt",
+      reply_to: process.env.CONTACT_REPLY_TO_EMAIL || "contact@digitallab.studio",
       html: buildEmailHtml({ clientName, dashboardUrl }),
     }),
   });
