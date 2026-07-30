@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import Sitemap from 'vite-plugin-sitemap'
 
-const siteUrl = 'https://digitallab.studio'
+const siteUrl = 'https://www.digitallab.studio'
 const pages = [
   '/services',
   '/projects',
