@@ -785,6 +785,99 @@ const scrollToElementWithHeaderOffset = (selectorOrElement) => {
   window.scrollTo({ top: targetTop, behavior: "smooth" });
 };
 
+function DeferredVideo({
+  ariaLabel,
+  autoPlay = false,
+  className,
+  loop = false,
+  muted = true,
+  playWhenVisible = false,
+  playsInline = true,
+  poster,
+  src,
+}) {
+  const videoRef = useRef(null);
+  const [isSourceAttached, setIsSourceAttached] = useState(false);
+  const [hasVideoError, setHasVideoError] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setReduceMotion(mediaQuery.matches);
+
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+
+    return () => mediaQuery.removeEventListener("change", updatePreference);
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video || isSourceAttached || hasVideoError) {
+      return undefined;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      setIsSourceAttached(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsSourceAttached(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "420px 0px", threshold: 0.01 },
+    );
+
+    observer.observe(video);
+
+    return () => observer.disconnect();
+  }, [hasVideoError, isSourceAttached]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video || !playWhenVisible || !isSourceAttached || reduceMotion || hasVideoError) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { rootMargin: "160px 0px", threshold: 0.28 },
+    );
+
+    observer.observe(video);
+
+    return () => observer.disconnect();
+  }, [hasVideoError, isSourceAttached, playWhenVisible, reduceMotion]);
+
+  return (
+    <video
+      ref={videoRef}
+      aria-label={ariaLabel}
+      autoPlay={!reduceMotion && autoPlay ? true : undefined}
+      className={className}
+      loop={loop}
+      muted={muted}
+      onError={() => setHasVideoError(true)}
+      playsInline={playsInline}
+      poster={poster}
+      preload={isSourceAttached ? "metadata" : "none"}
+      src={isSourceAttached && !hasVideoError ? src : undefined}
+    ></video>
+  );
+}
+
 const getUserDisplayName = (session) => {
   const user = session?.user;
 
@@ -915,7 +1008,9 @@ function ServiceGallery({ service, isOpen }) {
           <img
             alt={`Aperçu ${index + 1} pour ${service.title}`}
             className={index === safeActiveIndex ? "is-active" : ""}
+            decoding="async"
             key={image}
+            loading="lazy"
             onError={() => {
               setFailedImages((currentImages) =>
                 currentImages.includes(image) ? currentImages : [...currentImages, image],
@@ -1540,38 +1635,6 @@ function ProjectEstimator() {
 }
 
 function AIWebsiteTransformationSection() {
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    const video = videoRef.current;
-
-    if (!video) {
-      return undefined;
-    }
-
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (prefersReducedMotion) {
-      video.pause();
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { rootMargin: "160px 0px", threshold: 0.28 },
-    );
-
-    observer.observe(video);
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section className="section ai-transformation-section reveal-on-scroll reveal-section">
       <div className="section-inner">
@@ -1599,15 +1662,14 @@ function AIWebsiteTransformationSection() {
 
           <div className="ai-transformation-visual">
             <div className="ai-transformation-video-frame" id="ai-website-transformation-video">
-              <video
-                ref={videoRef}
+              <DeferredVideo
+                ariaLabel="Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
                 muted
                 loop
                 playsInline
-                preload="metadata"
+                playWhenVisible
                 src="/videos/AI_Website_Transformation.mp4"
-                aria-label="Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
-              ></video>
+              />
             </div>
           </div>
         </div>
@@ -1990,15 +2052,14 @@ function ProjectCasePage({ project, onNavigate }) {
 
             <div className="case-media">
               {project.video ? (
-                <video
+                <DeferredVideo
                   autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
                   poster={project.image}
                   src={project.video}
-                ></video>
+                />
               ) : (
                 <img src={project.image} alt={`Aperçu du projet ${project.title}`} />
               )}
@@ -3650,6 +3711,7 @@ function SiteHeader({
               <button
                 className={`navbar-client-button${hasClientUnreadMessages ? " has-unread" : ""}`}
                 type="button"
+                aria-label={hasClientUnreadMessages ? `Espace client, ${clientUnreadTooltip}` : undefined}
                 title={hasClientUnreadMessages ? clientUnreadTooltip : undefined}
                 onClick={() => {
                   setIsMenuOpen(false);
@@ -3660,21 +3722,11 @@ function SiteHeader({
                 {hasClientUnreadMessages && (
                   <span
                     className="navbar-notification-badge is-clickable"
-                    aria-label={clientUnreadTooltip}
-                    role="button"
-                    tabIndex={0}
+                    aria-hidden="true"
                     onClick={(event) => {
                       event.stopPropagation();
                       setIsMenuOpen(false);
                       onClientUnreadBadgeClick?.();
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setIsMenuOpen(false);
-                        onClientUnreadBadgeClick?.();
-                      }
                     }}
                   >
                     {clientUnreadMessageCount > 9 ? "9+" : clientUnreadMessageCount}
@@ -3685,6 +3737,7 @@ function SiteHeader({
                 <button
                   className={`navbar-admin-button${hasAdminUnreadMessages ? " has-unread" : ""}`}
                   type="button"
+                  aria-label={hasAdminUnreadMessages ? `Admin, ${adminUnreadTooltip}` : undefined}
                   title={hasAdminUnreadMessages ? adminUnreadTooltip : undefined}
                   onClick={() => {
                     setIsMenuOpen(false);
@@ -3695,21 +3748,11 @@ function SiteHeader({
                   {hasAdminUnreadMessages && (
                     <span
                       className="navbar-notification-badge is-clickable"
-                      aria-label={adminUnreadTooltip}
-                      role="button"
-                      tabIndex={0}
+                      aria-hidden="true"
                       onClick={(event) => {
                         event.stopPropagation();
                         setIsMenuOpen(false);
                         onAdminUnreadBadgeClick?.();
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          setIsMenuOpen(false);
-                          onAdminUnreadBadgeClick?.();
-                        }
                       }}
                     >
                       {adminUnreadMessageCount > 9 ? "9+" : adminUnreadMessageCount}
@@ -4509,7 +4552,7 @@ function App() {
                   et des automatisations destinés à améliorer les processus opérationnels.
                 </p>
               </div>
-              <p className="ai-lab-technologies" aria-label="Technologies utilisées">
+              <p className="ai-lab-technologies">
                 Claude <span>•</span> ChatGPT <span>•</span> Cursor <span>•</span> Lovable <span>•</span> React
                 <span>•</span> Supabase <span>•</span> APIs <span>•</span> WordPress <span>•</span> JavaScript
                 <span>•</span> GitHub <span>•</span> Vercel
@@ -4527,19 +4570,25 @@ function App() {
                 >
                   <div className="project-media">
                     {project.image ? (
-                      <img className="project-image" src={project.image} alt={`Aperçu du projet ${project.title}`} />
+                      <img
+                        className="project-image"
+                        src={project.image}
+                        alt={`Aperçu du projet ${project.title}`}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <div className="project-placeholder"></div>
                     )}
                     {project.video && (
-                      <video
+                      <DeferredVideo
                         muted
                         loop
                         playsInline
-                        preload="metadata"
+                        poster={project.image}
                         src={project.video}
-                        aria-label={`Aperçu vidéo du projet ${project.title}`}
-                      ></video>
+                        ariaLabel={`Aperçu vidéo du projet ${project.title}`}
+                      />
                     )}
                     <span className="project-media-overlay"></span>
                   </div>
@@ -4914,7 +4963,7 @@ function App() {
             </div>
 
             <div className="included-reassurance reveal-on-scroll reveal-card" style={{ "--reveal-delay": "420ms" }}>
-              <div aria-label="Garanties incluses">
+              <div>
                 <span>✓ Pas de coûts cachés</span>
                 <span>✓ Bonnes pratiques intégrées</span>
                 <span>✓ Solution prête à évoluer</span>

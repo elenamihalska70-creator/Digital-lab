@@ -6,7 +6,7 @@ import {
   updateQuote,
   updateQuoteStatus,
 } from "../services/quotes";
-import { generateQuotePdf, getQuoteReference } from "../services/quotePdf";
+import { getQuoteReference } from "../utils/quoteReference";
 
 const defaultQuoteValues = {
   title: "",
@@ -382,6 +382,7 @@ export function RequestQuotes({ request, role, session, onQuoteChange }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [pdfErrorMessage, setPdfErrorMessage] = useState("");
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const moduleRef = useRef(null);
   const formRef = useRef(null);
   const noticeRef = useRef(null);
@@ -546,14 +547,22 @@ export function RequestQuotes({ request, role, session, onQuoteChange }) {
     }, 80);
   };
 
-  const handlePdfDownload = () => {
+  const handlePdfDownload = async () => {
+    if (isPdfGenerating) {
+      return;
+    }
+
+    setIsPdfGenerating(true);
     setPdfErrorMessage("");
 
     try {
+      const { generateQuotePdf } = await import("../services/quotePdf");
       generateQuotePdf({ request, quote: latestQuote });
     } catch (error) {
       console.error(error);
       setPdfErrorMessage("Impossible de générer le PDF pour le moment. Vérifiez le devis puis réessayez.");
+    } finally {
+      setIsPdfGenerating(false);
     }
   };
 

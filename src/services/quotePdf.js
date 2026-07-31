@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { getQuoteReference } from "../utils/quoteReference";
 
 const violet = [111, 61, 255];
 const deepText = [24, 16, 36];
@@ -23,9 +24,6 @@ const formatDate = (date) => {
     year: "numeric",
   }).format(new Date(date));
 };
-
-export const getQuoteReference = (request, quote) =>
-  `${request?.reference || "DL-2026-0000"}-V${quote?.version || 1}`;
 
 export const getQuotePdfFileName = (request, quote) =>
   `devis-digital-lab-${getQuoteReference(request, quote)}.pdf`.replace(/[^a-zA-Z0-9._-]/g, "-");

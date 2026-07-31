@@ -76,7 +76,7 @@ export function RequestConversation({ request, senderRole, senderId, onMessagesR
 
       <div className="conversation-thread" aria-live="polite">
         {isLoading && (
-          <div className="conversation-loading" aria-label="Chargement des messages">
+          <div className="conversation-loading">
             <span></span>
             <span></span>
             <span></span>
