@@ -4,8 +4,10 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { initializeGoogleAnalytics } from './utils/analytics.js'
+import { initializeMicrosoftClarity } from './utils/clarity.js'
 
 initializeGoogleAnalytics()
+initializeMicrosoftClarity()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
