@@ -15,6 +15,7 @@ import {
 } from "./services/contactRequests";
 import { getCurrentSession, supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
+import { trackPageView } from "./utils/analytics";
 import { getEstimatorResult } from "./utils/estimator";
 
 const services = [
@@ -3906,6 +3907,10 @@ function App() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  useEffect(() => {
+    trackPageView();
+  }, [pathname]);
 
   const handleLogout = async () => {
     await logout();
