@@ -152,7 +152,7 @@ export function RequestDocuments({ request, userId, role }) {
         </div>
       )}
       {isLoading && (
-        <div className="documents-loading" aria-label="Chargement des documents">
+        <div className="documents-loading" role="status" aria-label="Chargement des documents">
           <span></span>
           <span></span>
         </div>

@@ -197,7 +197,7 @@ function QuoteEvents({ quote }) {
   ];
 
   return (
-    <div className="quote-events" aria-label="Timeline du devis">
+    <div className="quote-events" role="group" aria-label="Timeline du devis">
       {events.map((event) => (
         <div className={event.isDone ? "is-done" : ""} key={event.label}>
           <span>{event.isDone ? "✓" : "○"}</span>
