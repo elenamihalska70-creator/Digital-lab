@@ -146,11 +146,11 @@ const services = [
       "Notifications",
       "CRM léger",
       "Google Sheets",
-      "Dashboards",
+      "Tableaux de bord",
       "Suivi client",
     ],
     examples:
-      "Simulateurs, calculateurs, formulaires intelligents, emails automatiques, Google Sheets, CRM adapté, dashboards, notifications, suivi client, etc.",
+      "Simulateurs, calculateurs, formulaires intelligents, emails automatiques, Google Sheets, CRM adapté, tableaux de bord, notifications, suivi client, etc.",
     images: [
       "/projects/simulator_artfinanc.png",
       "/projects/simulator_artforgood_contact.png",
@@ -219,14 +219,14 @@ const services = [
     expectedResult: "Un prototype concret pour décider des prochaines étapes avec plus de confiance.",
     details: [
       "Prototype",
-      "Dashboard",
+      "Tableau de bord",
       "Espace client",
       "Parcours",
       "Démo",
       "Itérations",
     ],
     examples:
-      "Prototype SaaS, plateforme locale, dashboard B2B, espace utilisateur, application web testable, parcours utilisateur, version démo, etc.",
+      "Prototype SaaS, plateforme locale, tableau de bord B2B, espace utilisateur, application web testable, parcours utilisateur, version démo, etc.",
     images: [
       "/projects/microassist.png",
       "/projects/microassist-expert.png",
@@ -370,7 +370,7 @@ const includedProjectItems = [
 const trustCards = [
   {
     icon: "✓",
-    title: "Un langage business avant la technique",
+    title: "Un langage métier avant la technique",
     text: "Les choix sont expliqués selon leur impact concret sur votre activité.",
   },
   {
@@ -398,7 +398,7 @@ const trustBadges = [
   "Automatisation",
   "MVP",
   "Responsive",
-  "Dashboard",
+  "Tableau de bord",
   "IA conversationnelle",
 ];
 
@@ -410,7 +410,7 @@ const proofStats = [
     text: "Une solution pensée selon votre activité, vos objectifs et votre budget.",
   },
   { icon: "▦", value: null, label: "Création web & automatisation" },
-  { icon: "◎", value: null, label: "UX/UI, SEO & dashboards" },
+  { icon: "◎", value: null, label: "UX/UI, SEO & tableaux de bord" },
   { icon: "✓", value: null, label: "Approche claire, orientée résultat" },
 ];
 
@@ -454,7 +454,7 @@ const articles = [
   {
     title: "Automatiser sans compliquer son activité",
     description: "Des automatisations simples pour gagner du temps sans transformer toute votre organisation.",
-    tags: ["Automatisation", "PME", "Workflow"],
+    tags: ["Automatisation", "PME", "Flux de travail"],
     link: "#contact",
   },
   {
@@ -527,7 +527,7 @@ const estimatorFeatures = [
   "Réservation",
   "Email automatique",
   "Google Sheets / CRM",
-  "Dashboard",
+  "Tableau de bord",
   "Paiement",
   "Chatbot",
   "SEO",
@@ -583,10 +583,10 @@ const projects = [
       "Interface pensée pour les indépendants et petites structures",
       "Base solide pour tester rapidement un MVP SaaS",
     ],
-    stack: ["React", "Vite", "SaaS", "Dashboard", "Automatisation"],
+    stack: ["React", "Vite", "SaaS", "Tableau de bord", "Automatisation"],
     objective:
       "Valider un produit digital capable de réduire la charge administrative et de créer une expérience plus fluide pour les indépendants.",
-    tags: ["SaaS", "IA", "Automatisation", "Dashboard"],
+    tags: ["SaaS", "IA", "Automatisation", "Tableau de bord"],
     link: "/projects/microassist",
     image: "/projects/microassist.png",
     video: "/videos/microassist.mp4",
@@ -599,7 +599,7 @@ const projects = [
       adaptations: [
         "Pour les enseignants / répétiteurs : espace élève, suivi des progrès, notes, devoirs à rendre et tableau de bord par élève.",
         "Pour les coachs sportifs : suivi personnalisé des objectifs, séances, performances et rappels de rendez-vous.",
-        "Pour les formateurs / consultants : gestion des sessions, inscriptions, documents partagés et feedback des participants.",
+        "Pour les formateurs / consultants : gestion des sessions, inscriptions, documents partagés et retours des participants.",
       ],
       cta: "Adapter cette logique à mon métier →",
     },
@@ -652,7 +652,7 @@ const projects = [
       "Plateforme B2B avec tableaux de bord, alertes, priorités et automatisation du suivi multi-clients.",
     caseStudy: {
       problem: "Suivi multi-clients difficile pour les professionnels.",
-      solution: "Dashboard, alertes, priorités et fiches clients.",
+      solution: "Tableau de bord, alertes, priorités et fiches clients.",
       result: "Dossiers mieux organisés et risques plus faciles à suivre.",
     },
     details:
@@ -661,12 +661,12 @@ const projects = [
       "Vue multi-clients organisée par priorités",
       "Alertes et statuts pour suivre les dossiers sensibles",
       "Interface B2B claire pour limiter les frictions",
-      "Prototype évolutif pour tester des workflows métier",
+      "Prototype évolutif pour tester des flux de travail métier",
     ],
-    stack: ["React", "Dashboard", "B2B", "Prototype", "Workflow"],
+    stack: ["React", "Tableau de bord", "B2B", "Prototype", "Flux de travail"],
     objective:
       "Aider les professionnels à garder une vision claire de leurs clients, des urgences et des tâches à prioriser.",
-    tags: ["B2B", "Dashboard", "Automatisation", "Prototype"],
+    tags: ["B2B", "Tableau de bord", "Automatisation", "Prototype"],
     link: "/projects/microassist-expert",
     image: "/projects/microassist-expert.png",
     video: "/videos/microassist-expert.mp4",
@@ -675,13 +675,13 @@ const projects = [
       title: "Un tableau de bord pour piloter plusieurs dossiers en même temps",
       description:
         "MicroAssist Expert permet de suivre plusieurs clients, de visualiser les alertes et de prioriser les actions. L’objectif : ne plus perdre les informations importantes.",
-      adaptationTitle: "Comment l’adapter à vos process ?",
+      adaptationTitle: "Comment l’adapter à vos processus ?",
       adaptations: [
         "Pour les experts-comptables : suivi des dossiers clients, alertes déclaratives, documents manquants et priorités.",
         "Pour les responsables associatifs : suivi des adhésions, bénévoles, demandes entrantes et tâches à répartir.",
         "Pour les freelances ou petites équipes : vue d’ensemble des projets, délais, tâches et charge de travail.",
       ],
-      cta: "Adapter ce tableau de bord à mes process →",
+      cta: "Adapter ce tableau de bord à mes processus →",
     },
   },
   {
@@ -689,24 +689,24 @@ const projects = [
     title: "Assistant de réservation IA",
     subtitle: "Assistant conversationnel pour réservations et demandes clients.",
     description:
-      "Assistant conversationnel pour qualifier les demandes clients, automatiser les réservations et orchestrer des workflows métier.",
+      "Assistant conversationnel pour qualifier les demandes clients, automatiser les réservations et orchestrer des flux de travail métier.",
     caseStudy: {
       problem: "Demandes répétitives et réservations manuelles.",
       solution: "Assistant conversationnel, QR code, collecte de demandes.",
       result: "Prise de contact simplifiée et disponibilité 24/7.",
     },
     details:
-      "Cet assistant aide les petites structures à recevoir, qualifier et organiser les demandes clients. Il peut guider une réservation, collecter les informations utiles et déclencher un workflow efficace pour éviter les oublis.",
+      "Cet assistant aide les petites structures à recevoir, qualifier et organiser les demandes clients. Il peut guider une réservation, collecter les informations utiles et déclencher un flux de travail efficace pour éviter les oublis.",
     features: [
       "Conversation guidée pour qualifier les demandes",
-      "Workflow automatisé pour organiser les réservations",
+      "Flux de travail automatisé pour organiser les réservations",
       "Interface adaptable selon le métier",
       "Base prête à connecter à d’autres outils",
     ],
-    stack: ["IA", "Automatisation", "Chatbot", "Workflow", "Interface web"],
+    stack: ["IA", "Automatisation", "Chatbot", "Flux de travail", "Interface web"],
     objective:
       "Réduire le temps passé à répondre aux demandes répétitives tout en gardant une expérience claire et humaine pour les clients.",
-    tags: ["IA", "Chatbot", "Automatisation", "Workflow"],
+    tags: ["IA", "Chatbot", "Automatisation", "Flux de travail"],
     link: "https://reservation-bot-demo.pages.dev/",
     image: "/projects/automatisation.png",
     video: "/videos/automatisation.mp4",
@@ -725,6 +725,54 @@ const projects = [
     },
   },
 ];
+
+const optimizedImages = {
+  "/projects/site-wordpress-ohmyfood-home.png": {
+    src: "/projects/site-wordpress-ohmyfood-home.webp",
+    srcSet:
+      "/projects/site-wordpress-ohmyfood-home-640.webp 640w, /projects/site-wordpress-ohmyfood-home-960.webp 960w, /projects/site-wordpress-ohmyfood-home.webp 1762w",
+  },
+  "/projects/socle-local.png": {
+    src: "/projects/socle-local.webp",
+    srcSet: "/projects/socle-local-640.webp 640w, /projects/socle-local-960.webp 960w, /projects/socle-local.webp 1351w",
+  },
+  "/projects/maket-wordpress-ohmyfood-figma.png": {
+    src: "/projects/maket-wordpress-ohmyfood-figma.webp",
+    srcSet:
+      "/projects/maket-wordpress-ohmyfood-figma-640.webp 640w, /projects/maket-wordpress-ohmyfood-figma-960.webp 960w, /projects/maket-wordpress-ohmyfood-figma.webp 1073w",
+  },
+  "/projects/La_ferm_des_amanders.png": {
+    src: "/projects/La_ferm_des_amanders.webp",
+    srcSet:
+      "/projects/La_ferm_des_amanders-640.webp 640w, /projects/La_ferm_des_amanders-960.webp 960w, /projects/La_ferm_des_amanders.webp 1920w",
+  },
+  "/projects/srtructure_du_menu.png": {
+    src: "/projects/srtructure_du_menu.webp",
+    srcSet:
+      "/projects/srtructure_du_menu-640.webp 640w, /projects/srtructure_du_menu-960.webp 960w, /projects/srtructure_du_menu.webp 1920w",
+  },
+  "/projects/microassist-expert (2).png": {
+    src: "/projects/microassist-expert (2).webp",
+    srcSet:
+      "/projects/microassist-expert (2)-640.webp 640w, /projects/microassist-expert (2)-960.webp 960w, /projects/microassist-expert (2).webp 1341w",
+  },
+  "/projects/simulator_artforgood_contact.png": {
+    src: "/projects/simulator_artforgood_contact.webp",
+    srcSet:
+      "/projects/simulator_artforgood_contact-640.webp 640w, /projects/simulator_artforgood_contact-960.webp 960w, /projects/simulator_artforgood_contact.webp 1920w",
+  },
+  "/projects/microassist.png": {
+    src: "/projects/microassist.webp",
+    srcSet: "/projects/microassist-640.webp 640w, /projects/microassist-960.webp 960w, /projects/microassist.webp 1387w",
+  },
+  "/projects/microassist (2).png": {
+    src: "/projects/microassist (2).webp",
+    srcSet:
+      "/projects/microassist (2)-640.webp 640w, /projects/microassist (2)-960.webp 960w, /projects/microassist (2).webp 1809w",
+  },
+};
+
+const getOptimizedImage = (src) => optimizedImages[src] ?? { src };
 
 const getProjectFromPath = (pathname) => {
   const match = pathname.match(/^\/projects\/([^/]+)\/?$/);
@@ -1005,24 +1053,32 @@ function ServiceGallery({ service, isOpen }) {
     >
       <div className="service-gallery-frame">
         {visibleImages.map((image, index) => (
-          <img
-            alt={`Aperçu ${index + 1} pour ${service.title}`}
-            className={index === safeActiveIndex ? "is-active" : ""}
-            decoding="async"
-            key={image}
-            loading="lazy"
-            onError={() => {
-              setFailedImages((currentImages) =>
-                currentImages.includes(image) ? currentImages : [...currentImages, image],
-              );
-            }}
-            src={image}
-          />
+          (() => {
+            const optimizedImage = getOptimizedImage(image);
+
+            return (
+              <img
+                alt={`Aperçu ${index + 1} pour ${service.title}`}
+                className={index === safeActiveIndex ? "is-active" : ""}
+                decoding="async"
+                key={image}
+                loading="lazy"
+                onError={() => {
+                  setFailedImages((currentImages) =>
+                    currentImages.includes(image) ? currentImages : [...currentImages, image],
+                  );
+                }}
+                sizes="(max-width: 768px) 88vw, 420px"
+                src={optimizedImage.src}
+                srcSet={optimizedImage.srcSet}
+              />
+            );
+          })()
         ))}
         <span className="service-gallery-overlay"></span>
       </div>
 
-      <div className="service-gallery-dots" aria-label={`Aperçus pour ${service.title}`}>
+      <div className="service-gallery-dots" role="group" aria-label={`Aperçus pour ${service.title}`}>
         {visibleImages.map((image, index) => (
           <button
             aria-label={`Afficher l’aperçu ${index + 1}`}
@@ -1325,7 +1381,7 @@ function BlogCarousel() {
             </p>
           </div>
 
-          <div className="articles-controls" aria-label="Navigation des articles">
+          <div className="articles-controls" role="group" aria-label="Navigation des articles">
             <button type="button" onClick={() => scrollByDirection(-1)} aria-label="Article précédent">
               ←
             </button>
@@ -1342,7 +1398,7 @@ function BlogCarousel() {
               key={article.title}
               style={{ "--reveal-delay": `${index * 80}ms` }}
             >
-              <div className="article-tags" aria-label="Thèmes de l’article">
+              <div className="article-tags" role="group" aria-label="Thèmes de l’article">
                 {article.tags.map((tag) => (
                   <span key={tag}>{tag}</span>
                 ))}
@@ -1356,7 +1412,7 @@ function BlogCarousel() {
           ))}
         </div>
 
-        <div className="articles-pagination" aria-label="Pagination des articles">
+        <div className="articles-pagination" role="group" aria-label="Pagination des articles">
           {articles.map((article, index) => (
             <button
               className={activeIndex === index ? "is-active" : ""}
@@ -1444,7 +1500,7 @@ function ProjectEstimator() {
         </div>
 
         <div className="estimator-panel reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
-          <div className="estimator-progress" aria-label={`Progression ${progress}%`}>
+          <div className="estimator-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Progression ${progress}%`}>
             <span style={{ width: `${progress}%` }}></span>
           </div>
 
@@ -1545,7 +1601,7 @@ function ProjectEstimator() {
                   {[
                     "Simple : page ou fonctionnalité basique",
                     "Standard : plusieurs pages ou plusieurs fonctions",
-                    "Avancé : espace utilisateur, dashboard, automatisation ou IA",
+                    "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
                   ].map((option) => (
                     <button
                       className={answers.complexity === option ? "is-selected" : ""}
@@ -1642,20 +1698,20 @@ function AIWebsiteTransformationSection() {
           <div className="ai-transformation-copy">
             <span className="ai-transformation-eyebrow">AI Website Transformation</span>
             <h2>
-              Same business.
+              Même activité.
               <br />
-              Different perception.
+              Nouvelle perception.
             </h2>
             <p>
-              Transform existing websites into digital experiences that change how customers perceive your brand.
+              Transformer des sites existants en expériences digitales qui changent la perception de votre marque.
             </p>
 
             <div className="ai-transformation-actions">
               <a className="btn btn-primary" href="#ai-website-transformation-video">
-                ▶ Watch the transformation
+                ▶ Voir la transformation
               </a>
               <a className="ai-transformation-link" href="#contact">
-                See the full case
+                Voir le cas complet
               </a>
             </div>
           </div>
@@ -1904,7 +1960,7 @@ function SiteFooter({ onNavigate }) {
               <ContactIcon type="globe" />
               <span>{businessContact.siteDisplay}</span>
             </a>
-            <div className="footer-social-links" aria-label="Réseaux sociaux Digital Lab">
+            <div className="footer-social-links" role="group" aria-label="Réseaux sociaux Digital Lab">
               {socialLinks.map((socialLink) => (
                 <a
                   className="social-icon-link"
@@ -1929,7 +1985,7 @@ function SiteFooter({ onNavigate }) {
 
         <div className="footer-column">
           <h3>Nos expertises</h3>
-          <div className="footer-stack" aria-label="Expertises Digital Lab">
+          <div className="footer-stack" role="group" aria-label="Expertises Digital Lab">
             {footerExpertise.map((tool) => (
               <span key={tool}>{tool}</span>
             ))}
@@ -2057,11 +2113,22 @@ function ProjectCasePage({ project, onNavigate }) {
                   muted
                   loop
                   playsInline
-                  poster={project.image}
+                  poster={getOptimizedImage(project.image).src}
                   src={project.video}
                 />
               ) : (
-                <img src={project.image} alt={`Aperçu du projet ${project.title}`} />
+                (() => {
+                  const optimizedImage = getOptimizedImage(project.image);
+
+                  return (
+                    <img
+                      src={optimizedImage.src}
+                      srcSet={optimizedImage.srcSet}
+                      sizes="(max-width: 900px) 92vw, 50vw"
+                      alt={`Aperçu du projet ${project.title}`}
+                    />
+                  );
+                })()
               )}
             </div>
           </div>
@@ -2077,7 +2144,7 @@ function ProjectCasePage({ project, onNavigate }) {
           </article>
 
           <article className="case-panel">
-            <span>Objectif business</span>
+            <span>Objectif métier</span>
             <h2>Créer un outil utile et mesurable</h2>
             <p>{project.objective}</p>
           </article>
@@ -2316,7 +2383,7 @@ function RequestSummaryPanel({ activeQuote, request, role }) {
         <p>{getNextActionText(request.status, quoteStatus)}</p>
       </div>
 
-      <div className="client-timeline" aria-label="Avancement du projet">
+      <div className="client-timeline" role="group" aria-label="Avancement du projet">
         {getProjectTimeline(request.status, quoteStatus).map((step) => (
           <div className={step.isDone ? "is-done" : ""} key={step.label}>
             <span>{step.isDone ? "✓" : "○"}</span>
@@ -2651,7 +2718,7 @@ function ContactRequestsPanel({ session, userId, messageFocus, onUnreadCountChan
         </div>
 
         {isLoading && (
-          <div className="dashboard-skeleton-grid" aria-label="Chargement des demandes">
+          <div className="dashboard-skeleton-grid" role="status" aria-label="Chargement des demandes">
             <span></span>
             <span></span>
             <span></span>
@@ -2700,7 +2767,7 @@ function ContactRequestsPanel({ session, userId, messageFocus, onUnreadCountChan
                     </div>
                   </div>
                   <p>{request.message}</p>
-                  <div className="request-mini-timeline" aria-label="Avancement de la demande">
+                  <div className="request-mini-timeline" role="group" aria-label="Avancement de la demande">
                     {getProjectTimeline(request.status).map((step) => (
                       <span className={step.isDone ? "is-done" : ""} key={step.label}>
                         {step.label}
@@ -3024,7 +3091,7 @@ function AdminRequestsPanel({ session, messageFocus, onUnreadCountChange }) {
         </label>
         <div className="admin-filter-group">
           <span>Filtrer par statut</span>
-          <div className="admin-filter-tabs" aria-label="Filtrer par statut">
+          <div className="admin-filter-tabs" role="group" aria-label="Filtrer par statut">
             {[
               ["all", "Toutes"],
               ["new", "Nouvelles"],
@@ -3064,7 +3131,7 @@ function AdminRequestsPanel({ session, messageFocus, onUnreadCountChange }) {
       </div>
 
       {isLoading && (
-        <div className="dashboard-skeleton-grid" aria-label="Chargement des demandes admin">
+        <div className="dashboard-skeleton-grid" role="status" aria-label="Chargement des demandes admin">
           <span></span>
           <span></span>
           <span></span>
@@ -3135,7 +3202,7 @@ function AdminRequestsPanel({ session, messageFocus, onUnreadCountChange }) {
                     )}
                   </div>
 
-                  <div className="admin-status-actions" aria-label={`Changer le statut de ${request.name || "la demande"}`}>
+                  <div className="admin-status-actions" role="group" aria-label={`Changer le statut de ${request.name || "la demande"}`}>
                     <button className="admin-open-dossier" type="button" onClick={() => openDossier(request.id)}>
                       Ouvrir le dossier
                     </button>
@@ -4545,7 +4612,7 @@ function App() {
             <div className="ai-lab-intro glass-section premium-card premium-card-hero gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "80ms" }}>
               <div className="ai-lab-intro-copy">
                 <span className="ai-lab-kicker">Laboratoire &amp; expérimentation</span>
-                <h3>AI Innovation Lab</h3>
+                <h3>Laboratoire d’innovation IA</h3>
                 <p>
                   Ces projets constituent mon laboratoire d’innovation autour de l’intelligence artificielle appliquée
                   aux entreprises. J’y conçois et développe des solutions SaaS, des assistants IA, des outils métiers
@@ -4570,13 +4637,21 @@ function App() {
                 >
                   <div className="project-media">
                     {project.image ? (
-                      <img
-                        className="project-image"
-                        src={project.image}
-                        alt={`Aperçu du projet ${project.title}`}
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      (() => {
+                        const optimizedImage = getOptimizedImage(project.image);
+
+                        return (
+                          <img
+                            className="project-image"
+                            src={optimizedImage.src}
+                            srcSet={optimizedImage.srcSet}
+                            sizes="(max-width: 768px) 88vw, 420px"
+                            alt={`Aperçu du projet ${project.title}`}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        );
+                      })()
                     ) : (
                       <div className="project-placeholder"></div>
                     )}
@@ -4585,7 +4660,7 @@ function App() {
                         muted
                         loop
                         playsInline
-                        poster={project.image}
+                        poster={getOptimizedImage(project.image).src}
                         src={project.video}
                         ariaLabel={`Aperçu vidéo du projet ${project.title}`}
                       />
@@ -4694,7 +4769,7 @@ function App() {
               ))}
             </div>
 
-            <div className="method-badges" aria-label="Garanties de méthode">
+            <div className="method-badges" role="group" aria-label="Garanties de méthode">
               {methodBadges.map((badge) => (
                 <span className="badge-pill" key={badge}>✓ {badge}</span>
               ))}
@@ -4762,7 +4837,7 @@ function App() {
               ))}
             </div>
 
-            <div className="trust-badges" aria-label="Compétences et outils">
+            <div className="trust-badges" role="group" aria-label="Compétences et outils">
               {trustBadges.map((badge, index) => (
                 <span
                   className="badge-pill reveal-on-scroll reveal-card"
@@ -4829,7 +4904,7 @@ function App() {
               </div>
             </div>
 
-            <div className="proof-workflow" aria-label="Mini workflow réel">
+            <div className="proof-workflow" role="group" aria-label="Mini flux réel">
               {proofWorkflow.map((step, index) => (
                 <article
                   className="proof-workflow-step premium-card gradient-border soft-hover reveal-on-scroll reveal-card proof-reveal-item"
@@ -5001,7 +5076,7 @@ function App() {
               </li>
             </ul>
 
-            <div className="contact-badges" aria-label="Informations rassurantes">
+            <div className="contact-badges" role="group" aria-label="Informations rassurantes">
               <span className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": "520ms" }}>
                 ✓ Premier échange sans jargon
               </span>
@@ -5024,7 +5099,7 @@ function App() {
                 <span>Fondatrice & Cheffe de projet digitale</span>
               </div>
 
-              <div className="contact-link-list" aria-label="Coordonnées Digital Lab">
+              <div className="contact-link-list" role="group" aria-label="Coordonnées Digital Lab">
                 <a href={`mailto:${businessContact.email}`} aria-label="Envoyer un e-mail à Digital Lab">
                   <ContactIcon type="mail" />
                   <span>{businessContact.email}</span>
@@ -5044,7 +5119,7 @@ function App() {
                 </a>
               </div>
 
-              <div className="contact-social-links" aria-label="Profils professionnels">
+              <div className="contact-social-links" role="group" aria-label="Profils professionnels">
                 {socialLinks.map((socialLink) => (
                   <a
                     className="social-icon-link"

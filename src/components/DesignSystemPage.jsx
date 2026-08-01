@@ -1,65 +1,65 @@
 import "./DesignSystemPage.css";
 
 const brandColors = [
-  { value: "#07030F", label: "Main background" },
+  { value: "#07030F", label: "Fond principal" },
   { value: "#0F0A1C", label: "Surface" },
-  { value: "#141022", label: "Card" },
-  { value: "#8B5CF6", label: "Primary accent" },
-  { value: "#A855F7", label: "Secondary accent" },
-  { value: "#FFFFFF", label: "Main text" },
-  { value: "rgba(255,255,255,0.78)", label: "Secondary text" },
-  { value: "rgba(255,255,255,0.08)", label: "Border" },
+  { value: "#141022", label: "Carte" },
+  { value: "#8B5CF6", label: "Accent principal" },
+  { value: "#A855F7", label: "Accent secondaire" },
+  { value: "#FFFFFF", label: "Texte principal" },
+  { value: "rgba(255,255,255,0.78)", label: "Texte secondaire" },
+  { value: "rgba(255,255,255,0.08)", label: "Bordure" },
 ];
 
-const tags = ["WordPress", "React", "Supabase", "SEO", "Automatisation", "IA", "MVP", "Dashboard"];
+const tags = ["WordPress", "React", "Supabase", "SEO", "Automatisation", "IA", "MVP", "Tableau de bord"];
 
 const cardExamples = [
   {
-    eyebrow: "Service card",
+    eyebrow: "Carte service",
     title: "Création web & automatisation",
     text: "Une présence fiable et des outils pensés pour fluidifier votre activité.",
   },
   {
-    eyebrow: "Impact card",
+    eyebrow: "Carte impact",
     title: "Moins de tâches répétitives",
     text: "Le quotidien devient plus lisible, avec des étapes mieux organisées.",
   },
   {
-    eyebrow: "Project card",
+    eyebrow: "Carte projet",
     title: "Espace client sur mesure",
     text: "Un parcours clair pour centraliser les demandes, documents et échanges.",
   },
 ];
 
 const backgroundPreviews = [
-  { title: "Purple radial glow", className: "is-purple-glow" },
-  { title: "Dark premium background", className: "is-dark-premium" },
-  { title: "Gradient hero background", className: "is-hero-gradient" },
+  { title: "Halo radial violet", className: "is-purple-glow" },
+  { title: "Fond premium sombre", className: "is-dark-premium" },
+  { title: "Fond hero dégradé", className: "is-hero-gradient" },
 ];
 
 const glowLibrary = [
   {
-    title: "Hero Glow XL",
+    title: "Halo hero XL",
     size: "1600 × 900 px",
     className: "is-hero-xl",
   },
   {
-    title: "Hero Glow Medium",
+    title: "Halo hero moyen",
     size: "900 × 520 px",
     className: "is-hero-medium",
   },
   {
-    title: "Card Glow",
+    title: "Halo de carte",
     size: "520 × 360 px",
     className: "is-card-glow",
   },
   {
-    title: "Button Glow",
+    title: "Halo de bouton",
     size: "420 × 180 px",
     className: "is-button-glow",
   },
   {
-    title: "Background Ambient Glow",
+    title: "Halo d’ambiance",
     size: "1920 × 1080 px",
     className: "is-ambient-glow",
   },
@@ -67,29 +67,29 @@ const glowLibrary = [
 
 const socialAssets = [
   {
-    title: "LinkedIn carousel cover",
+    title: "Couverture carrousel LinkedIn",
     className: "is-linkedin",
     text: "Transformons vos idées en solutions digitales.",
   },
   {
-    title: "Instagram carousel cover",
+    title: "Couverture carrousel Instagram",
     className: "is-instagram",
     text: "Votre projet mérite mieux qu’un simple site.",
   },
   {
-    title: "Story/Reel cover",
+    title: "Couverture story/reel",
     className: "is-story",
     text: "Le numérique doit simplifier le travail, pas le compliquer.",
   },
 ];
 
 const exportAssets = [
-  { title: "Logo badge", className: "is-logo-badge" },
-  { title: "Primary button", className: "is-button" },
-  { title: "CTA card", className: "is-cta-card" },
-  { title: "Quote card", className: "is-quote-card" },
-  { title: "Service card", className: "is-service-card" },
-  { title: "Glow background", className: "is-glow-background" },
+  { title: "Badge logo", className: "is-logo-badge" },
+  { title: "Bouton principal", className: "is-button" },
+  { title: "Carte CTA", className: "is-cta-card" },
+  { title: "Carte citation", className: "is-quote-card" },
+  { title: "Carte service", className: "is-service-card" },
+  { title: "Fond lumineux", className: "is-glow-background" },
 ];
 
 function DesignSystemSection({ eyebrow, title, children }) {
@@ -120,15 +120,15 @@ export function DesignSystemPage() {
         <header className="design-system-header">
           <BrandMark />
           <div>
-            <p className="design-system-kicker">Internal library</p>
-            <h1>Design System & Brand Assets</h1>
+            <p className="design-system-kicker">Bibliothèque interne</p>
+            <h1>Système de design & ressources de marque</h1>
             <p>
-              Internal visual library for Digital Lab social media, presentations and brand materials.
+              Bibliothèque visuelle interne pour les réseaux sociaux, présentations et supports de marque Digital Lab.
             </p>
           </div>
         </header>
 
-        <DesignSystemSection eyebrow="Palette" title="Brand colors">
+        <DesignSystemSection eyebrow="Palette" title="Couleurs de marque">
           <div className="design-system-color-grid">
             {brandColors.map((color) => (
               <article className="design-system-color-card" key={color.value}>
@@ -140,7 +140,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Type scale" title="Typography">
+        <DesignSystemSection eyebrow="Échelle typographique" title="Typographie">
           <div className="design-system-type-card">
             <div>
               <span>H1</span>
@@ -151,17 +151,17 @@ export function DesignSystemPage() {
               <h3>Des solutions conçues pour votre activité.</h3>
             </div>
             <div>
-              <span>Body</span>
+              <span>Corps</span>
               <p>Chaque projet commence par une idée.</p>
             </div>
             <div>
-              <span>Caption</span>
+              <span>Légende</span>
               <small>Studio digital indépendant</small>
             </div>
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Actions" title="Buttons">
+        <DesignSystemSection eyebrow="Actions" title="Boutons">
           <div className="design-system-actions">
             <a className="btn btn-primary" href="/#contact">
               Parler de mon projet
@@ -173,7 +173,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Reusable surfaces" title="Cards">
+        <DesignSystemSection eyebrow="Surfaces réutilisables" title="Cartes">
           <div className="design-system-card-grid">
             {cardExamples.map((card) => (
               <article className="glass-card design-system-example-card" key={card.eyebrow}>
@@ -186,7 +186,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Metadata" title="Badges / Tags">
+        <DesignSystemSection eyebrow="Métadonnées" title="Badges / étiquettes">
           <div className="design-system-tags">
             {tags.map((tag) => (
               <span key={tag}>{tag}</span>
@@ -194,7 +194,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Atmosphere" title="Glow & Backgrounds">
+        <DesignSystemSection eyebrow="Atmosphère" title="Halos & fonds">
           <div className="design-system-preview-grid">
             {backgroundPreviews.map((preview) => (
               <article className={`design-system-background-preview ${preview.className}`} key={preview.title}>
@@ -204,7 +204,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Export backgrounds" title="Glow Library">
+        <DesignSystemSection eyebrow="Fonds exportables" title="Bibliothèque de halos">
           <div className="design-system-glow-grid">
             {glowLibrary.map((glow) => (
               <article className="design-system-glow-card" key={glow.title}>
@@ -218,7 +218,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Social" title="Social media assets">
+        <DesignSystemSection eyebrow="Réseaux" title="Ressources réseaux sociaux">
           <div className="design-system-social-grid">
             {socialAssets.map((asset) => (
               <article className={`design-system-social-preview ${asset.className}`} key={asset.title}>
@@ -230,7 +230,7 @@ export function DesignSystemPage() {
           </div>
         </DesignSystemSection>
 
-        <DesignSystemSection eyebrow="Canva kit" title="Assets to export for Canva">
+        <DesignSystemSection eyebrow="Kit Canva" title="Ressources à exporter pour Canva">
           <div className="design-system-export-grid">
             {exportAssets.map((asset) => (
               <article className={`design-system-export-card ${asset.className}`} key={asset.title}>

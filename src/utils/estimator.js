@@ -12,7 +12,7 @@ const NEED_ADJUSTMENTS = {
 const COMPLEXITY_ADJUSTMENTS = {
   "Simple : page ou fonctionnalité basique": { budget: 0, days: 0, complexity: 0 },
   "Standard : plusieurs pages ou plusieurs fonctions": { budget: 350, days: 3, complexity: 2 },
-  "Avancé : espace utilisateur, dashboard, automatisation ou IA": { budget: 900, days: 7, complexity: 5 },
+  "Avancé : espace utilisateur, tableau de bord, automatisation ou IA": { budget: 900, days: 7, complexity: 5 },
 };
 
 // Every selectable feature changes both budget and delivery time. Higher
@@ -23,7 +23,7 @@ export const ESTIMATOR_FEATURE_ADJUSTMENTS = {
   Réservation: { budget: 450, days: 3, complexity: 2 },
   "Email automatique": { budget: 300, days: 2, complexity: 1 },
   "Google Sheets / CRM": { budget: 600, days: 4, complexity: 3 },
-  Dashboard: { budget: 800, days: 6, complexity: 4 },
+  "Tableau de bord": { budget: 800, days: 6, complexity: 4 },
   Paiement: { budget: 550, days: 4, complexity: 3 },
   Chatbot: { budget: 950, days: 7, complexity: 5 },
   SEO: { budget: 320, days: 2, complexity: 1 },
