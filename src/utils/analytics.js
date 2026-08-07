@@ -50,3 +50,11 @@ export const trackPageView = () => {
     page_path: pagePath,
   });
 };
+
+export const trackEvent = (eventName, parameters = {}) => {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") {
+    return;
+  }
+
+  window.gtag("event", eventName, parameters);
+};

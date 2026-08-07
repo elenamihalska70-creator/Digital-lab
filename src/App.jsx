@@ -15,7 +15,7 @@ import {
 } from "./services/contactRequests";
 import { getCurrentSession, supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
-import { trackPageView } from "./utils/analytics";
+import { trackEvent, trackPageView } from "./utils/analytics";
 import { getEstimatorResult } from "./utils/estimator";
 
 const services = [
@@ -251,6 +251,7 @@ const services = [
 ];
 
 const navLinks = [
+  { label: "Audit gratuit", href: "/audit-site-web", emphasized: true },
   { label: "Services", href: "/#services" },
   { label: "Projets", href: "/#projets" },
   { label: "Méthode", href: "/#method" },
@@ -484,6 +485,61 @@ const businessContact = {
   github: "https://github.com/ElenaMihalska70-Creator",
   instagram: "https://www.instagram.com/digital.lab.fr/",
   facebook: "https://www.facebook.com/profile.php?id=61570761385765",
+};
+
+const siteUrl = "https://www.digitallab.studio";
+const auditLandingPath = "/audit-site-web";
+const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
+const auditAppUrl = configuredAuditUrl;
+const isAuditAppUrlConfigured = Boolean(configuredAuditUrl);
+const auditVideoSrc = "/videos/Digitallab_audit.mp4";
+const auditVideoPoster = "/logo-digital-lab.png";
+
+const auditBenefits = [
+  "Un score clair",
+  "3 risques prioritaires",
+  "Un plan d’action concret",
+];
+
+const auditSignals = [
+  "Visibilité et SEO",
+  "Confiance et preuves",
+  "Sécurité et Cyber Trust",
+  "RGPD et mentions clés",
+  "Performance perçue",
+  "Conversion et CTA",
+];
+
+const auditDeliverables = [
+  "Un Digital Score synthétique pour comprendre l’état général du site",
+  "Les principaux risques qui peuvent freiner la confiance ou les demandes",
+  "Des actions priorisées, expliquées dans un langage métier",
+  "Une passerelle vers l’accompagnement Digital Lab si une correction est utile",
+];
+
+const auditEvents = {
+  navClick: "audit_nav_click",
+  homeCta: "audit_home_cta_click",
+  landingCta: "audit_landing_cta_click",
+  externalLaunch: "audit_external_app_click",
+  videoPlay: "audit_video_play",
+  footerCta: "audit_footer_cta_click",
+  assistanceClick: "audit_assistance_click",
+};
+
+const pageMetadata = {
+  "/": {
+    title: "Digital Lab — Solutions digitales pour petites structures",
+    description:
+      "Digital Lab accompagne les PME, indépendants et associations avec des sites web modernes, des automatisations utiles et des solutions IA adaptées à leurs besoins.",
+    canonical: `${siteUrl}/`,
+  },
+  [auditLandingPath]: {
+    title: "Audit de site web gratuit pour TPE et indépendants | Digital Lab",
+    description:
+      "Analysez gratuitement votre site : visibilité, confiance, sécurité, RGPD, performance et conversion. Recevez les priorités à traiter, expliquées simplement.",
+    canonical: `${siteUrl}${auditLandingPath}`,
+  },
 };
 
 const socialLinks = [
@@ -833,12 +889,172 @@ const scrollToElementWithHeaderOffset = (selectorOrElement) => {
   window.scrollTo({ top: targetTop, behavior: "smooth" });
 };
 
+const setMetaContent = (selector, content) => {
+  if (!content) {
+    return;
+  }
+
+  let element = document.head.querySelector(selector);
+
+  if (!element) {
+    element = document.createElement("meta");
+    const nameMatch = selector.match(/\[name="([^"]+)"\]/);
+    const propertyMatch = selector.match(/\[property="([^"]+)"\]/);
+
+    if (nameMatch) {
+      element.setAttribute("name", nameMatch[1]);
+    }
+
+    if (propertyMatch) {
+      element.setAttribute("property", propertyMatch[1]);
+    }
+
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute("content", content);
+};
+
+const setCanonicalHref = (href) => {
+  let element = document.head.querySelector('link[rel="canonical"]');
+
+  if (!element) {
+    element = document.createElement("link");
+    element.setAttribute("rel", "canonical");
+    document.head.appendChild(element);
+  }
+
+  element.setAttribute("href", href);
+};
+
+const setJsonLd = (id, data) => {
+  let element = document.getElementById(id);
+
+  if (!element) {
+    element = document.createElement("script");
+    element.id = id;
+    element.type = "application/ld+json";
+    document.head.appendChild(element);
+  }
+
+  element.textContent = JSON.stringify(data);
+};
+
+const removeJsonLd = (id) => {
+  document.getElementById(id)?.remove();
+};
+
+const applyPageMetadata = (pathname) => {
+  const metadata = pageMetadata[pathname] ?? pageMetadata["/"];
+
+  document.title = metadata.title;
+  setMetaContent('meta[name="description"]', metadata.description);
+  setMetaContent('meta[property="og:title"]', metadata.title);
+  setMetaContent('meta[property="og:description"]', metadata.description);
+  setMetaContent('meta[property="og:url"]', metadata.canonical);
+  setMetaContent('meta[name="twitter:title"]', metadata.title);
+  setMetaContent('meta[name="twitter:description"]', metadata.description);
+  setCanonicalHref(metadata.canonical);
+
+  if (pathname === auditLandingPath) {
+    setJsonLd("audit-landing-structured-data", {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": `${siteUrl}${auditLandingPath}#webapplication`,
+          name: "Digital Lab Audit",
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          offers: {
+            "@type": "Offer",
+            price: "0",
+            priceCurrency: "EUR",
+          },
+          provider: {
+            "@type": "ProfessionalService",
+            name: "Digital Lab",
+            url: siteUrl,
+          },
+          url: metadata.canonical,
+          description: metadata.description,
+        },
+        {
+          "@type": "Service",
+          "@id": `${siteUrl}${auditLandingPath}#service`,
+          name: "Audit de site web gratuit Digital Lab",
+          provider: {
+            "@type": "ProfessionalService",
+            name: "Digital Lab",
+            url: siteUrl,
+          },
+          serviceType: "Diagnostic digital et commercial pour petites entreprises",
+          areaServed: "France",
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Accueil",
+              item: siteUrl,
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: "Audit de site web gratuit",
+              item: metadata.canonical,
+            },
+          ],
+        },
+        {
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Pourquoi utiliser Digital Lab Audit s’il existe déjà d’autres outils ?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text:
+                  "Les grandes plateformes SEO sont très puissantes pour les spécialistes. Digital Lab Audit a été conçu pour les dirigeants de petites entreprises qui veulent comprendre rapidement ce qui peut freiner la visibilité, la confiance et les demandes clients, sans devoir interpréter un rapport technique complexe.",
+              },
+            },
+          ],
+        },
+      ],
+    });
+  } else {
+    removeJsonLd("audit-landing-structured-data");
+  }
+};
+
+const trackAuditCta = (eventName, location) => {
+  trackEvent(eventName, {
+    cta_location: location,
+    destination_type: isAuditAppUrlConfigured ? "external_audit_app" : "configuration_fallback",
+  });
+};
+
+const handleAuditLaunchClick = (event, { eventName, location, onNavigate }) => {
+  trackAuditCta(eventName, location);
+
+  if (isAuditAppUrlConfigured) {
+    trackAuditCta(auditEvents.externalLaunch, location);
+    return;
+  }
+
+  event.preventDefault();
+  onNavigate(auditLandingPath);
+};
+
 function DeferredVideo({
   ariaLabel,
   autoPlay = false,
   className,
   loop = false,
   muted = true,
+  onPlay,
   playWhenVisible = false,
   playsInline = true,
   poster,
@@ -918,6 +1134,7 @@ function DeferredVideo({
       loop={loop}
       muted={muted}
       onError={() => setHasVideoError(true)}
+      onPlay={onPlay}
       playsInline={playsInline}
       poster={poster}
       preload={isSourceAttached ? "metadata" : "none"}
@@ -1902,6 +2119,331 @@ function ContactForm({ onAuthOpen }) {
         )}
       </div>
     </form>
+  );
+}
+
+function AuditVideoCard({ compact = false }) {
+  const hasTrackedPlayRef = useRef(false);
+
+  const trackVideoPlay = () => {
+    if (hasTrackedPlayRef.current) {
+      return;
+    }
+
+    hasTrackedPlayRef.current = true;
+    trackAuditCta(auditEvents.videoPlay, compact ? "audit_landing_video" : "homepage_spotlight_video");
+  };
+
+  const playVideo = (event) => {
+    const video = event.currentTarget.querySelector("video");
+
+    if (video) {
+      video.play().catch(() => {});
+    }
+  };
+
+  const pauseVideo = (event) => {
+    const video = event.currentTarget.querySelector("video");
+
+    if (video) {
+      video.pause();
+    }
+  };
+
+  return (
+    <div
+      className={`audit-video-card premium-card gradient-border${compact ? " is-compact" : ""}`}
+      onMouseEnter={playVideo}
+      onMouseLeave={pauseVideo}
+      onBlur={pauseVideo}
+      onClick={playVideo}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          playVideo(event);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Lire l’aperçu vidéo Digital Lab Audit"
+    >
+      <div className="project-media audit-video-media">
+        <DeferredVideo
+          ariaLabel="Aperçu vidéo Digital Lab Audit"
+          muted
+          loop
+          onPlay={trackVideoPlay}
+          playsInline
+          poster={auditVideoPoster}
+          src={auditVideoSrc}
+        />
+      </div>
+    </div>
+  );
+}
+
+function AuditSpotlightSection({ onNavigate }) {
+  const handleLandingClick = (event) => {
+    handleAuditLaunchClick(event, {
+      eventName: auditEvents.homeCta,
+      location: "homepage_spotlight",
+      onNavigate,
+    });
+  };
+
+  return (
+    <section className="section audit-spotlight-section reveal-on-scroll reveal-section" id="audit-gratuit">
+      <div className="section-inner audit-spotlight-grid">
+        <div className="audit-spotlight-copy">
+          <div className="section-heading">
+            <span>Diagnostic gratuit</span>
+            <h2>Votre site inspire-t-il vraiment confiance ?</h2>
+            <p>
+              Identifiez les principaux freins liés à la visibilité, à la confiance, à la sécurité et à la conversion,
+              puis découvrez les actions à traiter en priorité.
+            </p>
+          </div>
+
+          <ul className="audit-benefit-list">
+            {auditBenefits.map((benefit, index) => (
+              <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": `${index * 55}ms` }} key={benefit}>
+                <span aria-hidden="true">✓</span>
+                {benefit}
+              </li>
+            ))}
+          </ul>
+
+          <div className="audit-actions">
+            <a
+              className="btn btn-primary"
+              href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
+              target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
+              rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+              onClick={handleLandingClick}
+            >
+              Lancer mon audit gratuit <strong>→</strong>
+            </a>
+          </div>
+        </div>
+
+        <AuditVideoCard />
+      </div>
+    </section>
+  );
+}
+
+function AuditLandingPage({ onNavigate }) {
+  useEffect(() => {
+    if (!isAuditAppUrlConfigured) {
+      console.warn("Digital Lab Audit launch URL is not configured.");
+    }
+  }, []);
+
+  const handleLaunchClick = () => {
+    trackAuditCta(auditEvents.landingCta, "audit_landing_primary");
+
+    if (isAuditAppUrlConfigured) {
+      trackAuditCta(auditEvents.externalLaunch, "audit_landing_primary");
+    }
+  };
+
+  return (
+    <main className="audit-page fade-in-page">
+      <section className="audit-landing-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="section-inner audit-landing-hero-grid">
+          <div className="audit-landing-copy">
+            <nav className="audit-breadcrumb" aria-label="Fil d’Ariane">
+              <a
+                href="/#"
+                onClick={(event) => {
+                  event.preventDefault();
+                  onNavigate("/#");
+                }}
+              >
+                Accueil
+              </a>
+              <span aria-hidden="true">/</span>
+              <span>Audit gratuit</span>
+            </nav>
+
+            <div className="audit-offer-row">
+              <span className="audit-offer-badge">Diagnostic gratuit offert par Digital Lab</span>
+              <span className="audit-beta-badge">Version bêta</span>
+            </div>
+
+            <h1>Découvrez gratuitement ce qui freine votre site</h1>
+            <p>
+              Un diagnostic Digital Lab pour comprendre ce qui limite la confiance, la visibilité et les demandes
+              clients, avec des priorités expliquées simplement.
+            </p>
+            <div className="audit-landing-actions" id="audit-launch">
+              {isAuditAppUrlConfigured ? (
+                <a
+                  className="btn btn-primary"
+                  href={auditAppUrl}
+                  target={isExternalLink(auditAppUrl) ? "_blank" : undefined}
+                  rel={isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+                  onClick={handleLaunchClick}
+                >
+                  Lancer mon audit gratuit <strong>→</strong>
+                </a>
+              ) : (
+                <button className="btn btn-primary is-disabled" type="button" disabled onClick={handleLaunchClick}>
+                  Lancer mon audit gratuit
+                </button>
+              )}
+
+            </div>
+
+            <ul className="audit-trust-points" aria-label="Rassurances sur l’audit gratuit">
+              {[
+                "Résultats expliqués simplement",
+                "Priorités classées par impact",
+                "Aucun accès technique à votre site nécessaire",
+              ].map((point) => (
+                <li key={point}>
+                  <span aria-hidden="true">✓</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+
+            <p className="audit-beta-note">
+              Version bêta gratuite — capacité quotidienne limitée pendant la phase de test.
+            </p>
+            {!isAuditAppUrlConfigured && (
+              <div className="audit-availability-note" role="status">
+                <p>L’audit gratuit sera bientôt rouvert aux nouveaux tests bêta.</p>
+                <a
+                  href="/#contact"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    trackAuditCta(auditEvents.assistanceClick, "audit_landing_beta_contact");
+                    onNavigate("/#contact");
+                  }}
+                >
+                  Demander un accès testeur
+                </a>
+              </div>
+            )}
+          </div>
+
+          <AuditVideoCard compact />
+        </div>
+      </section>
+
+      <section className="section audit-details-section" id="audit-details">
+        <div className="section-inner audit-detail-grid">
+          <article className="audit-info-card premium-card gradient-border">
+            <span>Ce que l’audit analyse</span>
+            <h2>Les signaux qui influencent la visibilité et la confiance</h2>
+            <div className="audit-chip-grid">
+              {auditSignals.map((signal) => (
+                <span key={signal}>{signal}</span>
+              ))}
+            </div>
+          </article>
+
+          <article className="audit-info-card premium-card gradient-border">
+            <span>Ce que vous recevez</span>
+            <h2>Des priorités lisibles, pas un rapport technique interminable</h2>
+            <ul className="audit-detail-list">
+              {auditDeliverables.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="section audit-positioning-section">
+        <div className="section-inner audit-positioning-panel premium-card premium-card-hero gradient-border">
+          <div>
+            <span>Pourquoi c’est différent</span>
+            <h2>Pourquoi utiliser Digital Lab Audit s’il existe déjà d’autres outils ?</h2>
+          </div>
+          <p>
+            Les grandes plateformes SEO sont très puissantes pour les spécialistes. Digital Lab Audit a été conçu pour
+            les dirigeants de petites entreprises qui veulent comprendre rapidement ce qui peut freiner la visibilité,
+            la confiance et les demandes clients, sans devoir interpréter un rapport technique complexe.
+          </p>
+        </div>
+      </section>
+
+      <section className="section audit-ecosystem-section">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Écosystème Digital Lab</span>
+            <h2>Du diagnostic aux améliorations concrètes</h2>
+            <p>
+              Le diagnostic identifie les priorités. Digital Lab peut ensuite vous aider à les transformer en
+              améliorations concrètes.
+            </p>
+          </div>
+
+          <div className="audit-ecosystem-grid">
+            {[
+              "AI Website Transformation",
+              "Optimisation et corrections",
+              "Stratégie digitale",
+              "Automatisation métier",
+            ].map((item) => (
+              <article className="audit-ecosystem-card premium-card gradient-border soft-hover" key={item}>
+                <span aria-hidden="true">✦</span>
+                <h3>{item}</h3>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section audit-data-section">
+        <div className="section-inner audit-data-grid">
+          <article>
+            <span>Pourquoi gratuit aujourd’hui ?</span>
+            <h2>Une bêta ouverte pour améliorer le diagnostic</h2>
+            <p>
+              L’accès gratuit permet de tester la clarté des analyses, d’améliorer les priorités proposées et de
+              vérifier que le rapport reste utile pour les petites structures.
+            </p>
+          </article>
+          <article>
+            <span>Données</span>
+            <h2>Une approche sobre des informations traitées</h2>
+            <p>
+              Le parcours doit uniquement utiliser les informations nécessaires au diagnostic du site et au suivi de la
+              demande. Les pages de résultats individuelles ne doivent pas être indexées.
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function AuditFooterReminder({ onNavigate }) {
+  return (
+    <section className="audit-footer-reminder" aria-label="Rappel audit gratuit">
+      <div className="section-inner audit-footer-reminder-inner">
+        <h2>Votre site inspire-t-il vraiment confiance ?</h2>
+        <a
+          className="btn btn-primary"
+          href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
+          target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
+          rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+          onClick={(event) => {
+            handleAuditLaunchClick(event, {
+              eventName: auditEvents.footerCta,
+              location: "footer_reminder",
+              onNavigate,
+            });
+          }}
+        >
+          Lancer mon audit gratuit
+        </a>
+      </div>
+    </section>
   );
 }
 
@@ -3322,13 +3864,11 @@ function AdminDashboardPage({ session, isAuthLoading, profileError, messageFocus
 }
 
 function ClientAreaPage({ session, onAuthOpen, onLogout, isAuthLoading, messageFocus, onUnreadCountChange }) {
-  const [clientUnreadMessageCount, setClientUnreadMessageCount] = useState(0);
   const userEmail = session?.user?.email;
   const displayName = getUserDisplayName(session);
   const updateClientUnreadMessageCount = useCallback(
     (count) => {
       const nextCount = Number(count) || 0;
-      setClientUnreadMessageCount(nextCount);
       onUnreadCountChange?.(nextCount);
     },
     [onUnreadCountChange],
@@ -3658,7 +4198,8 @@ function SiteHeader({
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("");
-  const visibleActiveHref = pathname === "/" ? activeHref : "";
+  const isAuditPage = pathname === auditLandingPath;
+  const visibleActiveHref = isAuditPage ? auditLandingPath : pathname === "/" ? activeHref : "";
   const userEmail = session?.user?.email;
   const userDisplayName = getUserDisplayName(session);
   const hasClientUnreadMessages = Boolean(session && !isAdmin && clientUnreadMessageCount > 0);
@@ -3761,16 +4302,33 @@ function SiteHeader({
         <nav className="navbar-menu" aria-label="Navigation principale">
           {navLinks.map((link) => (
             <a
-              className={visibleActiveHref === link.href ? "is-active" : ""}
+              className={`${visibleActiveHref === link.href ? "is-active" : ""}${link.emphasized ? " nav-link-emphasis" : ""}`.trim()}
               href={link.href}
               key={link.href}
-              onClick={(event) => handleNavigate(event, link.href)}
+              aria-current={visibleActiveHref === link.href ? (isAuditPage ? "page" : "true") : undefined}
+              onClick={(event) => {
+                if (link.href === auditLandingPath) {
+                  trackAuditCta(auditEvents.navClick, isAuditPage ? "audit_page_nav" : "global_nav");
+                }
+
+                handleNavigate(event, link.href);
+              }}
             >
               {link.label}
             </a>
           ))}
-          <a className="navbar-cta" href="/#contact" onClick={(event) => handleNavigate(event, "/#contact")}>
-            Parler de mon projet
+          <a
+            className="navbar-cta"
+            href="/#contact"
+            onClick={(event) => {
+              if (isAuditPage) {
+                trackAuditCta(auditEvents.assistanceClick, "audit_nav_assistance");
+              }
+
+              handleNavigate(event, "/#contact");
+            }}
+          >
+            {isAuditPage ? "Besoin d’aide ?" : "Parler de mon projet"}
           </a>
           {session ? (
             <div className="navbar-auth-state">
@@ -4019,6 +4577,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    applyPageMetadata(pathname);
     trackPageView();
   }, [pathname]);
 
@@ -4033,6 +4592,7 @@ function App() {
   const isLoginPath = pathname === "/login";
   const isAdminPath = pathname === "/admin";
   const isDesignSystemPath = pathname === "/design-system";
+  const isAuditLandingPath = pathname === auditLandingPath;
 
   useEffect(() => {
     let isMounted = true;
@@ -4490,6 +5050,32 @@ function App() {
     );
   }
 
+  if (isAuditLandingPath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <AuditLandingPage onNavigate={navigate} />
+
+        <AuditFooterReminder onNavigate={navigate} />
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
   return (
     <>
       <SiteHeader
@@ -4538,17 +5124,28 @@ function App() {
             
 
             <p>
-              L’objectif est de créer des sites, automatisations, assistants IA et outils métiers qui rendent le
-              quotidien des entrepreneurs plus fluide.
+              Sites, automatisations et outils IA conçus pour simplifier le quotidien des petites entreprises.
             </p>
 
             <div className="hero-buttons">
-              <a href="#services" className="btn btn-primary">
-                Explorer les solutions <strong>→</strong>
+              <a
+                href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
+                className="btn btn-primary"
+                target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
+                rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+                onClick={(event) => {
+                  handleAuditLaunchClick(event, {
+                    eventName: auditEvents.homeCta,
+                    location: "homepage_hero",
+                    onNavigate: navigate,
+                  });
+                }}
+              >
+                Lancer mon audit gratuit <strong>→</strong>
               </a>
 
-              <a href="#projets" className="btn btn-secondary">
-                Voir les projets
+              <a href="#services" className="btn btn-secondary">
+                Découvrir nos solutions
               </a>
             </div>
 
@@ -4577,6 +5174,8 @@ function App() {
             </div>
           </div>
         </section>
+
+        <AuditSpotlightSection onNavigate={navigate} />
 
         <section className="section services-section reveal-on-scroll reveal-section" id="services">
           <div className="section-inner">
@@ -5154,15 +5753,21 @@ function App() {
 
       <a
         className={`mobile-sticky-cta${isMobileCtaVisible ? " is-visible" : ""}`}
-        href="/#contact"
+        href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
+        target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
+        rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
         onClick={(event) => {
-          event.preventDefault();
-          navigate("/#contact");
+          handleAuditLaunchClick(event, {
+            eventName: auditEvents.homeCta,
+            location: "homepage_mobile_sticky",
+            onNavigate: navigate,
+          });
         }}
       >
-        Parler de mon projet
+        Audit gratuit
       </a>
 
+      <AuditFooterReminder onNavigate={navigate} />
       <SiteFooter onNavigate={navigate} />
       {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
       <AuthToast message={authToast} onClose={clearAuthToast} />

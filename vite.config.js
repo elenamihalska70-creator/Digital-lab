@@ -4,6 +4,7 @@ import Sitemap from 'vite-plugin-sitemap'
 
 const siteUrl = 'https://www.digitallab.studio'
 const pages = [
+  '/audit-site-web',
   '/services',
   '/projects',
   '/method',
@@ -22,6 +23,7 @@ export default defineConfig({
       dynamicRoutes: pages,
       changefreq: {
         '/': 'weekly',
+        '/audit-site-web': 'weekly',
         '/services': 'weekly',
         '/projects': 'weekly',
         '/method': 'monthly',
@@ -32,6 +34,7 @@ export default defineConfig({
       },
       priority: {
         '/': 1,
+        '/audit-site-web': 0.95,
         '/services': 0.9,
         '/projects': 0.9,
         '/method': 0.8,
