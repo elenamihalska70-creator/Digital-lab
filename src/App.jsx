@@ -18,6 +18,12 @@ import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import { getEstimatorResult } from "./utils/estimator";
 
+const auditLandingPath = "/audit-site-web";
+const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
+const auditAppUrl = configuredAuditUrl;
+const auditLaunchHref = auditAppUrl || auditLandingPath;
+const isAuditAppUrlConfigured = Boolean(configuredAuditUrl);
+
 const services = [
   {
     icon: "site",
@@ -251,7 +257,7 @@ const services = [
 ];
 
 const navLinks = [
-  { label: "Audit gratuit", href: "/audit-site-web", emphasized: true },
+  { label: "Audit gratuit", href: auditLaunchHref, emphasized: true },
   { label: "Services", href: "/#services" },
   { label: "Projets", href: "/#projets" },
   { label: "Méthode", href: "/#method" },
@@ -488,10 +494,6 @@ const businessContact = {
 };
 
 const siteUrl = "https://www.digitallab.studio";
-const auditLandingPath = "/audit-site-web";
-const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
-const auditAppUrl = configuredAuditUrl;
-const isAuditAppUrlConfigured = Boolean(configuredAuditUrl);
 const auditVideoSrc = "/videos/Digitallab_audit.mp4";
 const auditVideoPoster = "/logo-digital-lab.png";
 
@@ -2216,9 +2218,9 @@ function AuditSpotlightSection({ onNavigate }) {
           <div className="audit-actions">
             <a
               className="btn btn-primary"
-              href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
-              target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
-              rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+              href={auditLaunchHref}
+              target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
+              rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
               onClick={handleLandingClick}
             >
               Lancer mon audit gratuit <strong>→</strong>
@@ -2278,22 +2280,15 @@ function AuditLandingPage({ onNavigate }) {
               clients, avec des priorités expliquées simplement.
             </p>
             <div className="audit-landing-actions" id="audit-launch">
-              {isAuditAppUrlConfigured ? (
-                <a
-                  className="btn btn-primary"
-                  href={auditAppUrl}
-                  target={isExternalLink(auditAppUrl) ? "_blank" : undefined}
-                  rel={isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
-                  onClick={handleLaunchClick}
-                >
-                  Lancer mon audit gratuit <strong>→</strong>
-                </a>
-              ) : (
-                <button className="btn btn-primary is-disabled" type="button" disabled onClick={handleLaunchClick}>
-                  Lancer mon audit gratuit
-                </button>
-              )}
-
+              <a
+                className="btn btn-primary"
+                href={auditLaunchHref}
+                target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
+                rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
+                onClick={handleLaunchClick}
+              >
+                Lancer mon audit gratuit <strong>→</strong>
+              </a>
             </div>
 
             <ul className="audit-trust-points" aria-label="Rassurances sur l’audit gratuit">
@@ -2429,9 +2424,9 @@ function AuditFooterReminder({ onNavigate }) {
         <h2>Votre site inspire-t-il vraiment confiance ?</h2>
         <a
           className="btn btn-primary"
-          href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
-          target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
-          rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+          href={auditLaunchHref}
+          target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
+          rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
           onClick={(event) => {
             handleAuditLaunchClick(event, {
               eventName: auditEvents.footerCta,
@@ -4304,11 +4299,18 @@ function SiteHeader({
             <a
               className={`${visibleActiveHref === link.href ? "is-active" : ""}${link.emphasized ? " nav-link-emphasis" : ""}`.trim()}
               href={link.href}
+              target={isExternalLink(link.href) ? "_blank" : undefined}
+              rel={isExternalLink(link.href) ? "noreferrer" : undefined}
               key={link.href}
               aria-current={visibleActiveHref === link.href ? (isAuditPage ? "page" : "true") : undefined}
               onClick={(event) => {
-                if (link.href === auditLandingPath) {
+                if (link.label === "Audit gratuit") {
                   trackAuditCta(auditEvents.navClick, isAuditPage ? "audit_page_nav" : "global_nav");
+                }
+
+                if (isExternalLink(link.href)) {
+                  setIsMenuOpen(false);
+                  return;
                 }
 
                 handleNavigate(event, link.href);
@@ -5129,10 +5131,10 @@ function App() {
 
             <div className="hero-buttons">
               <a
-                href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
+                href={auditLaunchHref}
                 className="btn btn-primary"
-                target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
-                rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+                target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
+                rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
                 onClick={(event) => {
                   handleAuditLaunchClick(event, {
                     eventName: auditEvents.homeCta,
@@ -5753,9 +5755,9 @@ function App() {
 
       <a
         className={`mobile-sticky-cta${isMobileCtaVisible ? " is-visible" : ""}`}
-        href={isAuditAppUrlConfigured ? auditAppUrl : auditLandingPath}
-        target={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "_blank" : undefined}
-        rel={isAuditAppUrlConfigured && isExternalLink(auditAppUrl) ? "noreferrer" : undefined}
+        href={auditLaunchHref}
+        target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
+        rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
         onClick={(event) => {
           handleAuditLaunchClick(event, {
             eventName: auditEvents.homeCta,
