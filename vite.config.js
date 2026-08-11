@@ -9,6 +9,7 @@ const pages = [
   '/projects/socle-local',
   '/projects/microassist-expert',
   '/projects/assistant-reservation-ia',
+  '/services/automatisation-pme',
   '/mentions-legales',
 ]
 
@@ -26,6 +27,7 @@ export default defineConfig({
         '/projects/socle-local': 'monthly',
         '/projects/microassist-expert': 'monthly',
         '/projects/assistant-reservation-ia': 'monthly',
+        '/services/automatisation-pme': 'monthly',
         '/mentions-legales': 'yearly',
       },
       priority: {
@@ -35,6 +37,7 @@ export default defineConfig({
         '/projects/socle-local': 0.7,
         '/projects/microassist-expert': 0.7,
         '/projects/assistant-reservation-ia': 0.7,
+        '/services/automatisation-pme': 0.7,
         '/mentions-legales': 0.3,
       },
       lastmod: new Date(),

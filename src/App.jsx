@@ -179,6 +179,7 @@ const services = [
       after: ["automatisations adaptées", "notifications et suivi", "centralisation des demandes"],
       result: "Gain de temps et meilleure organisation quotidienne.",
     },
+    learnMoreHref: "/services/automatisation-pme",
   },
   {
     icon: "feature",
@@ -796,6 +797,67 @@ const projects = [
   },
 ];
 
+const servicePages = [
+  {
+    slug: "automatisation-pme",
+    title: "Automatisation & outils connectés pour PME",
+    metaTitle: "Automatisation pour PME : moins de tâches répétitives | Digital Lab",
+    metaDescription:
+      "Automatisation pour PME et indépendants : formulaires connectés, notifications, rappels et tableaux de bord pour centraliser le suivi et réduire les tâches manuelles.",
+    intro:
+      "Les petites structures perdent souvent du temps sur des tâches répétitives : relances manuelles, copier-coller entre outils, suivi dispersé dans plusieurs fichiers. Digital Lab connecte les étapes importantes de votre activité pour fiabiliser le suivi et libérer du temps pour l’essentiel.",
+    audience:
+      "Indépendants, PME et associations qui gèrent leur suivi client, leurs demandes ou leur organisation avec des outils dispersés (fichiers, échanges email, formulaires manuels).",
+    problems: [
+      "Trop de copier-coller entre formulaires, emails et fichiers de suivi",
+      "Relances et rappels effectués manuellement, avec des oublis fréquents",
+      "Informations importantes dispersées dans plusieurs outils",
+      "Aucune vue d’ensemble claire sur les demandes en cours",
+    ],
+    capabilities: [
+      "Connexion de formulaires à des notifications automatiques",
+      "Mise en place de tableaux de bord simples pour centraliser le suivi",
+      "Automatisation des rappels et tâches répétitives",
+      "Intégration avec des outils déjà utilisés (Google Sheets, CRM léger)",
+    ],
+    expectedResults: [
+      "Moins de temps passé sur des tâches manuelles répétitives",
+      "Moins d’oublis grâce à des rappels automatiques",
+      "Une organisation plus lisible et centralisée",
+      "Une base évolutive, qui peut grandir avec vos besoins",
+    ],
+    useCases: [
+      {
+        title: "Suivi client centralisé",
+        text: "Regrouper les demandes entrantes dans un tableau de bord unique plutôt que dans plusieurs boîtes mail.",
+      },
+      {
+        title: "Notifications automatiques",
+        text: "Recevoir une alerte dès qu’une nouvelle demande ou un nouveau formulaire est soumis, sans vérification manuelle.",
+      },
+      {
+        title: "Rappels et relances",
+        text: "Automatiser les rappels récurrents pour réduire les oublis liés au suivi manuel.",
+      },
+    ],
+    method: [
+      "Échange clair pour comprendre vos outils actuels et vos priorités",
+      "Identification des tâches répétitives les plus coûteuses en temps",
+      "Mise en place progressive, sans tout changer d’un coup",
+      "Suivi dans la durée pour ajuster selon vos retours",
+    ],
+    relatedProjects: ["microassist", "microassist-expert", "assistant-reservation-ia"],
+    cta: {
+      title: "Une organisation plus fluide, sans complexité inutile",
+      text: "Parlons de vos tâches répétitives : je vous propose une première piste concrète, adaptée à votre activité.",
+      primaryLabel: "Faire un diagnostic gratuit",
+      primaryHref: auditLandingPath,
+      secondaryLabel: "Me contacter directement",
+      secondaryHref: "/#contact",
+    },
+  },
+];
+
 const optimizedImages = {
   "/projects/site-wordpress-ohmyfood-home.png": {
     src: "/projects/site-wordpress-ohmyfood-home.webp",
@@ -852,6 +914,16 @@ const getProjectFromPath = (pathname) => {
   }
 
   return projects.find((project) => project.slug === match[1]) ?? null;
+};
+
+const getServiceFromPath = (pathname) => {
+  const match = pathname.match(/^\/services\/([^/]+)\/?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return servicePages.find((servicePage) => servicePage.slug === match[1]) ?? null;
 };
 
 const handleProjectEnter = (event) => {
@@ -968,7 +1040,18 @@ const applyPageMetadata = (pathname) => {
         canonical: `${siteUrl}/projects/${project.slug}`,
       }
     : null;
-  const metadata = pageMetadata[pathname] ?? projectMetadata ?? pageMetadata["/"];
+
+  const isServicePath = pathname.startsWith("/services/");
+  const servicePage = isServicePath ? getServiceFromPath(pathname) : null;
+  const servicePageMetadata = servicePage
+    ? {
+        title: servicePage.metaTitle,
+        description: servicePage.metaDescription,
+        canonical: `${siteUrl}/services/${servicePage.slug}`,
+      }
+    : null;
+
+  const metadata = pageMetadata[pathname] ?? projectMetadata ?? servicePageMetadata ?? pageMetadata["/"];
 
   document.title = metadata.title;
   setMetaContent('meta[name="description"]', metadata.description);
@@ -980,10 +1063,11 @@ const applyPageMetadata = (pathname) => {
   setCanonicalHref(metadata.canonical);
 
   const isUnknownProjectPath = isProjectPath && !project;
+  const isUnknownServicePath = isServicePath && !servicePage;
   const isPrivatePath = privatePaths.includes(pathname);
   setMetaContent(
     'meta[name="robots"]',
-    isPrivatePath || isUnknownProjectPath ? "noindex, nofollow" : "index, follow",
+    isPrivatePath || isUnknownProjectPath || isUnknownServicePath ? "noindex, nofollow" : "index, follow",
   );
 
   if (pathname === auditLandingPath) {
@@ -1340,7 +1424,7 @@ function ServiceGallery({ service, isOpen }) {
   );
 }
 
-function ServiceAccordionCard({ service }) {
+function ServiceAccordionCard({ service, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -1378,6 +1462,19 @@ function ServiceAccordionCard({ service }) {
               <li key={detail}>{detail}</li>
             ))}
           </ul>
+
+          {service.learnMoreHref && (
+            <a
+              className="service-learn-more"
+              href={service.learnMoreHref}
+              onClick={(event) => {
+                event.preventDefault();
+                onNavigate(service.learnMoreHref);
+              }}
+            >
+              En savoir plus →
+            </a>
+          )}
         </div>
         <ServiceGallery isOpen={isOpen} service={service} />
       </div>
@@ -2772,6 +2869,186 @@ function ProjectCasePage({ project, onNavigate }) {
             <p>Parlez-moi de votre idée : je vous répondrai avec une première piste claire et concrète.</p>
             <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
               Demander une démo
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function ServicePage({ servicePage, onNavigate }) {
+  if (!servicePage) {
+    return (
+      <main className="case-page fade-in-page">
+        <section className="case-hero case-not-found">
+          <div className="case-shell">
+            <button className="back-button" type="button" onClick={() => onNavigate("/")}>
+              Retour à l’accueil
+            </button>
+            <div className="case-hero-copy">
+              <span>Service introuvable</span>
+              <h1>Cette page service n’existe pas encore.</h1>
+              <p>Revenez à la page principale pour consulter les services disponibles.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const relatedProjects = (servicePage.relatedProjects ?? [])
+    .map((slug) => projects.find((project) => project.slug === slug))
+    .filter(Boolean);
+
+  const handleNavigateTo = (target) => (event) => {
+    event.preventDefault();
+    onNavigate(target);
+  };
+
+  return (
+    <main className="case-page fade-in-page">
+      <section className="case-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <button className="back-button" type="button" onClick={() => onNavigate("/#services")}>
+            Retour
+          </button>
+
+          <div className="case-hero-copy">
+            <span>Service</span>
+            <h1>{servicePage.title}</h1>
+            <p>{servicePage.intro}</p>
+            <div className="case-actions">
+              <a
+                className="btn btn-primary"
+                href={servicePage.cta.primaryHref}
+                onClick={handleNavigateTo(servicePage.cta.primaryHref)}
+              >
+                {servicePage.cta.primaryLabel}
+              </a>
+              <a
+                className="btn btn-secondary"
+                href={servicePage.cta.secondaryHref}
+                onClick={handleNavigateTo(servicePage.cta.secondaryHref)}
+              >
+                {servicePage.cta.secondaryLabel}
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="case-section">
+        <div className="case-shell case-detail-grid">
+          <article className="case-panel">
+            <span>Pour qui</span>
+            <h2>Un service pensé pour les structures qui manquent de temps</h2>
+            <p>{servicePage.audience}</p>
+          </article>
+
+          <article className="case-panel case-description">
+            <span>Problèmes fréquents</span>
+            <h2>Ce qui ralentit votre organisation au quotidien</h2>
+            <ul className="case-list">
+              {servicePage.problems.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="case-section case-section-tight">
+        <div className="case-shell case-detail-grid">
+          <article className="case-panel">
+            <span>Ce qui peut être automatisé</span>
+            <h2>Des automatisations concrètes, adaptées à votre activité</h2>
+            <ul className="case-list">
+              {servicePage.capabilities.map((capability) => (
+                <li key={capability}>{capability}</li>
+              ))}
+            </ul>
+          </article>
+
+          <article className="case-panel">
+            <span>Bénéfices attendus</span>
+            <h2>Ce que cela change concrètement</h2>
+            <ul className="case-list">
+              {servicePage.expectedResults.map((result) => (
+                <li key={result}>{result}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section className="case-section">
+        <div className="case-shell">
+          <span>Exemples d’usage</span>
+          <h2>Des cas concrets pour les petites structures</h2>
+          <div className="case-detail-grid">
+            {servicePage.useCases.map((useCase) => (
+              <article className="case-panel" key={useCase.title}>
+                <h3>{useCase.title}</h3>
+                <p>{useCase.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="case-section case-section-tight">
+        <div className="case-shell">
+          <article className="case-panel">
+            <span>Méthode Digital Lab</span>
+            <h2>Une mise en place progressive, sans tout bouleverser</h2>
+            <ul className="case-list">
+              {servicePage.method.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+            <p>
+              <a href="/#method" onClick={handleNavigateTo("/#method")}>
+                Découvrir la méthode Digital Lab →
+              </a>
+            </p>
+          </article>
+        </div>
+      </section>
+
+      {relatedProjects.length > 0 && (
+        <section className="case-section">
+          <div className="case-shell">
+            <span>Projets liés</span>
+            <h2>Des exemples déjà mis en œuvre</h2>
+            <div className="case-detail-grid">
+              {relatedProjects.map((project) => (
+                <article className="case-panel" key={project.slug}>
+                  <h3>{project.title}</h3>
+                  <p>{project.description}</p>
+                  <a href={`/projects/${project.slug}`} onClick={handleNavigateTo(`/projects/${project.slug}`)}>
+                    Voir le projet →
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="case-section case-final-cta">
+        <div className="case-shell">
+          <div className="case-cta-panel">
+            <span>Votre organisation</span>
+            <h2>{servicePage.cta.title}</h2>
+            <p>{servicePage.cta.text}</p>
+            <a
+              className="btn btn-primary"
+              href={servicePage.cta.primaryHref}
+              onClick={handleNavigateTo(servicePage.cta.primaryHref)}
+            >
+              {servicePage.cta.primaryLabel}
             </a>
           </div>
         </div>
@@ -4497,6 +4774,7 @@ function App() {
   const [isMobileCtaVisible, setIsMobileCtaVisible] = useState(false);
   const previousPageRef = useRef("/");
   const activeProject = getProjectFromPath(pathname);
+  const activeServicePage = getServiceFromPath(pathname);
   const isAdmin = profileRole === "admin";
 
   const loadClientUnreadMessageCount = useCallback(async () => {
@@ -4955,6 +5233,31 @@ function App() {
     );
   }
 
+  if (pathname.startsWith("/services/")) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <ServicePage servicePage={activeServicePage} onNavigate={navigate} />
+
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
   if (pathname === "/mentions-legales") {
     return (
       <>
@@ -5246,7 +5549,7 @@ function App() {
                   key={service.title}
                   style={{ "--reveal-delay": `${index * 80}ms` }}
                 >
-                  <ServiceAccordionCard service={service} />
+                  <ServiceAccordionCard service={service} onNavigate={navigate} />
                 </div>
               ))}
             </div>
