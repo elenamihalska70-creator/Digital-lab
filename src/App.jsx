@@ -19,6 +19,8 @@ import { trackEvent, trackPageView } from "./utils/analytics";
 import { getEstimatorResult } from "./utils/estimator";
 
 const auditLandingPath = "/audit-site-web";
+const legalNoticePath = "/mentions-legales";
+const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl;
 const auditLaunchHref = auditAppUrl || auditLandingPath;
@@ -542,6 +544,12 @@ const pageMetadata = {
       "Analysez gratuitement votre site : visibilité, confiance, sécurité, RGPD, performance et conversion. Recevez les priorités à traiter, expliquées simplement.",
     canonical: `${siteUrl}${auditLandingPath}`,
   },
+  [legalNoticePath]: {
+    title: "Mentions légales | Digital Lab",
+    description:
+      "Mentions légales de Digital Lab : éditeur du site, hébergement, propriété intellectuelle et gestion des données personnelles.",
+    canonical: `${siteUrl}${legalNoticePath}`,
+  },
 };
 
 const socialLinks = [
@@ -947,7 +955,16 @@ const removeJsonLd = (id) => {
 };
 
 const applyPageMetadata = (pathname) => {
-  const metadata = pageMetadata[pathname] ?? pageMetadata["/"];
+  const isProjectPath = pathname.startsWith("/projects/");
+  const project = isProjectPath ? getProjectFromPath(pathname) : null;
+  const projectMetadata = project
+    ? {
+        title: `${project.title} | Digital Lab`,
+        description: project.description,
+        canonical: `${siteUrl}/projects/${project.slug}`,
+      }
+    : null;
+  const metadata = pageMetadata[pathname] ?? projectMetadata ?? pageMetadata["/"];
 
   document.title = metadata.title;
   setMetaContent('meta[name="description"]', metadata.description);
@@ -957,6 +974,13 @@ const applyPageMetadata = (pathname) => {
   setMetaContent('meta[name="twitter:title"]', metadata.title);
   setMetaContent('meta[name="twitter:description"]', metadata.description);
   setCanonicalHref(metadata.canonical);
+
+  const isUnknownProjectPath = isProjectPath && !project;
+  const isPrivatePath = privatePaths.includes(pathname);
+  setMetaContent(
+    'meta[name="robots"]',
+    isPrivatePath || isUnknownProjectPath ? "noindex, nofollow" : "index, follow",
+  );
 
   if (pathname === auditLandingPath) {
     setJsonLd("audit-landing-structured-data", {
