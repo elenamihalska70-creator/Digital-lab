@@ -654,6 +654,7 @@ const projects = [
       "Valider un produit digital capable de réduire la charge administrative et de créer une expérience plus fluide pour les indépendants.",
     tags: ["SaaS", "IA", "Automatisation", "Tableau de bord"],
     link: "/projects/microassist",
+    demoUrl: "https://microassist.netlify.app/",
     image: "/projects/microassist.png",
     video: "/videos/microassist.mp4",
     cta: "Demander une démo",
@@ -694,6 +695,7 @@ const projects = [
       "Créer un socle efficace pour renforcer la visibilité des initiatives locales et faciliter les échanges entre acteurs d’un territoire.",
     tags: ["Plateforme", "UX/UI", "Responsive", "Communauté"],
     link: "/projects/socle-local",
+    demoUrl: "https://socle-mvp.vercel.app/",
     image: "/projects/socle-local.png",
     video: "/videos/socle-local.mp4",
     cta: "Demander une démo",
@@ -734,6 +736,7 @@ const projects = [
       "Aider les professionnels à garder une vision claire de leurs clients, des urgences et des tâches à prioriser.",
     tags: ["B2B", "Tableau de bord", "Automatisation", "Prototype"],
     link: "/projects/microassist-expert",
+    demoUrl: "https://microassist-expert.vercel.app/",
     image: "/projects/microassist-expert.png",
     video: "/videos/microassist-expert.mp4",
     cta: "Demander une démo",
@@ -773,7 +776,8 @@ const projects = [
     objective:
       "Réduire le temps passé à répondre aux demandes répétitives tout en gardant une expérience claire et humaine pour les clients.",
     tags: ["IA", "Chatbot", "Automatisation", "Flux de travail"],
-    link: "https://reservation-bot-demo.pages.dev/",
+    link: "/projects/assistant-reservation-ia",
+    demoUrl: "https://reservation-bot-demo.pages.dev/",
     image: "/projects/automatisation.png",
     video: "/videos/automatisation.mp4",
     cta: "Demander une démo",
@@ -2250,6 +2254,20 @@ function AuditSpotlightSection({ onNavigate }) {
               Lancer mon audit gratuit <strong>→</strong>
             </a>
           </div>
+
+          {isAuditAppUrlConfigured && (
+            <p className="audit-secondary-link">
+              <a
+                href={auditLandingPath}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onNavigate(auditLandingPath);
+                }}
+              >
+                Découvrir comment fonctionne l’audit →
+              </a>
+            </p>
+          )}
         </div>
 
         <AuditVideoCard />
@@ -2658,6 +2676,16 @@ function ProjectCasePage({ project, onNavigate }) {
                 <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
                   {project.cta}
                 </a>
+                {project.demoUrl && (
+                  <a
+                    className="btn btn-secondary"
+                    href={project.demoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Voir la démo en ligne ↗
+                  </a>
+                )}
                 <a className="btn btn-secondary" href="/#projets" onClick={(event) => {
                   event.preventDefault();
                   onNavigate("/#projets");
