@@ -10,6 +10,7 @@ const pages = [
   '/projects/microassist-expert',
   '/projects/assistant-reservation-ia',
   '/services/automatisation-pme',
+  '/services/chatbot-ia',
   '/mentions-legales',
 ]
 
@@ -28,6 +29,7 @@ export default defineConfig({
         '/projects/microassist-expert': 'monthly',
         '/projects/assistant-reservation-ia': 'monthly',
         '/services/automatisation-pme': 'monthly',
+        '/services/chatbot-ia': 'monthly',
         '/mentions-legales': 'yearly',
       },
       priority: {
@@ -38,6 +40,7 @@ export default defineConfig({
         '/projects/microassist-expert': 0.7,
         '/projects/assistant-reservation-ia': 0.7,
         '/services/automatisation-pme': 0.7,
+        '/services/chatbot-ia': 0.7,
         '/mentions-legales': 0.3,
       },
       lastmod: new Date(),

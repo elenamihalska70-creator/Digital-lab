@@ -218,6 +218,7 @@ const services = [
       after: ["réponses automatiques", "collecte simplifiée", "disponibilité 24h/24"],
       result: "Le client reçoit plus facilement les premières demandes.",
     },
+    learnMoreHref: "/services/chatbot-ia",
   },
   {
     icon: "mvp",
@@ -850,6 +851,65 @@ const servicePages = [
     cta: {
       title: "Une organisation plus fluide, sans complexité inutile",
       text: "Parlons de vos tâches répétitives : je vous propose une première piste concrète, adaptée à votre activité.",
+      primaryLabel: "Faire un diagnostic gratuit",
+      primaryHref: auditLandingPath,
+      secondaryLabel: "Me contacter directement",
+      secondaryHref: "/#contact",
+    },
+  },
+  {
+    slug: "chatbot-ia",
+    title: "Chatbots & assistants IA pour PME et indépendants",
+    metaTitle: "Chatbot IA pour PME : répondre plus vite sans tout automatiser | Digital Lab",
+    metaDescription:
+      "Chatbot et assistant IA pour PME et indépendants : réponses aux questions fréquentes, qualification des demandes, collecte d’informations et transfert vers un humain quand nécessaire.",
+    intro:
+      "Un chatbot ou assistant IA aide les petites structures à répondre plus vite aux questions répétitives et à mieux qualifier les demandes entrantes. Il ne remplace pas un échange humain : il traite les demandes simples, collecte les informations utiles, et transmet à une personne les situations qui nécessitent réellement un suivi humain.",
+    audience:
+      "Indépendants, PME, associations et structures qui reçoivent des questions répétitives par email, téléphone ou formulaire, et qui souhaitent mieux organiser les premières réponses sans recruter.",
+    problems: [
+      "Questions répétitives qui prennent du temps à traiter individuellement",
+      "Demandes reçues en dehors des horaires d’ouverture, sans réponse immédiate",
+      "Informations importantes mal collectées ou incomplètes dès le premier contact",
+      "Difficulté à distinguer rapidement une demande simple d’une demande qui nécessite un suivi humain",
+    ],
+    capabilities: [
+      "Réponses automatiques aux questions fréquentes (horaires, tarifs, informations pratiques)",
+      "Qualification des demandes pour identifier le besoin avant un contact humain",
+      "Collecte structurée d’informations utiles (coordonnées, contexte, besoin exprimé)",
+      "Automatisation des demandes simples et répétitives (prise de rendez-vous, informations standard)",
+      "Transfert vers un humain dès que la demande dépasse ce que l’assistant peut traiter correctement",
+    ],
+    expectedResults: [
+      "Des réponses plus rapides aux questions les plus fréquentes",
+      "Une meilleure qualification des demandes avant un échange humain",
+      "Moins de questions répétitives à traiter manuellement",
+      "Une disponibilité élargie sans remplacer le contact humain",
+    ],
+    useCases: [
+      {
+        title: "FAQ automatisée",
+        text: "Répondre instantanément aux questions les plus posées, plutôt que de les traiter une par une.",
+      },
+      {
+        title: "Préqualification avant contact",
+        text: "Identifier le besoin du visiteur avant qu’il n’entre en contact direct, pour gagner du temps de part et d’autre.",
+      },
+      {
+        title: "Collecte de demandes hors horaires",
+        text: "Recueillir une demande structurée même lorsque personne n’est disponible pour répondre immédiatement.",
+      },
+    ],
+    method: [
+      "Échange clair pour identifier les questions et demandes les plus fréquentes",
+      "Définition des scénarios que l’assistant peut traiter seul, et de ceux qui doivent être transférés",
+      "Mise en place progressive, avec des réponses testées avant diffusion",
+      "Ajustement dans la durée selon les retours et les demandes réelles reçues",
+    ],
+    relatedProjects: ["assistant-reservation-ia", "microassist", "microassist-expert"],
+    cta: {
+      title: "Un assistant utile, sans perdre le contact humain",
+      text: "Parlons des questions que vous recevez le plus souvent : je vous propose une première piste concrète, adaptée à votre activité.",
       primaryLabel: "Faire un diagnostic gratuit",
       primaryHref: auditLandingPath,
       secondaryLabel: "Me contacter directement",
