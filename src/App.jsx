@@ -982,6 +982,74 @@ const servicePages = [
       secondaryLabel: "Me contacter directement",
       secondaryHref: "/#contact",
     },
+    localVariant: {
+      slug: "creation-site-web-besancon",
+      heading: "Vous êtes basé à Besançon ?",
+      text: "Digital Lab accompagne aussi les PME, indépendants et associations situés à Besançon, avec un accompagnement réalisable à distance, du premier échange à la mise en ligne.",
+      linkLabel: "Découvrir l’accompagnement pour Besançon",
+    },
+  },
+  {
+    slug: "creation-site-web-besancon",
+    title: "Création et refonte de site web pour PME à Besançon",
+    metaTitle: "Création site web Besançon : sites pros pour PME et indépendants | Digital Lab",
+    metaDescription:
+      "Digital Lab accompagne les PME, indépendants et associations à Besançon dans la création ou la refonte d’un site web professionnel, clair et responsive, avec un accompagnement à distance.",
+    intro:
+      "Digital Lab accompagne les PME, indépendants et associations à Besançon dans la création et la refonte de sites web professionnels. L’accompagnement se fait à distance, avec des échanges clairs à chaque étape, pour construire un site qui reflète réellement votre activité.",
+    audience:
+      "PME, indépendants et associations situés à Besançon qui ont besoin d’un premier site professionnel ou qui doivent moderniser un site devenu ancien, lent ou peu clair.",
+    problems: [
+      "Difficulté à être trouvé sur Google par des clients qui cherchent vos services à Besançon",
+      "Un site qui n’inspire pas assez confiance auprès d’une clientèle de proximité avant un premier contact",
+      "Une présence en ligne qui ne reflète pas le sérieux de votre activité locale",
+      "Un parcours de contact peu clair pour les visiteurs qui souhaitent vous solliciter rapidement",
+      "Une version mobile insuffisante, alors que les recherches locales se font majoritairement depuis un téléphone",
+    ],
+    capabilities: [
+      "Création d’un site vitrine clair, pensé pour présenter votre activité aux visiteurs de Besançon",
+      "Refonte d’un site existant devenu daté, lent ou peu adapté au mobile",
+      "Structure de pages et de contenu pensée pour la visibilité locale sur Google",
+      "Parcours de contact simplifié, pour transformer une visite en demande",
+      "Design responsive, prioritaire sur mobile",
+      "Bases SEO techniques cohérentes avec une activité locale (structure des titres, balises meta, maillage interne)",
+      "Formulaires de contact adaptés à votre activité",
+    ],
+    expectedResults: [
+      "Un site plus crédible pour les visiteurs de Besançon qui découvrent votre activité",
+      "Une meilleure lisibilité sur mobile, là où se font la majorité des recherches locales",
+      "Un parcours de contact plus simple, du premier clic à la demande",
+      "Une base plus solide pour la visibilité locale sur Google",
+    ],
+    useCases: [
+      {
+        title: "Premier site pour une activité locale",
+        text: "Mettre en ligne une présence claire pour une activité à Besançon qui ne dispose encore que d’une page réseau social ou d’aucune présence en ligne.",
+      },
+      {
+        title: "Refonte d’un site local vieillissant",
+        text: "Moderniser un site existant devenu difficile à consulter sur mobile ou peu représentatif de l’activité actuelle.",
+      },
+      {
+        title: "Clarification du parcours de contact local",
+        text: "Revoir la structure du site pour que les visiteurs de Besançon trouvent rapidement comment vous contacter.",
+      },
+    ],
+    method: [
+      "Échange à distance pour clarifier votre activité, vos priorités et votre budget",
+      "Structuration des pages et du message avant tout travail visuel",
+      "Construction progressive, avec des versions visibles à chaque étape, sans déplacement nécessaire",
+      "Vérification du responsive, de la performance et des bases SEO avant mise en ligne",
+    ],
+    relatedProjects: ["socle-local", "microassist", "microassist-expert"],
+    cta: {
+      title: "Un site clair, construit à distance avec vous",
+      text: "Parlons de votre projet de site ou de refonte à Besançon : je vous propose une première piste concrète, adaptée à votre activité.",
+      primaryLabel: "Faire un diagnostic gratuit",
+      primaryHref: auditLandingPath,
+      secondaryLabel: "Me contacter directement",
+      secondaryHref: "/#contact",
+    },
   },
 ];
 
@@ -3160,6 +3228,26 @@ function ServicePage({ servicePage, onNavigate }) {
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {servicePage.localVariant && (
+        <section className="case-section case-section-tight">
+          <div className="case-shell">
+            <article className="case-panel">
+              <span>Zone locale</span>
+              <h2>{servicePage.localVariant.heading}</h2>
+              <p>{servicePage.localVariant.text}</p>
+              <p>
+                <a
+                  href={`/services/${servicePage.localVariant.slug}`}
+                  onClick={handleNavigateTo(`/services/${servicePage.localVariant.slug}`)}
+                >
+                  {servicePage.localVariant.linkLabel} →
+                </a>
+              </p>
+            </article>
           </div>
         </section>
       )}

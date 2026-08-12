@@ -12,6 +12,7 @@ const pages = [
   '/services/automatisation-pme',
   '/services/chatbot-ia',
   '/services/creation-site-web',
+  '/services/creation-site-web-besancon',
   '/mentions-legales',
 ]
 
@@ -32,6 +33,7 @@ export default defineConfig({
         '/services/automatisation-pme': 'monthly',
         '/services/chatbot-ia': 'monthly',
         '/services/creation-site-web': 'monthly',
+        '/services/creation-site-web-besancon': 'monthly',
         '/mentions-legales': 'yearly',
       },
       priority: {
@@ -44,6 +46,7 @@ export default defineConfig({
         '/services/automatisation-pme': 0.7,
         '/services/chatbot-ia': 0.7,
         '/services/creation-site-web': 0.7,
+        '/services/creation-site-web-besancon': 0.65,
         '/mentions-legales': 0.3,
       },
       lastmod: new Date(),
