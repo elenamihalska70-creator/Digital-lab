@@ -63,6 +63,7 @@ const services = [
       result:
         "Le client peut présenter son activité de façon plus professionnelle et centraliser ses demandes.",
     },
+    learnMoreHref: "/services/creation-site-web",
   },
   {
     icon: "repair",
@@ -910,6 +911,72 @@ const servicePages = [
     cta: {
       title: "Un assistant utile, sans perdre le contact humain",
       text: "Parlons des questions que vous recevez le plus souvent : je vous propose une première piste concrète, adaptée à votre activité.",
+      primaryLabel: "Faire un diagnostic gratuit",
+      primaryHref: auditLandingPath,
+      secondaryLabel: "Me contacter directement",
+      secondaryHref: "/#contact",
+    },
+  },
+  {
+    slug: "creation-site-web",
+    title: "Création et refonte de site web pour PME",
+    metaTitle: "Création de site web pour PME et indépendants | Digital Lab",
+    metaDescription:
+      "Création ou refonte de site web pour PME, indépendants et associations : structure claire, responsive, formulaires de contact et bases SEO, pensé pour générer des demandes.",
+    intro:
+      "Un site vitrine ou une refonte bien pensée aide vos visiteurs à comprendre votre activité et à passer à l’action. Digital Lab conçoit des sites clairs, responsives et faciles à mettre à jour, avec les bases techniques nécessaires pour être visible et crédible.",
+    audience:
+      "Indépendants, PME et associations qui ont besoin d’un premier site professionnel ou qui doivent refondre un site ancien, lent ou peu clair.",
+    problems: [
+      "Un site qui ne génère pas ou peu de demandes",
+      "Une image peu professionnelle qui freine la confiance des visiteurs",
+      "Une navigation confuse qui complique la recherche d’information",
+      "Une expérience mobile insuffisante alors qu’une grande partie des visiteurs consulte le site depuis un téléphone",
+      "Un site difficile à mettre à jour au quotidien",
+      "Une faible visibilité sur Google",
+      "Une absence de call-to-action clair vers le contact",
+    ],
+    capabilities: [
+      "Création de site vitrine, pensé pour présenter clairement votre activité",
+      "Refonte de site existant, sans repartir de zéro lorsque ce n’est pas nécessaire",
+      "Design responsive, pensé mobile en priorité",
+      "Parcours utilisateur clarifié, pour guider le visiteur vers le contact",
+      "Optimisation de la performance de chargement",
+      "Bases SEO techniques (structure des titres, balises meta, maillage interne)",
+      "Bonnes pratiques d’accessibilité pour un site utilisable par le plus grand nombre",
+      "Formulaires de contact et prises de rendez-vous intégrés",
+      "Intégrations simples si nécessaires (carte de localisation, réseaux sociaux, prise de rendez-vous)",
+    ],
+    expectedResults: [
+      "Un site plus clair, qui aide les visiteurs à comprendre votre offre",
+      "Une navigation plus fluide, sur ordinateur comme sur mobile",
+      "Une meilleure base technique pour la visibilité sur Google",
+      "Un site plus simple à mettre à jour au quotidien",
+    ],
+    useCases: [
+      {
+        title: "Premier site professionnel",
+        text: "Mettre en ligne une présence claire et fiable lorsque l’activité n’a pas encore de site, ou repose uniquement sur les réseaux sociaux.",
+      },
+      {
+        title: "Refonte d’un site vieillissant",
+        text: "Reprendre un site existant devenu lent, mal affiché sur mobile ou difficile à faire évoluer, sans perdre le contenu utile déjà en place.",
+      },
+      {
+        title: "Clarification du parcours de contact",
+        text: "Revoir la structure des pages et les appels à l’action pour que les visiteurs sachent clairement comment vous contacter.",
+      },
+    ],
+    method: [
+      "Échange clair sur votre activité, vos priorités et votre budget",
+      "Structuration des pages et du message avant tout travail visuel",
+      "Construction progressive, avec des versions visibles à chaque étape",
+      "Vérification du responsive, de la performance et des bases SEO avant mise en ligne",
+    ],
+    relatedProjects: ["socle-local", "microassist", "microassist-expert"],
+    cta: {
+      title: "Un site clair, qui reflète votre activité",
+      text: "Parlons de votre projet de site ou de refonte : je vous propose une première piste concrète, adaptée à votre activité.",
       primaryLabel: "Faire un diagnostic gratuit",
       primaryHref: auditLandingPath,
       secondaryLabel: "Me contacter directement",

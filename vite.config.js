@@ -11,6 +11,7 @@ const pages = [
   '/projects/assistant-reservation-ia',
   '/services/automatisation-pme',
   '/services/chatbot-ia',
+  '/services/creation-site-web',
   '/mentions-legales',
 ]
 
@@ -30,6 +31,7 @@ export default defineConfig({
         '/projects/assistant-reservation-ia': 'monthly',
         '/services/automatisation-pme': 'monthly',
         '/services/chatbot-ia': 'monthly',
+        '/services/creation-site-web': 'monthly',
         '/mentions-legales': 'yearly',
       },
       priority: {
@@ -41,6 +43,7 @@ export default defineConfig({
         '/projects/assistant-reservation-ia': 0.7,
         '/services/automatisation-pme': 0.7,
         '/services/chatbot-ia': 0.7,
+        '/services/creation-site-web': 0.7,
         '/mentions-legales': 0.3,
       },
       lastmod: new Date(),
