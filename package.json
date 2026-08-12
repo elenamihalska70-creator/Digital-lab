@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build:vite": "vite build",
+    "prerender": "node scripts/prerender.mjs",
+    "build": "npm run build:vite && npm run prerender",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "playwright install chromium"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
@@ -24,6 +27,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "playwright": "^1.62.1",
     "vite": "^8.0.12",
     "vite-plugin-sitemap": "^0.8.2"
   }
