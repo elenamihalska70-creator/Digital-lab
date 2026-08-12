@@ -10,7 +10,7 @@
     "build": "npm run build:vite && npm run prerender",
     "lint": "eslint .",
     "preview": "vite preview",
-    "postinstall": "playwright install chromium"
+    "postinstall": "playwright install chromium --with-deps"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
