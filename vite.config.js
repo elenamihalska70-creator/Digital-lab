@@ -1,20 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import Sitemap from 'vite-plugin-sitemap'
+import { seoRoutes } from './seo-routes.config.js'
 
 const siteUrl = 'https://www.digitallab.studio'
-const pages = [
-  '/audit-site-web',
-  '/projects/microassist',
-  '/projects/socle-local',
-  '/projects/microassist-expert',
-  '/projects/assistant-reservation-ia',
-  '/services/automatisation-pme',
-  '/services/chatbot-ia',
-  '/services/creation-site-web',
-  '/services/creation-site-web-besancon',
-  '/mentions-legales',
-]
+const pages = seoRoutes
 
 // https://vite.dev/config/
 export default defineConfig({
