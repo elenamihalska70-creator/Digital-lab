@@ -14,7 +14,16 @@
 //
 // Routing, Supabase/auth, and analytics code are not modified by this
 // script — it only intercepts network requests inside its own isolated
-// Playwright browser contexts.
+// Playwright browser context.
+//
+// Browser binary (LOT DL SEO 5C.2): Vercel's build image (Amazon Linux
+// 2023) has no apt-get and isn't an officially supported Playwright OS, so
+// Playwright's own downloaded Chromium can't launch there (missing shared
+// libs) and `--with-deps` can't install them (no apt-get). On Vercel we
+// instead launch the prebuilt, dependency-free binary from
+// @sparticuz/chromium, which targets exactly this Amazon-Linux family.
+// Everywhere else (local dev, other CI) we use Playwright's own bundled
+// Chromium as before — see resolveLaunchOptions() and scripts/postinstall.mjs.
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -58,8 +67,8 @@ const shouldBlockRequest = (url) => {
   }
 };
 
-async function withBlockedTracking(context) {
-  await context.route("**/*", (route) => {
+async function withBlockedTracking(page) {
+  await page.route("**/*", (route) => {
     const url = route.request().url();
     if (shouldBlockRequest(url)) {
       return route.abort();
@@ -68,10 +77,15 @@ async function withBlockedTracking(context) {
   });
 }
 
-async function renderRoute(browser, baseUrl, route) {
-  const context = await browser.newContext();
-  await withBlockedTracking(context);
+async function renderRoute(context, baseUrl, route) {
+  // A dedicated page per route (not a dedicated BrowserContext): on Vercel,
+  // Chromium runs with @sparticuz/chromium's `--single-process` flag (needed
+  // to satisfy the build container's sandbox), under which repeatedly
+  // creating/closing BrowserContexts is known to be unstable. A fresh Page
+  // in one shared context gives the same per-route isolation for the
+  // tracking-block guarantee below without that risk.
   const page = await context.newPage();
+  await withBlockedTracking(page);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -96,14 +110,12 @@ async function renderRoute(browser, baseUrl, route) {
     return { title, canonical, rootChildCount, html, pageErrors };
   } finally {
     await page.close();
-    await context.close();
   }
 }
 
-async function verifyWrittenRoute(browser, baseUrl, route) {
-  const context = await browser.newContext();
-  await withBlockedTracking(context);
+async function verifyWrittenRoute(context, baseUrl, route) {
   const page = await context.newPage();
+  await withBlockedTracking(page);
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
@@ -119,8 +131,21 @@ async function verifyWrittenRoute(browser, baseUrl, route) {
     return { rootChildCount, pageErrors };
   } finally {
     await page.close();
-    await context.close();
   }
+}
+
+async function resolveLaunchOptions() {
+  if (!process.env.VERCEL) {
+    return { headless: true };
+  }
+  // Imported only on Vercel: this package is a Linux-only prebuilt binary
+  // and must never be loaded on local/non-Linux dev machines.
+  const { default: sparticuzChromium } = await import("@sparticuz/chromium");
+  return {
+    executablePath: await sparticuzChromium.executablePath(),
+    args: sparticuzChromium.args,
+    headless: true,
+  };
 }
 
 async function main() {
@@ -130,7 +155,8 @@ async function main() {
   });
   const baseUrl = previewServer.resolvedUrls.local[0].replace(/\/$/, "");
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch(await resolveLaunchOptions());
+  const context = await browser.newContext();
 
   const results = [];
   const failures = [];
@@ -138,7 +164,7 @@ async function main() {
   try {
     for (const route of routesToPrerender) {
       const { title, canonical, rootChildCount, html, pageErrors } = await renderRoute(
-        browser,
+        context,
         baseUrl,
         route,
       );
@@ -183,7 +209,7 @@ async function main() {
       if (failures.some((failure) => failure.route === route)) {
         continue;
       }
-      const { rootChildCount, pageErrors } = await verifyWrittenRoute(browser, baseUrl, route);
+      const { rootChildCount, pageErrors } = await verifyWrittenRoute(context, baseUrl, route);
       if (pageErrors.length > 0 || rootChildCount === 0) {
         failures.push({
           route,
@@ -196,6 +222,7 @@ async function main() {
       }
     }
   } finally {
+    await context.close();
     await browser.close();
     await previewServer.close();
   }
