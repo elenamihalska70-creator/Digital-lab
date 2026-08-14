@@ -272,6 +272,12 @@ const navLinks = [
   { label: "Contact", href: "/#contact" },
 ];
 
+// English labels for the /en/ page only (LOT DL 2.5.1) — same order/hrefs as
+// navLinks, deliberately kept as a separate array so translating a label
+// never implies a translated destination: every href above still points at
+// the existing French sections/pages (no /en/services/... routes exist).
+const englishNavLabels = ["Free audit", "Services", "Projects", "Method", "About", "Blog", "FAQ", "Contact"];
+
 const missionSteps = [
   {
     number: "01",
@@ -534,12 +540,20 @@ const auditEvents = {
   assistanceClick: "audit_assistance_click",
 };
 
+const englishHomePath = "/en";
+
 const pageMetadata = {
   "/": {
     title: "Digital Lab — Solutions digitales pour petites structures",
     description:
       "Digital Lab accompagne les PME, indépendants et associations avec des sites web modernes, des automatisations utiles et des solutions IA adaptées à leurs besoins.",
     canonical: `${siteUrl}/`,
+  },
+  [englishHomePath]: {
+    title: "Digital Lab — Digital Solutions for Small Businesses",
+    description:
+      "Digital Lab builds modern websites, useful automations, and practical AI tools for small businesses, freelancers, and nonprofits.",
+    canonical: `${siteUrl}/en/`,
   },
   [auditLandingPath]: {
     title: "Audit de site web gratuit pour TPE et indépendants | Digital Lab",
@@ -1208,6 +1222,30 @@ const setCanonicalHref = (href) => {
   element.setAttribute("href", href);
 };
 
+// FR/EN reciprocal alternates for the homepage pair only (LOT DL 2.5) — no
+// other route has an English equivalent yet, so no other route gets these.
+const homepageHreflangAlternates = [
+  { hreflang: "fr", href: `${siteUrl}/` },
+  { hreflang: "en", href: `${siteUrl}/en/` },
+  { hreflang: "x-default", href: `${siteUrl}/` },
+];
+
+const setHreflangAlternates = (pathname) => {
+  document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((element) => element.remove());
+
+  if (pathname !== "/" && pathname !== englishHomePath) {
+    return;
+  }
+
+  homepageHreflangAlternates.forEach(({ hreflang, href }) => {
+    const element = document.createElement("link");
+    element.setAttribute("rel", "alternate");
+    element.setAttribute("hreflang", hreflang);
+    element.setAttribute("href", href);
+    document.head.appendChild(element);
+  });
+};
+
 const setJsonLd = (id, data) => {
   let element = document.getElementById(id);
 
@@ -1248,6 +1286,7 @@ const applyPageMetadata = (pathname) => {
 
   const metadata = pageMetadata[pathname] ?? projectMetadata ?? servicePageMetadata ?? pageMetadata["/"];
 
+  document.documentElement.lang = pathname === englishHomePath ? "en" : "fr";
   document.title = metadata.title;
   setMetaContent('meta[name="description"]', metadata.description);
   setMetaContent('meta[property="og:title"]', metadata.title);
@@ -1256,6 +1295,7 @@ const applyPageMetadata = (pathname) => {
   setMetaContent('meta[name="twitter:title"]', metadata.title);
   setMetaContent('meta[name="twitter:description"]', metadata.description);
   setCanonicalHref(metadata.canonical);
+  setHreflangAlternates(pathname);
 
   const isUnknownProjectPath = isProjectPath && !project;
   const isUnknownServicePath = isServicePath && !servicePage;
@@ -2776,7 +2816,16 @@ function AuditFooterReminder({ onNavigate }) {
   );
 }
 
-function SiteFooter({ onNavigate }) {
+// English aria-labels for the footer social links on /en/ (LOT DL 2.5.1) —
+// keyed the same way as socialLinks, hrefs untouched.
+const englishSocialLinkAriaLabels = {
+  linkedin: "View Digital Lab's LinkedIn profile",
+  github: "View Digital Lab's GitHub profile",
+  instagram: "View Digital Lab's Instagram account",
+  facebook: "View Digital Lab's Facebook page",
+};
+
+function SiteFooter({ onNavigate, isEnglish = false }) {
   return (
     <footer className="footer">
       <div className="footer-smoke" aria-hidden="true"></div>
@@ -2789,13 +2838,17 @@ function SiteFooter({ onNavigate }) {
             <img src="/logo-digital-lab.png" alt="Digital Lab" />
             <span>Digital Lab</span>
           </a>
-          <p>Transformation digitale, IA & automatisation pour PME, indépendants et associations.</p>
+          <p>
+            {isEnglish
+              ? "Digital transformation, AI, and automation for small businesses, freelancers, and nonprofits."
+              : "Transformation digitale, IA & automatisation pour PME, indépendants et associations."}
+          </p>
         </div>
 
         <div className="footer-column">
           <h3>Navigation</h3>
-          <nav className="footer-nav" aria-label="Navigation de pied de page">
-            {navLinks.map((link) => (
+          <nav className="footer-nav" aria-label={isEnglish ? "Footer navigation" : "Navigation de pied de page"}>
+            {navLinks.map((link, index) => (
               <a
                 href={link.href}
                 key={link.href}
@@ -2804,7 +2857,7 @@ function SiteFooter({ onNavigate }) {
                   onNavigate(link.href);
                 }}
               >
-                {link.label}
+                {isEnglish ? englishNavLabels[index] : link.label}
               </a>
             ))}
           </nav>
@@ -2813,11 +2866,19 @@ function SiteFooter({ onNavigate }) {
         <div className="footer-column footer-contact-column">
           <h3>Contact</h3>
           <div className="footer-links">
-            <a className="footer-contact-link" href={`mailto:${businessContact.email}`} aria-label="Envoyer un e-mail à Digital Lab">
+            <a
+              className="footer-contact-link"
+              href={`mailto:${businessContact.email}`}
+              aria-label={isEnglish ? "Email Digital Lab" : "Envoyer un e-mail à Digital Lab"}
+            >
               <ContactIcon type="mail" />
               <span>{businessContact.email}</span>
             </a>
-            <a className="footer-contact-link" href={businessContact.phoneHref} aria-label="Appeler Digital Lab">
+            <a
+              className="footer-contact-link"
+              href={businessContact.phoneHref}
+              aria-label={isEnglish ? "Call Digital Lab" : "Appeler Digital Lab"}
+            >
               <ContactIcon type="phone" />
               <span>{businessContact.phoneDisplay}</span>
             </a>
@@ -2826,19 +2887,23 @@ function SiteFooter({ onNavigate }) {
               href={businessContact.url}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Ouvrir le site Digital Lab"
+              aria-label={isEnglish ? "Open the Digital Lab website" : "Ouvrir le site Digital Lab"}
             >
               <ContactIcon type="globe" />
               <span>{businessContact.siteDisplay}</span>
             </a>
-            <div className="footer-social-links" role="group" aria-label="Réseaux sociaux Digital Lab">
+            <div
+              className="footer-social-links"
+              role="group"
+              aria-label={isEnglish ? "Digital Lab social media" : "Réseaux sociaux Digital Lab"}
+            >
               {socialLinks.map((socialLink) => (
                 <a
                   className="social-icon-link"
                   href={socialLink.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={socialLink.label}
+                  aria-label={isEnglish ? englishSocialLinkAriaLabels[socialLink.key] : socialLink.label}
                   title={socialLink.title}
                   key={socialLink.key}
                 >
@@ -2855,8 +2920,8 @@ function SiteFooter({ onNavigate }) {
         </div>
 
         <div className="footer-column">
-          <h3>Nos expertises</h3>
-          <div className="footer-stack" role="group" aria-label="Expertises Digital Lab">
+          <h3>{isEnglish ? "Our expertise" : "Nos expertises"}</h3>
+          <div className="footer-stack" role="group" aria-label={isEnglish ? "Digital Lab expertise" : "Expertises Digital Lab"}>
             {footerExpertise.map((tool) => (
               <span key={tool}>{tool}</span>
             ))}
@@ -2870,7 +2935,7 @@ function SiteFooter({ onNavigate }) {
           event.preventDefault();
           onNavigate("/mentions-legales");
         }}>
-          Mentions légales
+          {isEnglish ? "Legal notice" : "Mentions légales"}
         </a>
       </div>
     </footer>
@@ -2923,6 +2988,212 @@ function LegalNoticePage({ onNavigate }) {
                 </p>
               </article>
             </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+// LOT DL 2.5 — English homepage. Deliberately not a full translation of the
+// French homepage: it reuses the same visual language (hero/section/card
+// classes, header, footer) but keeps its own compact copy and a small local
+// list of service/project teasers, since the linked service and project
+// pages themselves stay French-only in this LOT.
+const englishServiceTeasers = [
+  {
+    title: "Website creation",
+    summary: "A professional website that builds trust and turns visitors into leads.",
+    href: "/services/creation-site-web",
+  },
+  {
+    title: "AI chatbots",
+    summary: "Answer client questions instantly, day and night, without adding headcount.",
+    href: "/services/chatbot-ia",
+  },
+  {
+    title: "Business automation",
+    summary: "Remove the repetitive manual tasks slowing your team down.",
+    href: "/services/automatisation-pme",
+  },
+];
+
+const englishProjectTeasers = [
+  {
+    title: "MicroAssist",
+    summary: "A SaaS assistant that simplifies tax and admin tracking for freelancers.",
+    href: "/projects/microassist",
+  },
+  {
+    title: "Socle Local",
+    summary: "A community platform connecting residents, associations, and local shops.",
+    href: "/projects/socle-local",
+  },
+  {
+    title: "AI Booking Assistant",
+    summary: "A conversational assistant that handles reservations automatically.",
+    href: "/projects/assistant-reservation-ia",
+  },
+];
+
+function EnglishHomePage({ onNavigate }) {
+  const handleAuditClick = (event) => {
+    handleAuditLaunchClick(event, {
+      eventName: auditEvents.homeCta,
+      location: "en_homepage_hero",
+      onNavigate,
+    });
+  };
+
+  const handleTeaserClick = (event, href) => {
+    event.preventDefault();
+    onNavigate(href);
+  };
+
+  return (
+    <main>
+      <section className="hero">
+        <div className="hero-smoke" aria-hidden="true">
+          <div className="smoke-left"></div>
+          <div className="smoke-right"></div>
+          <div className="smoke-center"></div>
+        </div>
+
+        <div className="hero-content">
+          <a
+            href="/en/"
+            className="logo"
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate("/en/");
+            }}
+          >
+            <img src="/logo-digital-lab.png" alt="Digital Lab" />
+            <span>Digital Lab</span>
+          </a>
+
+          <div className="badge">
+            <span></span>
+            Digital studio for entrepreneurs
+          </div>
+
+          <h1 className="hero-title">
+            <span className="hero-title-line">Turning your ideas</span>
+            <span className="hero-title-line">
+              into <span className="hero-title-accent">digital solutions</span>.
+            </span>
+          </h1>
+
+          <p>
+            Websites, automations, and AI tools designed to simplify day-to-day operations for small businesses.
+          </p>
+
+          <div className="hero-buttons">
+            <a
+              href={auditLaunchHref}
+              className="btn btn-primary"
+              target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
+              rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
+              onClick={handleAuditClick}
+            >
+              Start my free audit <strong>→</strong>
+            </a>
+
+            <a href="#en-services" className="btn btn-secondary">
+              Explore our services
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section className="section brand-story-section reveal-on-scroll reveal-section">
+        <div className="section-inner about-layout">
+          <div className="section-heading">
+            <span>Why Digital Lab?</span>
+            <h2>Technology should simplify your work, not complicate it.</h2>
+          </div>
+
+          <div className="about-content glass-card premium-card gradient-border soft-hover">
+            <p>Many small business owners spend more time managing their tools than growing their business.</p>
+            <p>
+              Digital Lab was built on a simple idea: a digital tool should help you decide, organize, and move
+              forward with more confidence.
+            </p>
+            <p>
+              We design for the long run, with reliable foundations that evolve step by step as your needs grow.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section services-section reveal-on-scroll reveal-section" id="en-services">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Services</span>
+            <h2>Tools built around your business</h2>
+            <p>Each service solves a concrete need: getting found, saving time, or steering your project with more clarity.</p>
+          </div>
+
+          <div className="cards-grid">
+            {englishServiceTeasers.map((teaser) => (
+              <a
+                className="glass-card premium-card gradient-border soft-hover"
+                href={teaser.href}
+                key={teaser.href}
+                onClick={(event) => handleTeaserClick(event, teaser.href)}
+              >
+                <h3>{teaser.title}</h3>
+                <p>{teaser.summary}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section projects-section reveal-on-scroll reveal-section" id="en-work">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Selected work</span>
+            <h2>A look at recent projects</h2>
+          </div>
+
+          <div className="cards-grid project-grid">
+            {englishProjectTeasers.map((teaser) => (
+              <a
+                className="glass-card project-card premium-card gradient-border soft-hover"
+                href={teaser.href}
+                key={teaser.href}
+                onClick={(event) => handleTeaserClick(event, teaser.href)}
+              >
+                <h3>{teaser.title}</h3>
+                <p>{teaser.summary}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section reveal-on-scroll reveal-section" id="en-contact">
+        <div className="section-inner about-layout">
+          <div className="section-heading">
+            <span>Let's talk</span>
+            <h2>Tell us about your project</h2>
+            <p>Reach out directly and we'll get back to you shortly.</p>
+          </div>
+
+          <div className="about-content glass-card premium-card gradient-border soft-hover">
+            <p>
+              <a className="footer-contact-link" href={`mailto:${businessContact.email}`}>
+                <ContactIcon type="mail" />
+                <span>{businessContact.email}</span>
+              </a>
+            </p>
+            <p>
+              <a className="footer-contact-link" href={businessContact.phoneHref}>
+                <ContactIcon type="phone" />
+                <span>{businessContact.phoneDisplay}</span>
+              </a>
+            </p>
           </div>
         </div>
       </section>
@@ -4738,6 +5009,7 @@ function SiteHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("");
   const isAuditPage = pathname === auditLandingPath;
+  const isEnglishPath = pathname === englishHomePath;
   const visibleActiveHref = isAuditPage ? auditLandingPath : pathname === "/" ? activeHref : "";
   const userEmail = session?.user?.email;
   const userDisplayName = getUserDisplayName(session);
@@ -4839,7 +5111,7 @@ function SiteHeader({
         </button>
 
         <nav className="navbar-menu" aria-label="Navigation principale">
-          {navLinks.map((link) => (
+          {navLinks.map((link, index) => (
             <a
               className={`${visibleActiveHref === link.href ? "is-active" : ""}${link.emphasized ? " nav-link-emphasis" : ""}`.trim()}
               href={link.href}
@@ -4860,7 +5132,7 @@ function SiteHeader({
                 handleNavigate(event, link.href);
               }}
             >
-              {link.label}
+              {isEnglishPath ? englishNavLabels[index] : link.label}
             </a>
           ))}
           <a
@@ -4874,7 +5146,7 @@ function SiteHeader({
               handleNavigate(event, "/#contact");
             }}
           >
-            {isAuditPage ? "Besoin d’aide ?" : "Parler de mon projet"}
+            {isEnglishPath ? "Discuss my project" : isAuditPage ? "Besoin d’aide ?" : "Parler de mon projet"}
           </a>
           {session ? (
             <div className="navbar-auth-state">
@@ -4889,7 +5161,7 @@ function SiteHeader({
                   onNavigate("/dashboard");
                 }}
               >
-                Espace client
+                {isEnglishPath ? "Client area" : "Espace client"}
                 {hasClientUnreadMessages && (
                   <span
                     className="navbar-notification-badge is-clickable"
@@ -4939,7 +5211,7 @@ function SiteHeader({
                   onLogout();
                 }}
               >
-                Déconnexion
+                {isEnglishPath ? "Sign out" : "Déconnexion"}
               </button>
             </div>
           ) : (
@@ -4952,7 +5224,7 @@ function SiteHeader({
                   onNavigate("/login");
                 }}
               >
-                Espace client
+                {isEnglishPath ? "Client area" : "Espace client"}
               </button>
               <button
                 className="navbar-auth-button"
@@ -4962,10 +5234,36 @@ function SiteHeader({
                   onNavigate("/login");
                 }}
               >
-                Connexion
+                {isEnglishPath ? "Sign in" : "Connexion"}
               </button>
             </div>
           )}
+
+          <div className="lang-switcher" role="group" aria-label="Choisir la langue du site / Choose site language">
+            <a
+              className={`lang-switcher-link${!isEnglishPath ? " is-active" : ""}`}
+              href="/"
+              lang="fr"
+              aria-current={!isEnglishPath ? "true" : undefined}
+              aria-label="Français"
+              onClick={(event) => (isEnglishPath ? handleNavigate(event, "/") : event.preventDefault())}
+            >
+              FR
+            </a>
+            <span className="lang-switcher-divider" aria-hidden="true">
+              /
+            </span>
+            <a
+              className={`lang-switcher-link${isEnglishPath ? " is-active" : ""}`}
+              href="/en/"
+              lang="en"
+              aria-current={isEnglishPath ? "true" : undefined}
+              aria-label="English"
+              onClick={(event) => (!isEnglishPath ? handleNavigate(event, "/en/") : event.preventDefault())}
+            >
+              EN
+            </a>
+          </div>
         </nav>
       </header>
     </>
@@ -5642,6 +5940,31 @@ function App() {
 
         <AuditFooterReminder onNavigate={navigate} />
         <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
+  if (pathname === englishHomePath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <EnglishHomePage onNavigate={navigate} />
+
+        <SiteFooter onNavigate={navigate} isEnglish />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
         <AuthToast message={authToast} onClose={clearAuthToast} />
       </>

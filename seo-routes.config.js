@@ -5,7 +5,11 @@
 //
 // Do NOT add private routes (/login, /dashboard, /espace-client, /admin, /design-system),
 // the bare /services path, or unknown slugs here.
+//
+// "/en" is the English homepage (LOT DL 2.5). It's the only translated route
+// so far — do not add other /en/... paths here until they actually exist.
 export const seoRoutes = [
+  "/en",
   "/audit-site-web",
   "/projects/microassist",
   "/projects/socle-local",

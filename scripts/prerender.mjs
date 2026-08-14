@@ -25,7 +25,7 @@
 // Everywhere else (local dev, other CI) we use Playwright's own bundled
 // Chromium as before — see resolveLaunchOptions() and scripts/postinstall.mjs.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -38,6 +38,27 @@ const distDir = join(rootDir, "dist");
 
 const SITE_URL = "https://www.digitallab.studio";
 const PREVIEW_PORT = 4319;
+
+// LOT DL 2.5 — vite-plugin-sitemap normalizes every dynamicRoutes entry
+// through path.parse(), which unconditionally strips trailing slashes. That
+// means the sitemap <loc> it writes for "/en" comes out as ".../en", even
+// though the English homepage's canonical URL (and every other route) is
+// ".../en/". This patches just that one entry after vite build has run.
+function fixEnglishHomepageSitemapSlash() {
+  const sitemapPath = join(distDir, "sitemap.xml");
+  if (!existsSync(sitemapPath)) {
+    return;
+  }
+
+  const original = readFileSync(sitemapPath, "utf8");
+  const bareEnUrl = `${SITE_URL}/en`;
+  const pattern = new RegExp(`${bareEnUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s*</loc>)`);
+  const patched = original.replace(pattern, `${bareEnUrl}/$1`);
+
+  if (patched !== original) {
+    writeFileSync(sitemapPath, patched, "utf8");
+  }
+}
 
 // Domains that must never receive real traffic during prerendering.
 // Analytics/Clarity: avoid polluting real GA4/Clarity data with build-time
@@ -53,7 +74,14 @@ const BLOCKED_HOST_PATTERNS = [
 
 const routesToPrerender = ["/", ...seoRoutes];
 
-const expectedCanonicalFor = (route) => (route === "/" ? `${SITE_URL}/` : `${SITE_URL}${route}`);
+// "/" and "/en" (the English homepage) are the only two routes whose
+// canonical URL carries a trailing slash — every other route's canonical is
+// slash-free (see pageMetadata / servicePages in src/App.jsx).
+const expectedCanonicalFor = (route) => {
+  if (route === "/") return `${SITE_URL}/`;
+  if (route === "/en") return `${SITE_URL}/en/`;
+  return `${SITE_URL}${route}`;
+};
 
 const outputPathFor = (route) =>
   route === "/" ? join(distDir, "index.html") : join(distDir, route.replace(/^\//, ""), "index.html");
@@ -149,6 +177,8 @@ async function resolveLaunchOptions() {
 }
 
 async function main() {
+  fixEnglishHomepageSitemapSlash();
+
   const previewServer = await preview({
     root: rootDir,
     preview: { port: PREVIEW_PORT, strictPort: true },
@@ -215,6 +245,24 @@ async function main() {
           route,
           reasons: [
             "post-write reload check failed",
+            ...(pageErrors.length > 0 ? [`page error(s): ${pageErrors.join(" | ")}`] : []),
+            ...(rootChildCount === 0 ? ["client re-render produced no content"] : []),
+          ],
+        });
+      }
+    }
+
+    // LOT DL 2.5.1 — "/en" above only ever exercises the slash-free form.
+    // "/en/" (with the trailing slash) is the literal canonical/sitemap URL,
+    // so it's the one a search engine or a user actually lands on — reload
+    // it explicitly to confirm it hydrates too, not just its bare variant.
+    if (!failures.some((failure) => failure.route === "/en")) {
+      const { rootChildCount, pageErrors } = await verifyWrittenRoute(context, baseUrl, "/en/");
+      if (pageErrors.length > 0 || rootChildCount === 0) {
+        failures.push({
+          route: "/en/",
+          reasons: [
+            "trailing-slash reload check failed",
             ...(pageErrors.length > 0 ? [`page error(s): ${pageErrors.join(" | ")}`] : []),
             ...(rootChildCount === 0 ? ["client re-render produced no content"] : []),
           ],

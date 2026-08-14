@@ -238,6 +238,79 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+.lang-switcher {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid rgba(199, 168, 255, 0.28);
+  border-radius: 999px;
+}
+
+/* Real <a> links (crawlable, LOT DL 2.5.1) inside .navbar-menu, which already
+   has generic `.navbar-menu a` rules — including mobile-menu overrides
+   (full-width, space-between, 15px font, etc.) declared later in this file
+   inside @media blocks. A 3-class + type selector outranks those (2 classes
+   + type at most) regardless of source order, so it resets every property
+   those rules would otherwise leak into this compact two-way toggle. */
+.navbar-menu .lang-switcher a.lang-switcher-link {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 7px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: #f0ebff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  opacity: 0.6;
+  cursor: pointer;
+  transform: none;
+  text-shadow: none;
+  transition:
+    opacity 200ms ease,
+    background 200ms ease;
+}
+
+.navbar-menu .lang-switcher a.lang-switcher-link::after {
+  display: none;
+}
+
+.navbar-menu .lang-switcher a.lang-switcher-link:hover {
+  opacity: 0.9;
+  color: #f0ebff;
+  background: rgba(155, 109, 255, 0.12);
+  text-shadow: none;
+  transform: none;
+}
+
+.navbar-menu .lang-switcher a.lang-switcher-link.is-active {
+  opacity: 1;
+  background: rgba(155, 109, 255, 0.24);
+  cursor: default;
+}
+
+.navbar-menu .lang-switcher a.lang-switcher-link:focus-visible {
+  outline: 2px solid rgba(199, 168, 255, 0.85);
+  outline-offset: 2px;
+}
+
+.lang-switcher-divider {
+  color: rgba(240, 235, 255, 0.35);
+  font-size: 12px;
+}
+
 .navbar-auth-button,
 .navbar-auth-state button {
   white-space: nowrap;

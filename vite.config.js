@@ -13,8 +13,14 @@ export default defineConfig({
     Sitemap({
       hostname: siteUrl,
       dynamicRoutes: pages,
+      // Note: vite-plugin-sitemap normalizes every dynamicRoutes entry
+      // through path.parse(), which strips trailing slashes — so the sitemap
+      // <loc> for "/en" comes out as ".../en" even though its canonical URL
+      // is ".../en/". scripts/prerender.mjs patches just that one entry
+      // after this plugin runs (see fixEnglishHomepageSitemapSlash()).
       changefreq: {
         '/': 'weekly',
+        '/en': 'weekly',
         '/audit-site-web': 'weekly',
         '/projects/microassist': 'monthly',
         '/projects/socle-local': 'monthly',
@@ -28,6 +34,7 @@ export default defineConfig({
       },
       priority: {
         '/': 1,
+        '/en': 0.9,
         '/audit-site-web': 0.95,
         '/projects/microassist': 0.7,
         '/projects/socle-local': 0.7,
