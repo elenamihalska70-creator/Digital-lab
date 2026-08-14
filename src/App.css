@@ -8778,6 +8778,18 @@
     transition:
       opacity 260ms ease,
       transform 260ms ease;
+    /* LOT DL 2.5.3 — .navbar is position: sticky, so once it's pinned this
+       absolutely-positioned menu is pinned with it: page scroll can't reveal
+       content past the viewport edge. On short viewports the full menu
+       (nav links + CTA + auth + language switcher) can exceed the visible
+       height, making the bottom of the list — the FR/EN switcher —
+       unreachable. Cap it to the viewport and let it scroll internally
+       instead so every item, including the switcher, stays reachable. */
+    max-height: calc(100vh - 104px);
+    max-height: calc(100dvh - 104px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .navbar.is-menu-open .navbar-menu {
@@ -8899,6 +8911,18 @@
     transition:
       opacity 260ms ease,
       transform 260ms ease;
+    /* LOT DL 2.5.3 — .navbar is position: sticky, so once it's pinned this
+       absolutely-positioned menu is pinned with it: page scroll can't reveal
+       content past the viewport edge. On short viewports the full menu
+       (nav links + CTA + auth + language switcher) can exceed the visible
+       height, making the bottom of the list — the FR/EN switcher —
+       unreachable. Cap it to the viewport and let it scroll internally
+       instead so every item, including the switcher, stays reachable. */
+    max-height: calc(100vh - 104px);
+    max-height: calc(100dvh - 104px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .navbar.is-menu-open .navbar-menu {
