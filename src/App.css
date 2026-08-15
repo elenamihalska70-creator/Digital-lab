@@ -33,21 +33,29 @@
   transition: transform 120ms linear;
 }
 
+/* LOT DL 2.5.4.4 — two-level desktop header. This base rule now serves
+   exclusively the >=1181px desktop state: the <=1180px hamburger/dropdown
+   blocks below fully re-declare every one of these properties for mobile
+   (display, height, padding, border-radius, etc.), so nothing here leaks
+   into the approved mobile header. Brand + action cluster sit on row 1;
+   .navbar-menu (nav links) wraps onto row 2 — see .navbar-menu and
+   .navbar-actions. Height is auto (was a fixed single-row 82px) so the box
+   grows to fit both rows. */
 .navbar {
   position: sticky;
   top: 14px;
   left: 0;
   width: min(1380px, calc(100% - 32px));
-  height: 82px;
   margin: 0 auto;
-  padding: 0 12px 0 22px;
+  padding: 16px 18px 14px 22px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
   align-items: center;
-  gap: clamp(14px, 1.5vw, 28px);
+  gap: 14px clamp(14px, 1.5vw, 28px);
   z-index: 1000;
   border: 1px solid rgba(199, 168, 255, 0.16);
-  border-radius: 999px;
+  border-radius: 28px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
     rgba(7, 1, 15, 0.68);
@@ -58,7 +66,6 @@
   backdrop-filter: blur(20px);
   transition:
     width 320ms ease,
-    height 320ms ease,
     top 320ms ease,
     padding 320ms ease,
     border-color 320ms ease,
@@ -69,8 +76,7 @@
 .navbar.is-scrolled {
   top: 10px;
   width: min(1280px, calc(100% - 28px));
-  height: 68px;
-  padding: 0 10px 0 18px;
+  padding: 13px 16px 11px 18px;
   border-color: rgba(199, 168, 255, 0.24);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03)),
@@ -162,12 +168,38 @@
 }
 
 .navbar-menu {
-  flex: 1 1 auto;
+  /* flex-basis: 100% forces this onto its own new line within .navbar's
+     flex-wrap row (LOT DL 2.5.4.4) — it becomes row 2 (nav links), below
+     row 1 (brand + .navbar-actions, positioned separately, see below).
+     .navbar-actions is DOM-nested inside here but taken out of this flow
+     via position: absolute, so it doesn't affect this row's width/centering. */
+  flex: 1 1 100%;
   min-width: 0;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
-  gap: clamp(8px, 1vw, 18px);
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(199, 168, 255, 0.14);
+  gap: clamp(12px, 1.35vw, 22px);
+}
+
+/* LOT DL 2.5.4.4 — the CTA/auth/language cluster. DOM-nested inside
+   .navbar-menu (so mobile's flat dropdown list is untouched — see the
+   display: contents override in the <=1180px blocks below), but pulled out
+   of that row-2 flex flow here via absolute positioning so it renders on
+   row 1 instead, right-aligned next to the brand. Positions relative to
+   .navbar (position: sticky, the nearest positioned ancestor) since
+   .navbar-menu itself has no `position` of its own on desktop. */
+.navbar-actions {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: clamp(10px, 1.2vw, 18px);
 }
 
 .navbar-menu a {
@@ -231,7 +263,7 @@
    order. Scope one class deeper here so this trim reliably applies without
    touching that shared rule (used by unrelated buttons across the site). */
 .navbar .navbar-menu .navbar-cta {
-  padding: 11px 12px;
+  padding: 11px 16px;
 }
 
 .navbar-menu .navbar-cta::after {
@@ -251,8 +283,8 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 5px;
+  padding: 5px 10px;
   border: 1px solid rgba(199, 168, 255, 0.28);
   border-radius: 999px;
 }
@@ -268,10 +300,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   width: auto;
   min-width: 0;
   margin: 0;
-  padding: 4px 5px;
+  padding: 5px 8px;
   border: none;
   border-radius: 999px;
   background: none;
@@ -289,6 +322,41 @@
   transition:
     opacity 200ms ease,
     background 200ms ease;
+}
+
+/* LOT DL 2.5.4.1 — deterministic flag chips (CSS tricolour / inline SVG)
+   instead of Unicode regional-indicator emoji: Windows Chrome/Edge has no
+   guaranteed color-flag font, so the emoji rendered as plain "FR"/"GB"
+   letters there. Both are vector (gradient / SVG), so they're crisp at any
+   pixel density without needing @2x assets, and both share this box's fixed
+   size so the two flags line up identically regardless of each country's
+   real flag ratio. Inactive links are dimmed via opacity on the whole
+   .lang-switcher-link (text + flag together), so no separate dimming is
+   needed here. */
+.lang-switcher-flag {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 13px;
+  border-radius: 2px;
+  overflow: hidden;
+  outline: 1px solid rgba(255, 255, 255, 0.22);
+  outline-offset: 0;
+}
+
+.lang-switcher-flag--fr {
+  background: linear-gradient(
+    90deg,
+    #0055a4 0 33.34%,
+    #ffffff 33.34% 66.66%,
+    #ef4135 66.66% 100%
+  );
+}
+
+.lang-switcher-flag--gb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .navbar-menu .lang-switcher a.lang-switcher-link::after {
@@ -356,7 +424,7 @@
   align-items: center;
   gap: 6px;
   max-width: 360px;
-  padding: 6px 4px 6px 10px;
+  padding: 6px 6px 6px 12px;
   border: 1px solid rgba(199, 168, 255, 0.16);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.035);
@@ -373,7 +441,7 @@
 }
 
 .navbar-auth-state button {
-  padding: 8px 8px;
+  padding: 8px 10px;
 }
 
 .navbar-client-button,
@@ -8665,51 +8733,14 @@
 }
 
 @media (max-width: 1180px) {
-  .navbar {
-    gap: 14px;
-    padding: 0 12px 0 16px;
-  }
-
-  .navbar-brand {
-    gap: 9px;
-    font-size: 16px;
-  }
-
-  .navbar-brand img {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-  }
-
-  .navbar-menu {
-    gap: 10px;
-  }
-
-  .navbar-menu a {
-    font-size: 13px;
-  }
-
-  .navbar-menu .navbar-cta,
-  .navbar-auth-button {
-    padding: 10px 12px;
-  }
-
-  .navbar-auth-state {
-    gap: 6px;
-    max-width: 300px;
-    padding: 5px 5px 5px 9px;
-  }
-
-  .navbar-auth-state span {
-    max-width: 72px;
-    font-size: 12px;
-  }
-
-  .navbar-auth-state button {
-    padding: 7px 8px;
-    font-size: 12px;
-  }
-
+  /* LOT DL 2.5.4.3 — the horizontal-nav "compact tablet" rules that used to
+     live here (tightened gaps/padding/font-size for .navbar-menu and its
+     children) were removed: this breakpoint now falls entirely inside the
+     hamburger/dropdown zone (see the ≤1180px dropdown block below), so
+     those rules were dead weight that also invited exactly the kind of
+     repeated, fragile squeezing that caused the nav-links-run-together
+     regression. The dropdown block already styles .navbar-brand,
+     .navbar-menu, and .lang-switcher correctly for this range. */
   .project-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -8724,13 +8755,15 @@
   }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .navbar {
     top: 10px;
     width: calc(100% - 24px);
     height: 68px;
     padding: 0 12px 0 16px;
     overflow: visible;
+    flex-wrap: nowrap;
+    border-radius: 999px;
   }
 
   .navbar.is-scrolled {
@@ -8754,12 +8787,30 @@
     margin-left: auto;
   }
 
+  /* LOT DL 2.5.4.4 — .navbar-actions must render inline exactly where it
+     sits in the DOM (inside .navbar-menu) on mobile, not pulled onto a
+     desktop-only "row 1": display: contents makes the wrapper itself
+     invisible to layout, so its children (CTA, auth-state, switcher)
+     behave as direct .navbar-menu grid items, unchanged from before this
+     wrapper existed. */
+  .navbar-actions {
+    display: contents;
+  }
+
   .navbar-menu {
     position: absolute;
     top: calc(100% + 10px);
     left: 0;
     right: 0;
     display: grid;
+    margin-top: 0;
+    /* Without this, the implicit single column auto-sizes to the widest
+       row's own max-content width instead of the panel's full available
+       width (percentage-width children like .navbar-auth-state don't
+       contribute their intended width to that auto-sizing pass) — which
+       left the column, and everything centered within it, off-center
+       relative to the actual visible menu. 1fr pins it to true 100%. */
+    grid-template-columns: 1fr;
     gap: 8px;
     padding: 12px;
     border: 1px solid rgba(199, 168, 255, 0.18);
@@ -8856,6 +8907,36 @@
   .navbar-auth-state.is-guest {
     padding-left: 10px;
   }
+
+  /* LOT DL 2.5.4.2 — mobile-only enlargement: at true phone widths the
+     switcher was inheriting the compact ≤1180px "tight desktop" sizing
+     (built for squeezing a still-horizontal nav bar), which read as too
+     small in the spacious vertical mobile dropdown. Desktop/tablet sizing
+     (≤1180px block above) is untouched. justify-self only applies when an
+     element is a grid item (true here, since .navbar-menu is display:grid
+     on mobile) — .lang-switcher wasn't stretching to the row's full width,
+     so without it the pill defaulted to the start of the row instead of
+     the row's center. */
+  .lang-switcher {
+    justify-self: center;
+    gap: 5px;
+    padding: 6px 8px;
+  }
+
+  .navbar-menu .lang-switcher a.lang-switcher-link {
+    gap: 4px;
+    padding: 5px 6px;
+    font-size: 13px;
+  }
+
+  .lang-switcher-flag {
+    width: 22px;
+    height: 14px;
+  }
+
+  .lang-switcher-divider {
+    font-size: 13px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -8865,6 +8946,8 @@
     height: 68px;
     padding: 0 12px 0 16px;
     overflow: visible;
+    flex-wrap: nowrap;
+    border-radius: 999px;
   }
 
   .navbar.is-scrolled {
@@ -8887,12 +8970,24 @@
     display: grid;
   }
 
+  .navbar-actions {
+    display: contents;
+  }
+
   .navbar-menu {
     position: absolute;
     top: calc(100% + 10px);
     left: 0;
     right: 0;
     display: grid;
+    margin-top: 0;
+    /* Without this, the implicit single column auto-sizes to the widest
+       row's own max-content width instead of the panel's full available
+       width (percentage-width children like .navbar-auth-state don't
+       contribute their intended width to that auto-sizing pass) — which
+       left the column, and everything centered within it, off-center
+       relative to the actual visible menu. 1fr pins it to true 100%. */
+    grid-template-columns: 1fr;
     gap: 8px;
     padding: 12px;
     border: 1px solid rgba(199, 168, 255, 0.18);
@@ -8987,6 +9082,29 @@
 
   .navbar-auth-state.is-guest {
     padding-left: 10px;
+  }
+
+  /* LOT DL 2.5.4.2 — mobile-only enlargement, see matching comment in the
+     ≤1080px block above. */
+  .lang-switcher {
+    justify-self: center;
+    gap: 5px;
+    padding: 6px 8px;
+  }
+
+  .navbar-menu .lang-switcher a.lang-switcher-link {
+    gap: 4px;
+    padding: 5px 6px;
+    font-size: 13px;
+  }
+
+  .lang-switcher-flag {
+    width: 22px;
+    height: 14px;
+  }
+
+  .lang-switcher-divider {
+    font-size: 13px;
   }
 
   .logo {

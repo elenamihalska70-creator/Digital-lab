@@ -13,7 +13,7 @@ import {
   getContactRequestsForUser,
   updateContactRequestStatus,
 } from "./services/contactRequests";
-import { getCurrentSession, supabase } from "./services/auth";
+import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import { getEstimatorResult } from "./utils/estimator";
@@ -594,27 +594,6 @@ const socialLinks = [
     label: "Voir la page Facebook de Digital Lab",
     title: "Page Facebook Digital Lab",
   },
-];
-
-const estimatorNeeds = [
-  "Créer un site web",
-  "Réparer / améliorer un site existant",
-  "Optimiser SEO & visibilité",
-  "Ajouter une automatisation",
-  "Créer un chatbot / assistant IA",
-  "Créer un MVP ou prototype web",
-];
-
-const estimatorFeatures = [
-  "Formulaire de contact",
-  "Réservation",
-  "Email automatique",
-  "Google Sheets / CRM",
-  "Tableau de bord",
-  "Paiement",
-  "Chatbot",
-  "SEO",
-  "Maintenance",
 ];
 
 const contactProjectTypes = [
@@ -1659,7 +1638,7 @@ function ServiceGallery({ service, isOpen }) {
   );
 }
 
-function ServiceAccordionCard({ service, onNavigate }) {
+function ServiceAccordionCard({ service, onNavigate, isEnglish = false }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -1679,15 +1658,15 @@ function ServiceAccordionCard({ service, onNavigate }) {
         <div className="solution-detail-copy">
           <div className="service-sales-grid">
             <article>
-              <span>Votre problème</span>
+              <span>{isEnglish ? "Your challenge" : "Votre problème"}</span>
               <p>{service.problem}</p>
             </article>
             <article>
-              <span>Notre solution</span>
+              <span>{isEnglish ? "Our solution" : "Notre solution"}</span>
               <p>{service.canDo}</p>
             </article>
             <article>
-              <span>Résultat concret</span>
+              <span>{isEnglish ? "Concrete result" : "Résultat concret"}</span>
               <p>{service.expectedResult}</p>
             </article>
           </div>
@@ -1707,7 +1686,7 @@ function ServiceAccordionCard({ service, onNavigate }) {
                 onNavigate(service.learnMoreHref);
               }}
             >
-              En savoir plus →
+              {isEnglish ? "Learn more →" : "En savoir plus →"}
             </a>
           )}
         </div>
@@ -1764,7 +1743,7 @@ function AnimatedCounter({ value, suffix = "" }) {
   );
 }
 
-function ProjectModal({ project, onClose }) {
+function ProjectModal({ project, onClose, isEnglish = false }) {
   const closeButtonRef = useRef(null);
 
   useEffect(() => {
@@ -1809,7 +1788,7 @@ function ProjectModal({ project, onClose }) {
         <button
           className="project-modal-close"
           type="button"
-          aria-label="Fermer la fenêtre"
+          aria-label={isEnglish ? "Close the window" : "Fermer la fenêtre"}
           onClick={onClose}
           ref={closeButtonRef}
         >
@@ -1844,7 +1823,7 @@ function ProjectModal({ project, onClose }) {
   );
 }
 
-function ArticleSoonModal({ article, onClose }) {
+function ArticleSoonModal({ article, onClose, isEnglish = false }) {
   const closeButtonRef = useRef(null);
 
   useEffect(() => {
@@ -1887,31 +1866,33 @@ function ArticleSoonModal({ article, onClose }) {
         <button
           className="article-modal-close"
           type="button"
-          aria-label="Fermer la fenêtre"
+          aria-label={isEnglish ? "Close the window" : "Fermer la fenêtre"}
           onClick={onClose}
           ref={closeButtonRef}
         >
           ×
         </button>
-        <span>Conseil pratique</span>
-        <h2 id="article-modal-title">Article bientôt disponible</h2>
+        <span>{isEnglish ? "Practical tip" : "Conseil pratique"}</span>
+        <h2 id="article-modal-title">{isEnglish ? "Article coming soon" : "Article bientôt disponible"}</h2>
         <p>
-          Les articles complets seront ajoutés progressivement. Vous pouvez déjà me contacter si vous avez une question
-          sur ce sujet.
+          {isEnglish
+            ? "Full articles will be added progressively. Feel free to contact me already if you have a question on this topic."
+            : "Les articles complets seront ajoutés progressivement. Vous pouvez déjà me contacter si vous avez une question sur ce sujet."}
         </p>
         <small>{article.title}</small>
-        <a className="btn btn-primary" href="#contact" onClick={onClose}>
-          Me poser une question
+        <a className="btn btn-primary" href={isEnglish ? "#en-contact" : "#contact"} onClick={onClose}>
+          {isEnglish ? "Ask me a question" : "Me poser une question"}
         </a>
       </section>
     </div>
   );
 }
 
-function BlogCarousel() {
+function BlogCarousel({ isEnglish = false }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const trackRef = useRef(null);
+  const displayedArticles = isEnglish ? englishArticles : articles;
 
   const scrollToArticle = (index) => {
     const track = trackRef.current;
@@ -1929,7 +1910,7 @@ function BlogCarousel() {
   };
 
   const scrollByDirection = (direction) => {
-    const nextIndex = Math.max(0, Math.min(articles.length - 1, activeIndex + direction));
+    const nextIndex = Math.max(0, Math.min(displayedArticles.length - 1, activeIndex + direction));
     scrollToArticle(nextIndex);
   };
 
@@ -1944,40 +1925,41 @@ function BlogCarousel() {
     const gap = 18;
     const nextIndex = Math.round(track.scrollLeft / (cardWidth + gap));
 
-    setActiveIndex(Math.max(0, Math.min(articles.length - 1, nextIndex)));
+    setActiveIndex(Math.max(0, Math.min(displayedArticles.length - 1, nextIndex)));
   };
 
   return (
-    <section className="section articles-section reveal-on-scroll reveal-section" id="blog">
+    <section className="section articles-section reveal-on-scroll reveal-section" id={isEnglish ? "en-blog" : "blog"}>
       <div className="section-inner">
         <div className="articles-header">
           <div className="section-heading">
-            <span>Conseils pratiques</span>
-            <h2>Articles & conseils</h2>
+            <span>{isEnglish ? "Practical tips" : "Conseils pratiques"}</span>
+            <h2>{isEnglish ? "Articles & tips" : "Articles & conseils"}</h2>
             <p>
-              Des conseils pratiques pour mieux comprendre le web, améliorer sa visibilité et éviter les erreurs
-              fréquentes.
+              {isEnglish
+                ? "Practical tips to better understand the web, improve your visibility, and avoid common mistakes."
+                : "Des conseils pratiques pour mieux comprendre le web, améliorer sa visibilité et éviter les erreurs fréquentes."}
             </p>
           </div>
 
-          <div className="articles-controls" role="group" aria-label="Navigation des articles">
-            <button type="button" onClick={() => scrollByDirection(-1)} aria-label="Article précédent">
+          <div className="articles-controls" role="group" aria-label={isEnglish ? "Article navigation" : "Navigation des articles"}>
+            <button type="button" onClick={() => scrollByDirection(-1)} aria-label={isEnglish ? "Previous article" : "Article précédent"}>
               ←
             </button>
-            <button type="button" onClick={() => scrollByDirection(1)} aria-label="Article suivant">
+            <button type="button" onClick={() => scrollByDirection(1)} aria-label={isEnglish ? "Next article" : "Article suivant"}>
               →
             </button>
           </div>
         </div>
 
         <div className="articles-carousel" ref={trackRef} onScroll={handleScroll}>
-          {articles.map((article, index) => (
+          {displayedArticles.map((article, index) => (
             <article
               className="article-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
               key={article.title}
               style={{ "--reveal-delay": `${index * 80}ms` }}
             >
-              <div className="article-tags" role="group" aria-label="Thèmes de l’article">
+              <div className="article-tags" role="group" aria-label={isEnglish ? "Article topics" : "Thèmes de l’article"}>
                 {article.tags.map((tag) => (
                   <span key={tag}>{tag}</span>
                 ))}
@@ -1985,37 +1967,38 @@ function BlogCarousel() {
               <h3>{article.title}</h3>
               <p>{article.description}</p>
               <button type="button" onClick={() => setSelectedArticle(article)}>
-                Lire l’article <span aria-hidden="true">→</span>
+                {isEnglish ? "Read the article" : "Lire l’article"} <span aria-hidden="true">→</span>
               </button>
             </article>
           ))}
         </div>
 
-        <div className="articles-pagination" role="group" aria-label="Pagination des articles">
-          {articles.map((article, index) => (
+        <div className="articles-pagination" role="group" aria-label={isEnglish ? "Article pagination" : "Pagination des articles"}>
+          {displayedArticles.map((article, index) => (
             <button
               className={activeIndex === index ? "is-active" : ""}
               type="button"
               key={article.title}
               onClick={() => scrollToArticle(index)}
-              aria-label={`Afficher l’article ${index + 1}`}
+              aria-label={isEnglish ? `Show article ${index + 1}` : `Afficher l’article ${index + 1}`}
             ></button>
           ))}
         </div>
 
-        <button className="articles-soon-button" type="button" onClick={() => setSelectedArticle(articles[0])}>
-          Articles complets à venir
+        <button className="articles-soon-button" type="button" onClick={() => setSelectedArticle(displayedArticles[0])}>
+          {isEnglish ? "Full articles coming soon" : "Articles complets à venir"}
         </button>
       </div>
 
-      <ArticleSoonModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
+      <ArticleSoonModal article={selectedArticle} onClose={() => setSelectedArticle(null)} isEnglish={isEnglish} />
     </section>
   );
 }
 
-function ProjectEstimator() {
+function ProjectEstimator({ isEnglish = false }) {
   const [answers, setAnswers] = useState(initialEstimatorAnswers);
-  const result = getEstimatorResult(answers);
+  const rawResult = getEstimatorResult(answers);
+  const result = translateEstimatorResult(rawResult, isEnglish);
   const answeredSteps = [
     answers.profile,
     answers.priority,
@@ -2027,26 +2010,50 @@ function ProjectEstimator() {
     answers.urgency,
   ].filter(Boolean).length;
   const progress = Math.round((answeredSteps / 8) * 100);
-  const emailBody = [
-    "Bonjour Digital Lab,",
-    "",
-    "Je souhaite échanger sur un projet.",
-    "",
-    `Profil : ${answers.profile}`,
-    `Priorité principale : ${answers.priority}`,
-    `Besoin principal : ${answers.need}`,
-    `Site ou outil existant : ${answers.existing}`,
-    `Contenus : ${answers.content}`,
-    `Complexité souhaitée : ${answers.complexity}`,
-    `Fonctionnalités souhaitées : ${answers.features.length ? answers.features.join(", ") : "À préciser"}`,
-    `Urgence : ${answers.urgency}`,
-    "",
-    `Estimation indicative : ${result.type} — ${result.budget} — ${result.delay}`,
-    "",
-    "Pouvez-vous me proposer une première piste ?",
-  ].join("\n");
+  const labelFor = (options, value) => options.find((option) => option.value === value)?.label ?? value;
+  const emailBody = isEnglish
+    ? [
+        "Hello Digital Lab,",
+        "",
+        "I'd like to talk about a project.",
+        "",
+        `Profile: ${labelFor(estimatorProfileOptions, answers.profile)}`,
+        `Main priority: ${labelFor(estimatorPriorityOptions, answers.priority)}`,
+        `Main need: ${labelFor(estimatorNeedOptions, answers.need)}`,
+        `Existing site or tool: ${labelFor(estimatorExistingOptions, answers.existing)}`,
+        `Content: ${labelFor(estimatorContentOptions, answers.content)}`,
+        `Desired complexity: ${labelFor(estimatorComplexityOptions, answers.complexity)}`,
+        `Desired features: ${
+          answers.features.length
+            ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
+            : "To be defined"
+        }`,
+        `Urgency: ${labelFor(estimatorUrgencyOptions, answers.urgency)}`,
+        "",
+        `Indicative estimate: ${result.type} — ${result.budget} — ${result.delay}`,
+        "",
+        "Could you suggest a first direction?",
+      ].join("\n")
+    : [
+        "Bonjour Digital Lab,",
+        "",
+        "Je souhaite échanger sur un projet.",
+        "",
+        `Profil : ${answers.profile}`,
+        `Priorité principale : ${answers.priority}`,
+        `Besoin principal : ${answers.need}`,
+        `Site ou outil existant : ${answers.existing}`,
+        `Contenus : ${answers.content}`,
+        `Complexité souhaitée : ${answers.complexity}`,
+        `Fonctionnalités souhaitées : ${answers.features.length ? answers.features.join(", ") : "À préciser"}`,
+        `Urgence : ${answers.urgency}`,
+        "",
+        `Estimation indicative : ${result.type} — ${result.budget} — ${result.delay}`,
+        "",
+        "Pouvez-vous me proposer une première piste ?",
+      ].join("\n");
   const mailtoHref = `mailto:${businessContact.email}?subject=${encodeURIComponent(
-    "Demande de projet Digital Lab",
+    isEnglish ? "Digital Lab project inquiry" : "Demande de projet Digital Lab",
   )}&body=${encodeURIComponent(emailBody)}`;
 
   const updateAnswer = (key, value) => {
@@ -2070,71 +2077,75 @@ function ProjectEstimator() {
   };
 
   return (
-    <section className="section estimator-section reveal-on-scroll reveal-section" id="estimation">
+    <section className="section estimator-section reveal-on-scroll reveal-section" id={isEnglish ? "en-estimation" : "estimation"}>
       <div className="section-inner">
         <div className="section-heading">
-          <span>Estimation</span>
-          <h2>Estimez une première version de votre projet</h2>
-          <p>Répondez à quelques questions ciblées pour obtenir une première indication de budget, délai et complexité.</p>
+          <span>{isEnglish ? "Estimate" : "Estimation"}</span>
+          <h2>{isEnglish ? "Estimate a first version of your project" : "Estimez une première version de votre projet"}</h2>
+          <p>
+            {isEnglish
+              ? "Answer a few targeted questions to get an initial idea of budget, timeline, and complexity."
+              : "Répondez à quelques questions ciblées pour obtenir une première indication de budget, délai et complexité."}
+          </p>
         </div>
 
         <div className="estimator-panel reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
-          <div className="estimator-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Progression ${progress}%`}>
+          <div
+            className="estimator-progress"
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={isEnglish ? `Progress ${progress}%` : `Progression ${progress}%`}
+          >
             <span style={{ width: `${progress}%` }}></span>
           </div>
 
           <div className="estimator-grid">
             <div className="estimator-questions">
               <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "180ms" }}>
-                <h3>Vous êtes :</h3>
+                <h3>{isEnglish ? "You are:" : "Vous êtes :"}</h3>
                 <div className="estimator-options">
-                  {["Indépendant", "Association", "Commerce local", "Restaurant / service", "Projet en création", "Autre"].map((profile) => (
+                  {estimatorProfileOptions.map((profile) => (
                     <button
-                      className={answers.profile === profile ? "is-selected" : ""}
-                      key={profile}
+                      className={answers.profile === profile.value ? "is-selected" : ""}
+                      key={profile.value}
                       type="button"
-                      onClick={() => updateAnswer("profile", profile)}
+                      onClick={() => updateAnswer("profile", profile.value)}
                     >
-                      {profile}
+                      {isEnglish ? profile.label : profile.value}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "220ms" }}>
-                <h3>Votre priorité principale :</h3>
+                <h3>{isEnglish ? "Your main priority:" : "Votre priorité principale :"}</h3>
                 <div className="estimator-options">
-                  {[
-                    "Être visible",
-                    "Recevoir plus de demandes",
-                    "Gagner du temps",
-                    "Réparer un site existant",
-                    "Tester une idée",
-                    "Automatiser une tâche",
-                  ].map((priority) => (
+                  {estimatorPriorityOptions.map((priority) => (
                     <button
-                      className={answers.priority === priority ? "is-selected" : ""}
-                      key={priority}
+                      className={answers.priority === priority.value ? "is-selected" : ""}
+                      key={priority.value}
                       type="button"
-                      onClick={() => updateAnswer("priority", priority)}
+                      onClick={() => updateAnswer("priority", priority.value)}
                     >
-                      {priority}
+                      {isEnglish ? priority.label : priority.value}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "260ms" }}>
-                <h3>Quel est votre besoin principal ?</h3>
+                <h3>{isEnglish ? "What's your main need?" : "Quel est votre besoin principal ?"}</h3>
                 <div className="estimator-options">
-                  {estimatorNeeds.map((need) => (
+                  {estimatorNeedOptions.map((need) => (
                     <button
-                      className={answers.need === need ? "is-selected" : ""}
-                      key={need}
+                      className={answers.need === need.value ? "is-selected" : ""}
+                      key={need.value}
                       type="button"
-                      onClick={() => updateAnswer("need", need)}
+                      onClick={() => updateAnswer("need", need.value)}
                     >
-                      {need}
+                      {isEnglish ? need.label : need.value}
                     </button>
                   ))}
                 </div>
@@ -2142,32 +2153,32 @@ function ProjectEstimator() {
 
               <div className="estimator-question estimator-question-inline reveal-on-scroll reveal-card" style={{ "--reveal-delay": "320ms" }}>
                 <div>
-                  <h3>Avez-vous déjà un site ou un outil existant ?</h3>
+                  <h3>{isEnglish ? "Do you already have a site or tool?" : "Avez-vous déjà un site ou un outil existant ?"}</h3>
                   <div className="estimator-options compact">
-                    {["Oui", "Non", "Partiellement"].map((option) => (
+                    {estimatorExistingOptions.map((option) => (
                       <button
-                        className={answers.existing === option ? "is-selected" : ""}
-                        key={option}
+                        className={answers.existing === option.value ? "is-selected" : ""}
+                        key={option.value}
                         type="button"
-                        onClick={() => updateAnswer("existing", option)}
+                        onClick={() => updateAnswer("existing", option.value)}
                       >
-                        {option}
+                        {isEnglish ? option.label : option.value}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <h3>Avez-vous déjà les contenus ?</h3>
+                  <h3>{isEnglish ? "Do you already have the content?" : "Avez-vous déjà les contenus ?"}</h3>
                   <div className="estimator-options compact">
-                    {["Textes et images prêts", "Quelques éléments seulement", "Je pars de zéro"].map((option) => (
+                    {estimatorContentOptions.map((option) => (
                       <button
-                        className={answers.content === option ? "is-selected" : ""}
-                        key={option}
+                        className={answers.content === option.value ? "is-selected" : ""}
+                        key={option.value}
                         type="button"
-                        onClick={() => updateAnswer("content", option)}
+                        onClick={() => updateAnswer("content", option.value)}
                       >
-                        {option}
+                        {isEnglish ? option.label : option.value}
                       </button>
                     ))}
                   </div>
@@ -2175,52 +2186,48 @@ function ProjectEstimator() {
               </div>
 
               <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "380ms" }}>
-                <h3>Niveau de complexité souhaité</h3>
+                <h3>{isEnglish ? "Desired complexity level" : "Niveau de complexité souhaité"}</h3>
                 <div className="estimator-options">
-                  {[
-                    "Simple : page ou fonctionnalité basique",
-                    "Standard : plusieurs pages ou plusieurs fonctions",
-                    "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
-                  ].map((option) => (
+                  {estimatorComplexityOptions.map((option) => (
                     <button
-                      className={answers.complexity === option ? "is-selected" : ""}
-                      key={option}
+                      className={answers.complexity === option.value ? "is-selected" : ""}
+                      key={option.value}
                       type="button"
-                      onClick={() => updateAnswer("complexity", option)}
+                      onClick={() => updateAnswer("complexity", option.value)}
                     >
-                      {option}
+                      {isEnglish ? option.label : option.value}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "440ms" }}>
-                <h3>Fonctionnalités souhaitées</h3>
+                <h3>{isEnglish ? "Desired features" : "Fonctionnalités souhaitées"}</h3>
                 <div className="estimator-checkboxes">
-                  {estimatorFeatures.map((feature) => (
-                    <label className={answers.features.includes(feature) ? "is-selected" : ""} key={feature}>
+                  {estimatorFeatureOptions.map((feature) => (
+                    <label className={answers.features.includes(feature.value) ? "is-selected" : ""} key={feature.value}>
                       <input
-                        checked={answers.features.includes(feature)}
+                        checked={answers.features.includes(feature.value)}
                         type="checkbox"
-                        onChange={() => toggleFeature(feature)}
+                        onChange={() => toggleFeature(feature.value)}
                       />
-                      <span>{feature}</span>
+                      <span>{isEnglish ? feature.label : feature.value}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "500ms" }}>
-                <h3>Urgence</h3>
+                <h3>{isEnglish ? "Urgency" : "Urgence"}</h3>
                 <div className="estimator-options compact">
-                  {["Normal", "Rapide", "Urgent"].map((option) => (
+                  {estimatorUrgencyOptions.map((option) => (
                     <button
-                      className={answers.urgency === option ? "is-selected" : ""}
-                      key={option}
+                      className={answers.urgency === option.value ? "is-selected" : ""}
+                      key={option.value}
                       type="button"
-                      onClick={() => updateAnswer("urgency", option)}
+                      onClick={() => updateAnswer("urgency", option.value)}
                     >
-                      {option}
+                      {isEnglish ? option.label : option.value}
                     </button>
                   ))}
                 </div>
@@ -2228,25 +2235,26 @@ function ProjectEstimator() {
             </div>
 
             <aside className="estimator-result reveal-on-scroll reveal-card" style={{ "--reveal-delay": "300ms" }}>
-              <span>Résultat indicatif</span>
+              <span>{isEnglish ? "Indicative result" : "Résultat indicatif"}</span>
               <h3>{result.type}</h3>
               <div className="result-metrics">
                 <div>
-                  <small>Budget indicatif</small>
+                  <small>{isEnglish ? "Estimated budget" : "Budget indicatif"}</small>
                   <strong>{result.budget}</strong>
                 </div>
                 <div>
-                  <small>Délai indicatif</small>
+                  <small>{isEnglish ? "Estimated timeline" : "Délai indicatif"}</small>
                   <strong>{result.delay}</strong>
                 </div>
               </div>
               <p>{result.message}</p>
               <p className="estimator-note">
-                Cette estimation est indicative. Le devis final dépendra du brief, des contenus disponibles et des
-                fonctionnalités exactes.
+                {isEnglish
+                  ? "This estimate is indicative. The final quote will depend on the brief, available content, and exact features."
+                  : "Cette estimation est indicative. Le devis final dépendra du brief, des contenus disponibles et des fonctionnalités exactes."}
               </p>
               <a className="btn btn-primary" href={mailtoHref}>
-                Recevoir cette estimation
+                {isEnglish ? "Get this estimate" : "Recevoir cette estimation"}
               </a>
             </aside>
           </div>
@@ -2259,17 +2267,18 @@ function ProjectEstimator() {
             </svg>
           </span>
           <p>
-            Vous ne trouvez pas exactement votre besoin ? Vous pouvez aussi me contacter directement et expliquer
-            votre projet avec vos mots, même s’il est encore flou.
+            {isEnglish
+              ? "Can't find exactly what you need? You can also contact me directly and describe your project in your own words, even if it's still unclear."
+              : "Vous ne trouvez pas exactement votre besoin ? Vous pouvez aussi me contacter directement et expliquer votre projet avec vos mots, même s’il est encore flou."}
           </p>
-          <a href="#contact">Discuter de mon projet</a>
+          <a href={isEnglish ? "#en-contact" : "#contact"}>{isEnglish ? "Discuss my project" : "Discuter de mon projet"}</a>
         </div>
       </div>
     </section>
   );
 }
 
-function AIWebsiteTransformationSection() {
+function AIWebsiteTransformationSection({ isEnglish = false }) {
   return (
     <section className="section ai-transformation-section reveal-on-scroll reveal-section">
       <div className="section-inner">
@@ -2277,20 +2286,32 @@ function AIWebsiteTransformationSection() {
           <div className="ai-transformation-copy">
             <span className="ai-transformation-eyebrow">AI Website Transformation</span>
             <h2>
-              Même activité.
-              <br />
-              Nouvelle perception.
+              {isEnglish ? (
+                <>
+                  Same business.
+                  <br />
+                  New perception.
+                </>
+              ) : (
+                <>
+                  Même activité.
+                  <br />
+                  Nouvelle perception.
+                </>
+              )}
             </h2>
             <p>
-              Transformer des sites existants en expériences digitales qui changent la perception de votre marque.
+              {isEnglish
+                ? "Turning existing websites into digital experiences that change how your brand is perceived."
+                : "Transformer des sites existants en expériences digitales qui changent la perception de votre marque."}
             </p>
 
             <div className="ai-transformation-actions">
               <a className="btn btn-primary" href="#ai-website-transformation-video">
-                ▶ Voir la transformation
+                {isEnglish ? "▶ Watch the transformation" : "▶ Voir la transformation"}
               </a>
-              <a className="ai-transformation-link" href="#contact">
-                Voir le cas complet
+              <a className="ai-transformation-link" href={isEnglish ? "#en-contact" : "#contact"}>
+                {isEnglish ? "See the full case" : "Voir le cas complet"}
               </a>
             </div>
           </div>
@@ -2298,7 +2319,11 @@ function AIWebsiteTransformationSection() {
           <div className="ai-transformation-visual">
             <div className="ai-transformation-video-frame" id="ai-website-transformation-video">
               <DeferredVideo
-                ariaLabel="Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
+                ariaLabel={
+                  isEnglish
+                    ? "Video transformation of an old e-commerce site into a premium digital experience"
+                    : "Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
+                }
                 muted
                 loop
                 playsInline
@@ -2324,7 +2349,7 @@ function isSupabaseAccessError(error) {
   );
 }
 
-function ContactForm({ onAuthOpen }) {
+function ContactForm({ onAuthOpen, isEnglish = false }) {
   const { session } = useAuth();
   const [form, setForm] = useState(initialContactForm);
   const [isSending, setIsSending] = useState(false);
@@ -2369,8 +2394,12 @@ function ContactForm({ onAuthOpen }) {
       setSubmitStatus({
         type: "error",
         message: guestNeedsLogin
-          ? "Connectez-vous puis réessayez, ou envoyez-moi un email directement."
-          : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants.",
+          ? isEnglish
+            ? "Sign in and try again, or email me directly."
+            : "Connectez-vous puis réessayez, ou envoyez-moi un email directement."
+          : isEnglish
+            ? "Your request couldn't be sent right now. Please try again in a moment."
+            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants.",
       });
 
       if (guestNeedsLogin) {
@@ -2395,7 +2424,9 @@ function ContactForm({ onAuthOpen }) {
 
     setSubmitStatus({
       type: "success",
-      message: "Votre demande a bien été envoyée. Je vous répondrai sous 24–48h.",
+      message: isEnglish
+        ? "Your request has been sent. I'll get back to you within 24–48h."
+        : "Votre demande a bien été envoyée. Je vous répondrai sous 24–48h.",
     });
     setForm({ ...initialContactForm, email: sessionEmail });
     setIsSending(false);
@@ -2409,13 +2440,13 @@ function ContactForm({ onAuthOpen }) {
     <form className="contact-form reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }} onSubmit={handleSubmit}>
       <div className="contact-form-grid">
         <label className="contact-field" htmlFor="contact-name">
-          Nom
+          {isEnglish ? "Name" : "Nom"}
           <input
             id="contact-name"
             name="name"
             type="text"
             value={form.name}
-            placeholder="Votre nom"
+            placeholder={isEnglish ? "Your name" : "Votre nom"}
             required
             onChange={updateField}
           />
@@ -2428,30 +2459,30 @@ function ContactForm({ onAuthOpen }) {
             name="email"
             type="email"
             value={form.email}
-            placeholder={sessionEmail || "vous@email.com"}
+            placeholder={sessionEmail || (isEnglish ? "you@email.com" : "vous@email.com")}
             required={!sessionEmail}
             onChange={updateField}
           />
         </label>
 
         <label className="contact-field" htmlFor="contact-company">
-          Structure
+          {isEnglish ? "Organization" : "Structure"}
           <input
             id="contact-company"
             name="company"
             type="text"
             value={form.company}
-            placeholder="Entreprise, association, projet..."
+            placeholder={isEnglish ? "Company, nonprofit, project..." : "Entreprise, association, projet..."}
             onChange={updateField}
           />
         </label>
 
         <label className="contact-field" htmlFor="contact-project-type">
-          Type de projet
+          {isEnglish ? "Project type" : "Type de projet"}
           <select id="contact-project-type" name="projectType" value={form.projectType} onChange={updateField}>
-            {contactProjectTypes.map((projectType) => (
-              <option key={projectType} value={projectType}>
-                {projectType}
+            {contactProjectTypeOptions.map((projectType) => (
+              <option key={projectType.value} value={projectType.value}>
+                {isEnglish ? projectType.label : projectType.value}
               </option>
             ))}
           </select>
@@ -2463,7 +2494,11 @@ function ContactForm({ onAuthOpen }) {
             id="contact-message"
             name="message"
             value={form.message}
-            placeholder="Expliquez simplement votre besoin, même s’il est encore flou."
+            placeholder={
+              isEnglish
+                ? "Describe your need in plain terms, even if it's still unclear."
+                : "Expliquez simplement votre besoin, même s’il est encore flou."
+            }
             required
             onChange={updateField}
           ></textarea>
@@ -2472,7 +2507,7 @@ function ContactForm({ onAuthOpen }) {
 
       <div className="contact-form-footer">
         <button className="btn btn-primary contact-cta-primary" type="submit" disabled={isSending}>
-          {isSending ? "Envoi en cours..." : "Envoyer ma demande"}
+          {isSending ? (isEnglish ? "Sending..." : "Envoi en cours...") : isEnglish ? "Send my request" : "Envoyer ma demande"}
         </button>
         {submitStatus.message && (
           <p className={`contact-form-status is-${submitStatus.type}`} role="status" tabIndex={-1} ref={statusRef}>
@@ -2484,7 +2519,7 @@ function ContactForm({ onAuthOpen }) {
   );
 }
 
-function AuditVideoCard({ compact = false }) {
+function AuditVideoCard({ compact = false, isEnglish = false }) {
   const hasTrackedPlayRef = useRef(false);
 
   const trackVideoPlay = () => {
@@ -2527,11 +2562,11 @@ function AuditVideoCard({ compact = false }) {
       }}
       role="button"
       tabIndex={0}
-      aria-label="Lire l’aperçu vidéo Digital Lab Audit"
+      aria-label={isEnglish ? "Play the Digital Lab Audit preview video" : "Lire l’aperçu vidéo Digital Lab Audit"}
     >
       <div className="project-media audit-video-media">
         <DeferredVideo
-          ariaLabel="Aperçu vidéo Digital Lab Audit"
+          ariaLabel={isEnglish ? "Digital Lab Audit preview video" : "Aperçu vidéo Digital Lab Audit"}
           muted
           loop
           onPlay={trackVideoPlay}
@@ -2544,7 +2579,7 @@ function AuditVideoCard({ compact = false }) {
   );
 }
 
-function AuditSpotlightSection({ onNavigate }) {
+function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
   const handleLandingClick = (event) => {
     handleAuditLaunchClick(event, {
       eventName: auditEvents.homeCta,
@@ -2552,22 +2587,24 @@ function AuditSpotlightSection({ onNavigate }) {
       onNavigate,
     });
   };
+  const displayedAuditBenefits = isEnglish ? englishAuditBenefits : auditBenefits;
 
   return (
     <section className="section audit-spotlight-section reveal-on-scroll reveal-section" id="audit-gratuit">
       <div className="section-inner audit-spotlight-grid">
         <div className="audit-spotlight-copy">
           <div className="section-heading">
-            <span>Diagnostic gratuit</span>
-            <h2>Votre site inspire-t-il vraiment confiance ?</h2>
+            <span>{isEnglish ? "Free diagnostic" : "Diagnostic gratuit"}</span>
+            <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site inspire-t-il vraiment confiance ?"}</h2>
             <p>
-              Identifiez les principaux freins liés à la visibilité, à la confiance, à la sécurité et à la conversion,
-              puis découvrez les actions à traiter en priorité.
+              {isEnglish
+                ? "Identify the main obstacles related to visibility, trust, security, and conversion, then discover the actions to prioritize."
+                : "Identifiez les principaux freins liés à la visibilité, à la confiance, à la sécurité et à la conversion, puis découvrez les actions à traiter en priorité."}
             </p>
           </div>
 
           <ul className="audit-benefit-list">
-            {auditBenefits.map((benefit, index) => (
+            {displayedAuditBenefits.map((benefit, index) => (
               <li className="reveal-on-scroll reveal-card" style={{ "--reveal-delay": `${index * 55}ms` }} key={benefit}>
                 <span aria-hidden="true">✓</span>
                 {benefit}
@@ -2583,7 +2620,7 @@ function AuditSpotlightSection({ onNavigate }) {
               rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
               onClick={handleLandingClick}
             >
-              Lancer mon audit gratuit <strong>→</strong>
+              {isEnglish ? "Start my free audit" : "Lancer mon audit gratuit"} <strong>→</strong>
             </a>
           </div>
 
@@ -2596,13 +2633,13 @@ function AuditSpotlightSection({ onNavigate }) {
                   onNavigate(auditLandingPath);
                 }}
               >
-                Découvrir comment fonctionne l’audit →
+                {isEnglish ? "See how the audit works →" : "Découvrir comment fonctionne l’audit →"}
               </a>
             </p>
           )}
         </div>
 
-        <AuditVideoCard />
+        <AuditVideoCard isEnglish={isEnglish} />
       </div>
     </section>
   );
@@ -2791,11 +2828,11 @@ function AuditLandingPage({ onNavigate }) {
   );
 }
 
-function AuditFooterReminder({ onNavigate }) {
+function AuditFooterReminder({ onNavigate, isEnglish = false }) {
   return (
-    <section className="audit-footer-reminder" aria-label="Rappel audit gratuit">
+    <section className="audit-footer-reminder" aria-label={isEnglish ? "Free audit reminder" : "Rappel audit gratuit"}>
       <div className="section-inner audit-footer-reminder-inner">
-        <h2>Votre site inspire-t-il vraiment confiance ?</h2>
+        <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site inspire-t-il vraiment confiance ?"}</h2>
         <a
           className="btn btn-primary"
           href={auditLaunchHref}
@@ -2809,7 +2846,7 @@ function AuditFooterReminder({ onNavigate }) {
             });
           }}
         >
-          Lancer mon audit gratuit
+          {isEnglish ? "Start my free audit" : "Lancer mon audit gratuit"}
         </a>
       </div>
     </section>
@@ -2995,59 +3032,458 @@ function LegalNoticePage({ onNavigate }) {
   );
 }
 
-// LOT DL 2.5 — English homepage. Deliberately not a full translation of the
-// French homepage: it reuses the same visual language (hero/section/card
-// classes, header, footer) but keeps its own compact copy and a small local
-// list of service/project teasers, since the linked service and project
-// pages themselves stay French-only in this LOT.
-const englishServiceTeasers = [
+// LOT DL 2.5.5 — English homepage parity. The English homepage now mirrors
+// the French homepage's full section structure (same components, same
+// media, same order). Rather than a second copy of every section, each
+// array below supplies English text for the exact same data-driven
+// sections the French homepage already renders, keyed positionally to the
+// French arrays above. Linked service/project detail pages stay
+// French-only in this LOT — only the homepage itself is bilingual — so
+// hrefs, slugs, images, and videos are reused unchanged.
+
+// Translated overrides for `services`, merged positionally in englishServices below.
+const englishServiceTranslations = [
   {
     title: "Website creation",
-    summary: "A professional website that builds trust and turns visitors into leads.",
-    href: "/services/creation-site-web",
+    summary: "Build a presence that inspires trust.",
+    problem: "Your business lacks a reliable entry point to inspire trust and receive requests.",
+    canDo: "I structure your pages, clarify your message, and build a smooth path to contact.",
+    expectedResult:
+      "A site that's ready to share, easy to read on every screen, and aligned with your business goals.",
+    details: ["Showcase site", "Landing page", "WordPress", "Contact form", "Responsive", "Going live"],
   },
   {
-    title: "AI chatbots",
-    summary: "Answer client questions instantly, day and night, without adding headcount.",
-    href: "/services/chatbot-ia",
+    title: "Site repair & recovery",
+    summary: "Get back a site that's reliable and pleasant to use.",
+    problem: "Your site is slow, unstable, poorly displayed, or hard to manage day to day.",
+    canDo: "I identify the blocking points, fix the user journeys, and clean up the technical foundations.",
+    expectedResult: "A more stable, smoother site that reassures your visitors.",
+    details: ["Bugs", "Mobile", "Forms", "Speed", "Backups", "Security"],
+  },
+  {
+    title: "SEO & visibility",
+    summary: "Help the right people find you.",
+    problem: "Your site exists, but it isn't capturing enough qualified traffic.",
+    canDo: "I clarify the structure, key pages, and content to better present your offer.",
+    expectedResult: "A site that's easier for visitors to read and better prepared for Google.",
+    details: ["SEO tags", "Heading structure", "Copy", "Alt text", "Internal linking", "Performance"],
   },
   {
     title: "Business automation",
-    summary: "Remove the repetitive manual tasks slowing your team down.",
-    href: "/services/automatisation-pme",
+    summary: "Free up time for what matters.",
+    problem: "Your follow-up relies on too much copy-pasting, manual messages, or scattered files.",
+    canDo: "I connect the important steps to centralize requests and make follow-up reliable.",
+    expectedResult:
+      "Less wasted time, fewer things falling through the cracks, and a more sustainable organization.",
+    details: ["Forms", "Notifications", "Lightweight CRM", "Google Sheets", "Dashboards", "Client tracking"],
+  },
+  {
+    title: "AI chatbots & assistants",
+    summary: "Guide your visitors before the first conversation.",
+    problem: "You receive repetitive questions, and some requests get lost for lack of a quick answer.",
+    canDo: "I design a useful, unobtrusive assistant focused on your clients' real needs.",
+    expectedResult: "Better-guided visitors and requests that are easier to handle.",
+    details: ["FAQ", "Prequalification", "Booking", "Collection", "Scenarios", "Integration"],
+  },
+  {
+    title: "MVPs & web prototypes",
+    summary: "Test quickly before investing further.",
+    problem: "You have an idea, but need to make it concrete before investing further.",
+    canDo: "I build a targeted version to show, test, and quickly adjust the concept.",
+    expectedResult: "A concrete prototype to decide on next steps with more confidence.",
+    details: ["Prototype", "Dashboard", "Client area", "User journey", "Demo", "Iterations"],
   },
 ];
 
-const englishProjectTeasers = [
+const englishServices = services.map((service, index) => ({
+  ...service,
+  ...englishServiceTranslations[index],
+}));
+
+// Translated overrides for `projects`, merged positionally in englishProjects below.
+const englishProjectTranslations = [
   {
-    title: "MicroAssist",
-    summary: "A SaaS assistant that simplifies tax and admin tracking for freelancers.",
-    href: "/projects/microassist",
+    title: "MicroAssist — Tax & Admin SaaS Assistant",
+    subtitle: "A SaaS assistant that simplifies administrative tasks.",
+    description:
+      "An AI assistant for freelancers and micro-entrepreneurs: activity tracking, document generation, and simplified admin work.",
+    tags: ["SaaS", "AI", "Automation", "Dashboard"],
+    cta: "Request a demo",
+    modal: {
+      title: "A SaaS approach to simplifying client follow-up",
+      description:
+        "MicroAssist helps freelancers and micro-entrepreneurs stay ahead of charges and filings. It's built around a dashboard, automatic alerts, and a clear personal space.",
+      adaptationTitle: "How could this be adapted to your business?",
+      adaptations: [
+        "For tutors / teachers: a student space, progress tracking, grades, assignments due, and a per-student dashboard.",
+        "For sports coaches: personalized tracking of goals, sessions, performance, and appointment reminders.",
+        "For trainers / consultants: session management, sign-ups, shared documents, and participant feedback.",
+      ],
+      cta: "Adapt this approach to my business →",
+    },
   },
   {
-    title: "Socle Local",
-    summary: "A community platform connecting residents, associations, and local shops.",
-    href: "/projects/socle-local",
+    title: "Socle Local — Local Community Platform",
+    subtitle: "A community platform connecting local life.",
+    description:
+      "A collaborative platform for residents, nonprofits, and local shops to make everyday exchanges and neighborhood services easier.",
+    tags: ["Platform", "UX/UI", "Responsive", "Community"],
+    cta: "Request a demo",
+    modal: {
+      title: "The power of a community platform for your ecosystem",
+      description:
+        "Socle Local centralizes listings, nonprofits, and neighborhood services. It's an adaptable base for building connections, organizing information, and enabling exchanges.",
+      adaptationTitle: "How could this be adapted to your area or network?",
+      adaptations: [
+        "For a federation of nonprofits: a directory of member organizations, news, volunteer needs, and a shared calendar.",
+        "For a network of local shops: featured offers, deals, hours, and contact details for participating businesses.",
+        "For a town hall or community space: a workshop calendar, event sign-ups, and a directory of local services.",
+      ],
+      cta: "Adapt this platform to my area →",
+    },
+  },
+  {
+    title: "MicroAssist Expert — B2B Client Tracking",
+    subtitle: "Multi-client tracking for professionals and experts.",
+    description:
+      "A B2B platform with dashboards, alerts, priorities, and automated multi-client tracking.",
+    tags: ["B2B", "Dashboard", "Automation", "Prototype"],
+    cta: "Request a demo",
+    modal: {
+      title: "A dashboard to manage several cases at once",
+      description:
+        "MicroAssist Expert lets you track multiple clients, view alerts, and prioritize actions. The goal: never lose track of what matters.",
+      adaptationTitle: "How could this be adapted to your process?",
+      adaptations: [
+        "For accountants: client case tracking, filing alerts, missing documents, and priorities.",
+        "For nonprofit managers: membership tracking, volunteers, incoming requests, and task distribution.",
+        "For freelancers or small teams: an overview of projects, deadlines, tasks, and workload.",
+      ],
+      cta: "Adapt this dashboard to my process →",
+    },
   },
   {
     title: "AI Booking Assistant",
-    summary: "A conversational assistant that handles reservations automatically.",
-    href: "/projects/assistant-reservation-ia",
+    subtitle: "A conversational assistant for bookings and client requests.",
+    description:
+      "A conversational assistant that qualifies client requests, automates bookings, and orchestrates business workflows.",
+    tags: ["AI", "Chatbot", "Automation", "Workflow"],
+    cta: "Request a demo",
+    modal: {
+      title: "A conversational assistant to automate first requests",
+      description:
+        "This assistant answers frequent questions, collects useful information, and guides the client toward a booking or a first contact.",
+      adaptationTitle: "How could this be adapted to your business?",
+      adaptations: [
+        "For restaurants: booking requests, hours, availability, menus, and automatic answers to common questions.",
+        "For salons / studios: appointment booking, service selection, practical information, and automatic reminders.",
+        "For nonprofits or events: sign-ups, FAQs, request collection, and participant guidance.",
+      ],
+      cta: "Build an assistant for my business →",
+    },
   },
 ];
 
-function EnglishHomePage({ onNavigate }) {
+const englishProjects = projects.map((project, index) => ({
+  ...project,
+  ...englishProjectTranslations[index],
+}));
+
+const englishMissionStepTranslations = [
+  { title: "Clear conversation", text: "Everything starts with your business reality, not a rigid spec sheet." },
+  { title: "Useful direction", text: "The solution is scoped around your priorities, budget, and clients." },
+  { title: "First version", text: "You quickly validate something concrete before going further." },
+  { title: "Going live", text: "Final adjustments ensure a reliable, ready-to-use delivery." },
+  { title: "Evolution", text: "The project stays built to support your business over time." },
+];
+
+const englishMissionSteps = missionSteps.map((step, index) => ({
+  ...step,
+  ...englishMissionStepTranslations[index],
+}));
+
+const englishMethodBadges = ["No jargon", "Controlled budget", "Clear decisions", "Gradual evolution", "Long-term follow-up"];
+
+const englishImprovementCardTranslations = [
+  {
+    title: "Receive better-qualified requests",
+    text: "A better-designed journey helps visitors understand your offer and take action.",
+  },
+  {
+    title: "Spend less time on repetitive tasks",
+    text: "Manual steps are streamlined so you can focus your energy on the decisions that matter.",
+  },
+  {
+    title: "Inspire trust from the first few seconds",
+    text: "Your digital presence conveys a reliable, consistent, and professional impression.",
+  },
+  {
+    title: "Keep better track of your requests",
+    text: "Important information is grouped together to avoid missed details and scattered conversations.",
+  },
+  {
+    title: "Be easier to find",
+    text: "A clear structure strengthens your visibility and helps Google understand your business.",
+  },
+  {
+    title: "Build a durable foundation",
+    text: "The project can start simply, then evolve with your real needs.",
+  },
+];
+
+const englishImprovementCards = improvementCards.map((card, index) => ({
+  ...card,
+  ...englishImprovementCardTranslations[index],
+}));
+
+const englishIncludedProjectItemTranslations = [
+  { title: "Basic SEO", text: "Essential tags and a clear structure." },
+  { title: "Responsive", text: "A smooth experience on every screen." },
+  { title: "Performance", text: "Fast loading and comfortable navigation." },
+  { title: "Security", text: "Foundations configured with care." },
+  { title: "Scalable", text: "A foundation ready to grow." },
+  { title: "Support", text: "Answers after delivery." },
+];
+
+const englishIncludedProjectItems = includedProjectItems.map((item, index) => ({
+  ...item,
+  ...englishIncludedProjectItemTranslations[index],
+}));
+
+const englishTrustCardTranslations = [
+  {
+    title: "Business language before technical jargon",
+    text: "Choices are explained by their concrete impact on your business.",
+  },
+  {
+    title: "Faster decisions",
+    text: "A first version lets you validate the direction without losing weeks.",
+  },
+  {
+    title: "A complete picture",
+    text: "Website, tool, automation, or assistant: every piece serves a specific goal.",
+  },
+  {
+    title: "A trusted relationship",
+    text: "Support built with method, listening, and continuity.",
+  },
+];
+
+const englishTrustCards = trustCards.map((card, index) => ({
+  ...card,
+  ...englishTrustCardTranslations[index],
+}));
+
+const englishTrustBadges = [
+  "WordPress",
+  "Front-end",
+  "UX/UI",
+  "SEO",
+  "Automation",
+  "MVP",
+  "Responsive",
+  "Dashboards",
+  "Conversational AI",
+];
+
+const englishProofStatTranslations = [
+  { label: "Tailor-made project", text: "A solution designed around your business, goals, and budget." },
+  { label: "Web creation & automation" },
+  { label: "UX/UI, SEO & dashboards" },
+  { label: "Clear, results-driven approach" },
+];
+
+const englishProofStats = proofStats.map((stat, index) => ({
+  ...stat,
+  ...englishProofStatTranslations[index],
+}));
+
+const englishProofWorkflowTranslations = [
+  { title: "Idea", text: "Clarify the need and the priorities." },
+  { title: "Prototype", text: "Create a first visible version." },
+  { title: "Adjustments", text: "Refine pages, content, and details." },
+  { title: "Going live", text: "Publish a clean, usable version." },
+  { title: "Evolution", text: "Add SEO, automation, or new pages." },
+];
+
+const englishProofWorkflow = proofWorkflow.map((step, index) => ({
+  ...step,
+  ...englishProofWorkflowTranslations[index],
+}));
+
+const englishArticleTranslations = [
+  {
+    title: "How do you know if your site needs a redesign?",
+    description: "The signs that show a site is becoming hard to use, slow, or ineffective.",
+    tags: ["SEO", "UX", "Website"],
+  },
+  {
+    title: "3 signs your site is losing you clients",
+    description: "Confusing navigation, slow loading, lack of clarity: details that can block inquiries.",
+    tags: ["Conversion", "Performance", "UX"],
+  },
+  {
+    title: "Automating without complicating your business",
+    description: "Simple automations to save time without overhauling your entire organization.",
+    tags: ["Automation", "Small business", "Workflow"],
+  },
+  {
+    title: "Should you build an MVP before the real project?",
+    description: "Why starting small can help you test an idea before investing further.",
+    tags: ["MVP", "Prototype", "Strategy"],
+  },
+];
+
+const englishArticles = articles.map((article, index) => ({
+  ...article,
+  ...englishArticleTranslations[index],
+}));
+
+const englishAuditBenefits = ["A clear score", "3 priority risks", "A concrete action plan"];
+
+const englishFaqItems = [
+  {
+    question: "I'm not exactly sure what I need.",
+    answer: "That's common. I'll help you clarify the need, the priorities, and the best first step.",
+  },
+  {
+    question: "Do you work with small budgets?",
+    answer: "Yes. The project can start with a targeted version, then evolve based on your resources and feedback.",
+  },
+  {
+    question: "Can you take over an existing site?",
+    answer: "Yes. I can fix, reorganize, or improve a site that's already live.",
+  },
+  {
+    question: "How long does a project take?",
+    answer: "It depends on the scope. A first, targeted version often allows for quick progress.",
+  },
+  {
+    question: "Can we start small and add features later?",
+    answer: "Yes. The goal is to build a reliable foundation, then add what becomes useful.",
+  },
+  {
+    question: "Do you work with nonprofits and small organizations?",
+    answer: "Yes. I support entrepreneurs, nonprofits, and local projects that want to move forward with method.",
+  },
+];
+
+// Estimator option pairs: `value` is the exact French string the pricing
+// engine (utils/estimator.js) keys off — kept unchanged so the calculator's
+// business logic never has to know about language. `label` is what's shown
+// on screen. English answers are still stored/compared as `value`.
+const estimatorProfileOptions = [
+  { value: "Indépendant", label: "Freelancer / independent" },
+  { value: "Association", label: "Nonprofit / association" },
+  { value: "Commerce local", label: "Local shop" },
+  { value: "Restaurant / service", label: "Restaurant / service business" },
+  { value: "Projet en création", label: "Project in the works" },
+  { value: "Autre", label: "Other" },
+];
+
+const estimatorPriorityOptions = [
+  { value: "Être visible", label: "Get found online" },
+  { value: "Recevoir plus de demandes", label: "Get more inquiries" },
+  { value: "Gagner du temps", label: "Save time" },
+  { value: "Réparer un site existant", label: "Fix an existing site" },
+  { value: "Tester une idée", label: "Test an idea" },
+  { value: "Automatiser une tâche", label: "Automate a task" },
+];
+
+const estimatorNeedOptions = [
+  { value: "Créer un site web", label: "Create a website" },
+  { value: "Réparer / améliorer un site existant", label: "Repair / improve an existing site" },
+  { value: "Optimiser SEO & visibilité", label: "Optimize SEO & visibility" },
+  { value: "Ajouter une automatisation", label: "Add an automation" },
+  { value: "Créer un chatbot / assistant IA", label: "Create an AI chatbot / assistant" },
+  { value: "Créer un MVP ou prototype web", label: "Create an MVP or web prototype" },
+];
+
+const estimatorExistingOptions = [
+  { value: "Oui", label: "Yes" },
+  { value: "Non", label: "No" },
+  { value: "Partiellement", label: "Partially" },
+];
+
+const estimatorContentOptions = [
+  { value: "Textes et images prêts", label: "Text and images ready" },
+  { value: "Quelques éléments seulement", label: "A few elements only" },
+  { value: "Je pars de zéro", label: "Starting from scratch" },
+];
+
+const estimatorComplexityOptions = [
+  { value: "Simple : page ou fonctionnalité basique", label: "Simple: a page or basic feature" },
+  { value: "Standard : plusieurs pages ou plusieurs fonctions", label: "Standard: several pages or features" },
+  {
+    value: "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
+    label: "Advanced: client area, dashboard, automation, or AI",
+  },
+];
+
+const estimatorFeatureOptions = [
+  { value: "Formulaire de contact", label: "Contact form" },
+  { value: "Réservation", label: "Booking" },
+  { value: "Email automatique", label: "Automatic emails" },
+  { value: "Google Sheets / CRM", label: "Google Sheets / CRM" },
+  { value: "Tableau de bord", label: "Dashboard" },
+  { value: "Paiement", label: "Payments" },
+  { value: "Chatbot", label: "Chatbot" },
+  { value: "SEO", label: "SEO" },
+  { value: "Maintenance", label: "Maintenance" },
+];
+
+const estimatorUrgencyOptions = [
+  { value: "Normal", label: "Normal" },
+  { value: "Rapide", label: "Fast" },
+  { value: "Urgent", label: "Urgent" },
+];
+
+// Translates the pricing engine's French output for display only — the
+// engine itself (utils/estimator.js) keeps matching on French option
+// values, so its budget/complexity logic never changes between languages.
+function translateEstimatorResult(result, isEnglish) {
+  if (!isEnglish) {
+    return result;
+  }
+
+  const typeLabels = { Simple: "Simple", Intermédiaire: "Intermediate", Avancé: "Advanced" };
+  const messages = {
+    Simple: "Your need looks well-defined. A short intervention is likely enough to move fast.",
+    Intermédiaire: "Your project involves several elements to coordinate. A clear first version can be built quickly.",
+    Avancé:
+      "Your project involves several features or workflows. A precise scoping phase will help secure the budget and the steps.",
+  };
+  const budgetAmount = result.budget.match(/(\d+)/)?.[1];
+
+  return {
+    type: typeLabels[result.type] ?? result.type,
+    budget: budgetAmount ? `from €${budgetAmount}` : result.budget,
+    delay: result.delay
+      .replace(/(\d+)–(\d+) jours ouvrés/, "$1–$2 business days")
+      .replace(/(\d+)–(\d+) semaines/, "$1–$2 weeks"),
+    message: messages[result.type] ?? result.message,
+  };
+}
+
+const contactProjectTypeOptions = [
+  { value: "Site web", label: "Website" },
+  { value: "Réparation / amélioration", label: "Repair / improvement" },
+  { value: "SEO & visibilité", label: "SEO & visibility" },
+  { value: "Automatisation", label: "Automation" },
+  { value: "Chatbot / assistant IA", label: "AI chatbot / assistant" },
+  { value: "MVP / prototype", label: "MVP / prototype" },
+  { value: "Autre", label: "Other" },
+];
+
+function EnglishHomePage({ onNavigate, onAuthOpen }) {
+  const [selectedProject, setSelectedProject] = useState(null);
+
   const handleAuditClick = (event) => {
     handleAuditLaunchClick(event, {
       eventName: auditEvents.homeCta,
       location: "en_homepage_hero",
       onNavigate,
     });
-  };
-
-  const handleTeaserClick = (event, href) => {
-    event.preventDefault();
-    onNavigate(href);
   };
 
   return (
@@ -3126,6 +3562,8 @@ function EnglishHomePage({ onNavigate }) {
         </div>
       </section>
 
+      <AuditSpotlightSection onNavigate={onNavigate} isEnglish />
+
       <section className="section services-section reveal-on-scroll reveal-section" id="en-services">
         <div className="section-inner">
           <div className="section-heading">
@@ -3134,67 +3572,429 @@ function EnglishHomePage({ onNavigate }) {
             <p>Each service solves a concrete need: getting found, saving time, or steering your project with more clarity.</p>
           </div>
 
-          <div className="cards-grid">
-            {englishServiceTeasers.map((teaser) => (
-              <a
-                className="glass-card premium-card gradient-border soft-hover"
-                href={teaser.href}
-                key={teaser.href}
-                onClick={(event) => handleTeaserClick(event, teaser.href)}
-              >
-                <h3>{teaser.title}</h3>
-                <p>{teaser.summary}</p>
-              </a>
+          <div className="services-accordion">
+            {englishServices.map((service) => (
+              <ServiceAccordionCard key={service.title} service={service} onNavigate={onNavigate} isEnglish />
             ))}
           </div>
         </div>
       </section>
+
+      <AIWebsiteTransformationSection isEnglish />
 
       <section className="section projects-section reveal-on-scroll reveal-section" id="en-work">
         <div className="section-inner">
           <div className="section-heading">
-            <span>Selected work</span>
-            <h2>A look at recent projects</h2>
+            <span>Projects</span>
+            <h2>Featured projects</h2>
+          </div>
+
+          <div className="ai-lab-intro glass-section premium-card premium-card-hero gradient-border soft-hover">
+            <div className="ai-lab-intro-copy">
+              <span className="ai-lab-kicker">Lab &amp; experimentation</span>
+              <h3>AI innovation lab</h3>
+              <p>
+                These projects make up my AI innovation lab for businesses. I design and build SaaS solutions, AI
+                assistants, business tools, and automations aimed at improving operational processes.
+              </p>
+            </div>
+            <p className="ai-lab-technologies">
+              Claude <span>•</span> ChatGPT <span>•</span> Cursor <span>•</span> Lovable <span>•</span> React
+              <span>•</span> Supabase <span>•</span> APIs <span>•</span> WordPress <span>•</span> JavaScript
+              <span>•</span> GitHub <span>•</span> Vercel
+            </p>
           </div>
 
           <div className="cards-grid project-grid">
-            {englishProjectTeasers.map((teaser) => (
-              <a
+            {englishProjects.map((project) => (
+              <article
                 className="glass-card project-card premium-card gradient-border soft-hover"
-                href={teaser.href}
-                key={teaser.href}
-                onClick={(event) => handleTeaserClick(event, teaser.href)}
+                key={project.title}
+                onMouseEnter={handleProjectEnter}
+                onMouseLeave={handleProjectLeave}
               >
-                <h3>{teaser.title}</h3>
-                <p>{teaser.summary}</p>
-              </a>
+                <div className="project-media">
+                  {project.image ? (
+                    (() => {
+                      const optimizedImage = getOptimizedImage(project.image);
+
+                      return (
+                        <img
+                          className="project-image"
+                          src={optimizedImage.src}
+                          srcSet={optimizedImage.srcSet}
+                          sizes="(max-width: 768px) 88vw, 420px"
+                          alt={`Preview of the ${project.title} project`}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      );
+                    })()
+                  ) : (
+                    <div className="project-placeholder"></div>
+                  )}
+                  {project.video && (
+                    <DeferredVideo
+                      muted
+                      loop
+                      playsInline
+                      poster={getOptimizedImage(project.image).src}
+                      src={project.video}
+                      ariaLabel={`Video preview of the ${project.title} project`}
+                    />
+                  )}
+                  <span className="project-media-overlay"></span>
+                </div>
+                <div className="project-body">
+                  <h3>{project.title}</h3>
+                  <p>{project.description}</p>
+                  <div className="tags">
+                    {project.tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                  <div className="project-actions">
+                    <button
+                      className="project-detail-button"
+                      type="button"
+                      onClick={() => setSelectedProject(project)}
+                    >
+                      View details
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="ai-roadmap glass-section premium-card premium-card-subtle gradient-border soft-hover">
+            <div className="ai-roadmap-heading">
+              <span>AI roadmap</span>
+              <h3>In development</h3>
+              <p>
+                New modules are being designed to strengthen the Digital Lab ecosystem around automation, generative
+                AI, and business support.
+              </p>
+            </div>
+            <ul className="ai-roadmap-list">
+              <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Website Transformation</strong><span>AI-assisted website redesign</span></li>
+              <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Growth Engine</strong><span>SEO and marketing content automation</span></li>
+              <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Workforce</strong><span>Specialized AI agent architecture</span></li>
+            </ul>
+            <p className="ai-roadmap-note">
+              These projects are currently in design or prototyping and will be released progressively.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} isEnglish />
+
+      <ProjectEstimator isEnglish />
+
+      <BlogCarousel isEnglish />
+
+      <section className="section method-section reveal-on-scroll reveal-section" id="en-method">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Method</span>
+            <h2>A method designed for calm decisions</h2>
+            <p>Every step turns an idea into concrete choices, without unnecessary jargon.</p>
+          </div>
+
+          <div className="method-timeline">
+            {englishMissionSteps.map((step) => (
+              <article className="method-step" key={step.title}>
+                <div className="method-step-marker">
+                  <span>{step.number}</span>
+                </div>
+                <div className="method-step-card premium-card gradient-border soft-hover">
+                  <span className="method-step-icon" aria-hidden="true">
+                    {step.icon}
+                  </span>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="method-badges" role="group" aria-label="Method guarantees">
+            {englishMethodBadges.map((badge) => (
+              <span className="badge-pill" key={badge}>✓ {badge}</span>
+            ))}
+          </div>
+
+          <div className="method-reassurance glass-section premium-card premium-card-subtle gradient-border soft-hover">
+            <span aria-hidden="true">✓</span>
+            <p>Digital Lab exists to make technology more useful, more reliable, and more durable for entrepreneurs.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section about-section reveal-on-scroll reveal-section" id="en-about">
+        <div className="section-inner about-layout">
+          <div className="section-heading">
+            <span>About</span>
+            <h2>A studio born from real entrepreneurial experience</h2>
+          </div>
+
+          <div className="about-content glass-card premium-card gradient-border soft-hover">
+            <p>
+              Before Digital Lab, there are more than 25 years of entrepreneurship: clients to understand, budgets
+              to arbitrate, shifting priorities, and decisions to make fast.
+            </p>
+            <p>
+              That experience now feeds a digital project lead's approach: building concrete solutions, useful day
+              to day, able to support a business over time.
+            </p>
+
+            <ul className="about-list">
+              <li>Understanding of on-the-ground realities</li>
+              <li>Decisions guided by real-world use</li>
+              <li>Practical, reliable, scalable solutions</li>
+              <li>A human, ongoing relationship</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="section trust-section reveal-on-scroll reveal-section">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Trust</span>
+            <h2>An approach centered on your business reality</h2>
+            <p>Technology is never the starting point. It serves your organization, your clients, and your growth.</p>
+          </div>
+
+          <div className="trust-grid">
+            {englishTrustCards.map((card) => (
+              <article className="trust-card premium-card gradient-border soft-hover" key={card.title}>
+                <span className="trust-icon" aria-hidden="true">
+                  {card.icon}
+                </span>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="trust-badges" role="group" aria-label="Skills and tools">
+            {englishTrustBadges.map((badge) => (
+              <span className="badge-pill" key={badge}>✓ {badge}</span>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section reveal-on-scroll reveal-section" id="en-contact">
-        <div className="section-inner about-layout">
+      <section className="section proof-section reveal-on-scroll reveal-section">
+        <div className="section-inner">
           <div className="section-heading">
-            <span>Let's talk</span>
-            <h2>Tell us about your project</h2>
-            <p>Reach out directly and we'll get back to you shortly.</p>
+            <span>Proof &amp; trust</span>
+            <h2>Concrete experience, designed to move forward with precision</h2>
+            <p>Projects designed to make ideas clearer, exchanges smoother, and decisions safer.</p>
           </div>
 
-          <div className="about-content glass-card premium-card gradient-border soft-hover">
-            <p>
-              <a className="footer-contact-link" href={`mailto:${businessContact.email}`}>
+          <div className="proof-stats">
+            {englishProofStats.map((stat) => (
+              <article className="proof-stat-card premium-card gradient-border soft-hover" key={stat.label}>
+                <span className="proof-icon" aria-hidden="true">
+                  {stat.icon}
+                </span>
+                <strong>
+                  {typeof stat.value === "number" ? (
+                    <AnimatedCounter value={stat.value} suffix={stat.suffix} />
+                  ) : (
+                    stat.label
+                  )}
+                </strong>
+                {(stat.text || typeof stat.value === "number") && <p>{stat.text || stat.label}</p>}
+              </article>
+            ))}
+          </div>
+
+          <div className="proof-stack-panel premium-card gradient-border soft-hover">
+            <div>
+              <span>Tools</span>
+              <h3>A lean stack, chosen based on the need</h3>
+            </div>
+            <div className="proof-stack">
+              {proofStack.map((tool) => (
+                <span key={tool}>{tool}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="proof-workflow" role="group" aria-label="A quick look at the real workflow">
+            {englishProofWorkflow.map((step) => (
+              <article className="proof-workflow-step premium-card gradient-border soft-hover" key={step.title}>
+                <span aria-hidden="true">{step.icon}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="proof-highlight premium-card premium-card-subtle gradient-border soft-hover">
+            <span aria-hidden="true">✓</span>
+            <p>I support entrepreneurs who want to move forward with method, without unnecessary complexity.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section faq-section reveal-on-scroll reveal-section" id="en-faq">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>FAQ</span>
+            <h2>Frequently asked questions</h2>
+          </div>
+
+          <div className="faq-list">
+            {englishFaqItems.map((item) => (
+              <details className="faq-item" key={item.question}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section improvements-section reveal-on-scroll reveal-section">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Impact</span>
+            <h2>What your project can improve</h2>
+            <p>A good digital tool should support your business, not just exist online.</p>
+          </div>
+
+          <div className="improvements-grid">
+            {englishImprovementCards.map((card) => (
+              <article className="improvement-card premium-card gradient-border soft-hover" key={card.title}>
+                <span className="improvement-icon" aria-hidden="true">
+                  {card.icon}
+                </span>
+                <h3>{card.title}</h3>
+                <p>{card.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section included-section reveal-on-scroll reveal-section">
+        <div className="section-inner">
+          <div className="section-heading">
+            <span>Included</span>
+            <h2>What's included in every project</h2>
+            <p>The essential foundations are built in from delivery.</p>
+          </div>
+
+          <div className="included-grid">
+            {englishIncludedProjectItems.map((item) => (
+              <article className="included-card premium-card gradient-border soft-hover" key={item.title}>
+                <span className="included-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="included-reassurance">
+            <div>
+              <span>✓ No hidden costs</span>
+              <span>✓ Best practices built in</span>
+              <span>✓ Solution ready to evolve</span>
+            </div>
+            <p>You get a solution built to last, not just a web page.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section contact-section reveal-on-scroll reveal-section" id="en-contact">
+        <div className="section-inner contact-panel">
+          <div className="contact-copy">
+            <span>Contact</span>
+            <h2>Let's talk about your project.</h2>
+            <p>Even if your idea is still unclear, a first conversation can help clarify the right direction.</p>
+          </div>
+
+          <ul className="contact-points">
+            <li>website or redesign</li>
+            <li>improving an existing site</li>
+            <li>SEO &amp; visibility</li>
+            <li>useful automation</li>
+            <li>prototype or MVP</li>
+          </ul>
+
+          <div className="contact-badges" role="group" aria-label="Reassuring information">
+            <span>✓ No-jargon first conversation</span>
+            <span>✓ Concrete scoping</span>
+            <span>✓ Ongoing relationship</span>
+          </div>
+
+          <address className="contact-details">
+            <div className="contact-brand-block">
+              <strong>{businessContact.brand}</strong>
+              <span>Digital transformation • AI • Automation</span>
+            </div>
+
+            <div className="contact-founder-block">
+              <strong>{businessContact.name}</strong>
+              <span>Founder &amp; Digital Project Lead</span>
+            </div>
+
+            <div className="contact-link-list" role="group" aria-label="Digital Lab contact details">
+              <a href={`mailto:${businessContact.email}`} aria-label="Email Digital Lab">
                 <ContactIcon type="mail" />
                 <span>{businessContact.email}</span>
               </a>
-            </p>
-            <p>
-              <a className="footer-contact-link" href={businessContact.phoneHref}>
+              <a href={businessContact.phoneHref} aria-label="Call Digital Lab">
                 <ContactIcon type="phone" />
                 <span>{businessContact.phoneDisplay}</span>
               </a>
-            </p>
+              <a
+                href={businessContact.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open the Digital Lab website"
+              >
+                <ContactIcon type="globe" />
+                <span>{businessContact.siteDisplay}</span>
+              </a>
+            </div>
+
+            <div className="contact-social-links" role="group" aria-label="Professional profiles">
+              {socialLinks.map((socialLink) => (
+                <a
+                  className="social-icon-link"
+                  href={socialLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={englishSocialLinkAriaLabels[socialLink.key]}
+                  title={englishSocialLinkAriaLabels[socialLink.key]}
+                  key={socialLink.key}
+                >
+                  <ContactIcon type={socialLink.key} />
+                </a>
+              ))}
+            </div>
+          </address>
+
+          <ContactForm onAuthOpen={onAuthOpen} isEnglish />
+
+          <div className="contact-actions">
+            <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20inquiry`}>
+              Send an email
+            </a>
+            <a className="btn btn-secondary contact-cta-secondary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20discussion`}>
+              Discuss the project
+            </a>
           </div>
+
+          <p className="contact-response-note">I typically reply within 24–48h.</p>
         </div>
       </section>
     </main>
@@ -5135,6 +5935,13 @@ function SiteHeader({
               {isEnglishPath ? englishNavLabels[index] : link.label}
             </a>
           ))}
+          {/* LOT DL 2.5.4.4 — groups the CTA/auth/switcher cluster so desktop
+              CSS can place it on the header's top row next to the brand,
+              while .navbar-menu's nav links form their own row below. On
+              mobile this wrapper is display:contents (see App.css), so it's
+              invisible to layout and the dropdown list is byte-identical to
+              before: same flat children, same order, same behavior. */}
+          <div className="navbar-actions">
           <a
             className="navbar-cta"
             href="/#contact"
@@ -5248,6 +6055,7 @@ function SiteHeader({
               aria-label="Français"
               onClick={(event) => (isEnglishPath ? handleNavigate(event, "/") : event.preventDefault())}
             >
+              <span className="lang-switcher-flag lang-switcher-flag--fr" aria-hidden="true"></span>
               FR
             </a>
             <span className="lang-switcher-divider" aria-hidden="true">
@@ -5261,8 +6069,18 @@ function SiteHeader({
               aria-label="English"
               onClick={(event) => (!isEnglishPath ? handleNavigate(event, "/en/") : event.preventDefault())}
             >
+              <span className="lang-switcher-flag lang-switcher-flag--gb" aria-hidden="true">
+                <svg viewBox="0 0 60 30" focusable="false">
+                  <rect width="60" height="30" fill="#00247d" />
+                  <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
+                  <path d="M0,0 L60,30 M60,0 L0,30" stroke="#cf142b" strokeWidth="2" />
+                  <path d="M30,0 V30 M0,15 H60" stroke="#fff" strokeWidth="10" />
+                  <path d="M30,0 V30 M0,15 H60" stroke="#cf142b" strokeWidth="6" />
+                </svg>
+              </span>
               EN
             </a>
+          </div>
           </div>
         </nav>
       </header>
@@ -5441,57 +6259,36 @@ function App() {
 
   useEffect(() => {
     let isMounted = true;
-    let profileTimer = 0;
 
-    profileTimer = window.setTimeout(async () => {
-      setIsProfileLoading(true);
+    if (!session?.user?.id) {
+      setProfileRole("");
+      setProfileError("");
+      setIsProfileLoading(false);
+      return undefined;
+    }
 
-      const { data: sessionData, error: sessionError } = await getCurrentSession();
-      const currentSession = sessionData?.session ?? session;
+    setIsProfileLoading(true);
 
-      if (!isMounted) {
-        return;
-      }
-
-      if (sessionError || !currentSession?.user?.id) {
-        console.log("ADMIN CHECK user id:", currentSession?.user?.id ?? "none");
-        console.log("ADMIN CHECK email:", currentSession?.user?.email ?? "none");
-        console.log("ADMIN CHECK profile:", null);
-        console.log("ADMIN CHECK role:", undefined);
-        setProfileRole("");
-        setProfileError(sessionError?.message ?? "");
-        setIsProfileLoading(false);
-        return;
-      }
-
-      const { data, error } = await getProfileForUser(currentSession.user.id);
-
+    getProfileForUser(session.user.id).then(({ data, error }) => {
       if (!isMounted) {
         return;
       }
 
       const profile = error ? null : data;
-      const nextRole = profile?.role ?? "";
-
-      console.log("ADMIN CHECK user id:", currentSession.user.id);
-      console.log("ADMIN CHECK email:", currentSession.user.email);
-      console.log("ADMIN CHECK profile:", profile);
-      console.log("ADMIN CHECK role:", profile?.role);
 
       if (error) {
         console.error("Profile role fetch failed:", error.message);
       }
 
-      setProfileRole(nextRole);
+      setProfileRole(profile?.role ?? "");
       setProfileError(error?.message ?? "");
       setIsProfileLoading(false);
-    }, 0);
+    });
 
     return () => {
       isMounted = false;
-      window.clearTimeout(profileTimer);
     };
-  }, [isAdminPath, session]);
+  }, [session]);
 
   useEffect(() => {
     loadClientUnreadMessageCount();
@@ -5962,8 +6759,9 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <EnglishHomePage onNavigate={navigate} />
+        <EnglishHomePage onNavigate={navigate} onAuthOpen={() => setIsAuthOpen(true)} />
 
+        <AuditFooterReminder onNavigate={navigate} isEnglish />
         <SiteFooter onNavigate={navigate} isEnglish />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
         <AuthToast message={authToast} onClose={clearAuthToast} />
