@@ -2992,13 +2992,14 @@ function LegalNoticePage({ onNavigate }) {
           <div className="legal-panel">
             <span>Informations légales</span>
             <h1>Mentions légales</h1>
-            {/* Remplacer “À compléter” par le numéro SIREN/SIRET réel et les informations de l’hébergeur avant publication officielle. */}
             <div className="legal-grid">
               <article>
                 <h2>Éditeur du site</h2>
                 <p>Olena Mykhalska — Digital Lab</p>
-                <p>Entrepreneure individuelle / Micro-entreprise</p>
-                <p>SIREN/SIRET : 10575928600013</p>
+                <p>Entrepreneure individuelle</p>
+                <p>SIREN : 105 759 286</p>
+                <p>SIRET : 105 759 286 00013</p>
+                <p>Belfort, France</p>
                 <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
                 <p>Téléphone : <a href={businessContact.phoneHref}>{businessContact.phoneDisplay}</a></p>
                 <p>Site : <a href={businessContact.url}>{businessContact.url}</a></p>
@@ -3006,7 +3007,7 @@ function LegalNoticePage({ onNavigate }) {
 
               <article>
                 <h2>Hébergement</h2>
-                <p>À compléter selon l’hébergeur utilisé pour la version finale.</p>
+                <p>Vercel Inc., 440 N Barranca Avenue #4133, Covina, CA 91723, États-Unis.</p>
               </article>
 
               <article>
