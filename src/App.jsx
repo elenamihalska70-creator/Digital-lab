@@ -650,7 +650,8 @@ const projects = [
       "Valider un produit digital capable de réduire la charge administrative et de créer une expérience plus fluide pour les indépendants.",
     tags: ["SaaS", "IA", "Automatisation", "Tableau de bord"],
     link: "/projects/microassist",
-    demoUrl: "https://microassist.netlify.app/",
+    demoUrl: "https://microassist.digitallab.studio/",
+    demoCtaLabel: "Découvrir MicroAssist",
     image: "/projects/microassist.png",
     video: "/videos/microassist.mp4",
     cta: "Demander une démo",
@@ -4047,7 +4048,7 @@ function ProjectCasePage({ project, onNavigate }) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Voir la démo en ligne ↗
+                    {project.demoCtaLabel ?? "Voir la démo en ligne ↗"}
                   </a>
                 )}
                 <a className="btn btn-secondary" href="/#projets" onClick={(event) => {
