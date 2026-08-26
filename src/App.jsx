@@ -4055,7 +4055,7 @@ function ProjectCasePage({ project, onNavigate }) {
                   event.preventDefault();
                   onNavigate("/#projets");
                 }}>
-                  Voir les projets
+                  ← Retour aux projets
                 </a>
               </div>
             </div>
