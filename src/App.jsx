@@ -20,6 +20,7 @@ import { getEstimatorResult } from "./utils/estimator";
 
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
+const privacyPolicyPath = "/politique-de-confidentialite";
 const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl;
@@ -566,6 +567,12 @@ const pageMetadata = {
     description:
       "Mentions légales de Digital Lab : éditeur du site, hébergement, propriété intellectuelle et gestion des données personnelles.",
     canonical: `${siteUrl}${legalNoticePath}`,
+  },
+  [privacyPolicyPath]: {
+    title: "Politique de confidentialité | Digital Lab",
+    description:
+      "Politique de confidentialité de Digital Lab : données collectées, services Google, finalités, conservation, sécurité et droits RGPD.",
+    canonical: `${siteUrl}${privacyPolicyPath}`,
   },
 };
 
@@ -2969,12 +2976,20 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
 
       <div className="footer-bottom">
         <span>© 2026 Digital Lab — Olena Mykhalska</span>
-        <a href="/mentions-legales" onClick={(event) => {
-          event.preventDefault();
-          onNavigate("/mentions-legales");
-        }}>
-          {isEnglish ? "Legal notice" : "Mentions légales"}
-        </a>
+        <nav className="footer-legal-nav" aria-label={isEnglish ? "Legal pages" : "Pages légales"}>
+          <a href={legalNoticePath} onClick={(event) => {
+            event.preventDefault();
+            onNavigate(legalNoticePath);
+          }}>
+            {isEnglish ? "Legal notice" : "Mentions légales"}
+          </a>
+          <a href={privacyPolicyPath} onClick={(event) => {
+            event.preventDefault();
+            onNavigate(privacyPolicyPath);
+          }}>
+            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
+          </a>
+        </nav>
       </div>
     </footer>
   );
@@ -3024,6 +3039,145 @@ function LegalNoticePage({ onNavigate }) {
                 <p>
                   Les informations envoyées par email ou via un formulaire sont utilisées uniquement pour répondre
                   aux demandes de contact.
+                </p>
+                <p>
+                  Pour plus de détails, consultez la <a href={privacyPolicyPath} onClick={(event) => {
+                    event.preventDefault();
+                    onNavigate(privacyPolicyPath);
+                  }}>politique de confidentialité</a>.
+                </p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function PrivacyPolicyPage({ onNavigate }) {
+  return (
+    <main className="legal-page fade-in-page">
+      <section className="legal-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <button className="back-button" type="button" onClick={() => onNavigate("/")}>
+            Retour
+          </button>
+
+          <div className="legal-panel">
+            <span>Protection des données</span>
+            <h1>Politique de confidentialité</h1>
+            <div className="legal-grid">
+              <article>
+                <h2>1. Responsable du traitement</h2>
+                <p>Olena Mykhalska — Digital Lab</p>
+                <p>Entrepreneure individuelle</p>
+                <p>SIREN : 105 759 286</p>
+                <p>Belfort, France</p>
+                <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+              </article>
+
+              <article>
+                <h2>2. Données collectées sur le site</h2>
+                <p>
+                  Digital Lab collecte les données que vous envoyez volontairement via les formulaires du site ou par email,
+                  notamment vos coordonnées, votre message et les informations utiles au traitement de votre demande.
+                </p>
+                <p>
+                  Le site utilise également Google Analytics afin de mesurer l’audience et d’améliorer l’expérience de navigation.
+                  Des données techniques peuvent être traitées à cette occasion, comme les pages consultées, le type d’appareil,
+                  le navigateur, des informations de performance et des identifiants de mesure associés aux cookies analytics.
+                </p>
+              </article>
+
+              <article>
+                <h2>3. Utilisation des services Google</h2>
+                <p>
+                  Une automatisation privée et interne de Digital Lab peut accéder à certains services Google lorsque cela est
+                  nécessaire à l’organisation et à la publication de contenus Digital Lab.
+                </p>
+                <ul>
+                  <li>Google Sheets : lecture et mise à jour du Content Hub.</li>
+                  <li>Google Drive : lecture et téléchargement d’images, de documents et de vidéos sélectionnés pour publication.</li>
+                </ul>
+              </article>
+
+              <article>
+                <h2>4. Finalités</h2>
+                <p>Les données sont utilisées pour les finalités suivantes :</p>
+                <ul>
+                  <li>planification du contenu Digital Lab ;</li>
+                  <li>préparation des publications ;</li>
+                  <li>publication du contenu Digital Lab ;</li>
+                  <li>suivi du statut des publications ;</li>
+                  <li>réponse aux demandes envoyées via le site ou par email.</li>
+                </ul>
+              </article>
+
+              <article>
+                <h2>5. Limitation d’accès</h2>
+                <p>
+                  L’automatisation fonctionne uniquement avec les fichiers et tableaux explicitement sélectionnés ou fournis
+                  par Digital Lab.
+                </p>
+                <p>
+                  Les données utilisateur Google ne sont pas vendues, ne sont pas utilisées à des fins publicitaires et ne sont
+                  pas transmises à des tiers, sauf aux prestataires techniques nécessaires à l’exécution de l’automatisation.
+                </p>
+              </article>
+
+              <article>
+                <h2>6. Conservation et sécurité</h2>
+                <p>
+                  Digital Lab applique un principe de minimisation des données et conserve les informations uniquement pendant
+                  la durée nécessaire aux finalités décrites dans cette politique.
+                </p>
+                <p>
+                  Des mesures techniques raisonnables sont mises en place pour protéger les accès et limiter les risques.
+                  Les credentials, tokens et secrets techniques ne sont pas publiés sur le site.
+                </p>
+              </article>
+
+              <article>
+                <h2>7. Révocation de l’accès Google</h2>
+                <p>
+                  L’accès accordé aux services Google peut être révoqué à tout moment depuis la page de gestion des autorisations
+                  Google : <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">
+                    https://myaccount.google.com/permissions
+                  </a>.
+                </p>
+              </article>
+
+              <article>
+                <h2>8. Droits RGPD</h2>
+                <p>
+                  Conformément au RGPD, vous pouvez demander l’accès, la rectification, l’effacement ou la limitation du
+                  traitement de vos données. Vous pouvez également vous opposer à certains traitements lorsque la réglementation
+                  le permet.
+                </p>
+                <p>
+                  Pour exercer vos droits, contactez Digital Lab à l’adresse suivante :
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
+                </p>
+              </article>
+
+              <article>
+                <h2>9. Mise à jour de la politique</h2>
+                <p>Dernière mise à jour : 1er septembre 2026.</p>
+                <p>
+                  Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
+                  internes de Digital Lab.
+                </p>
+              </article>
+
+              <article>
+                <h2>10. Google API disclosure</h2>
+                <p>
+                  L’utilisation et le transfert vers toute autre application des informations reçues depuis les APIs Google
+                  respectent la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
+                    Google API Services User Data Policy
+                  </a>, y compris les exigences Limited Use.
                 </p>
               </article>
             </div>
@@ -6570,7 +6724,7 @@ function App() {
     );
   }
 
-  if (pathname === "/mentions-legales") {
+  if (pathname === legalNoticePath) {
     return (
       <>
         <SiteHeader
@@ -6587,6 +6741,31 @@ function App() {
         />
 
         <LegalNoticePage onNavigate={navigate} />
+
+        <SiteFooter onNavigate={navigate} />
+        {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
+        <AuthToast message={authToast} onClose={clearAuthToast} />
+      </>
+    );
+  }
+
+  if (pathname === privacyPolicyPath) {
+    return (
+      <>
+        <SiteHeader
+          onNavigate={navigate}
+          pathname={pathname}
+          session={session}
+          isAdmin={isAdmin}
+          clientUnreadMessageCount={clientUnreadMessageCount}
+          adminUnreadMessageCount={adminUnreadMessageCount}
+          onClientUnreadBadgeClick={openClientUnreadMessages}
+          onAdminUnreadBadgeClick={openAdminUnreadMessages}
+          onAuthOpen={() => setIsAuthOpen(true)}
+          onLogout={handleLogout}
+        />
+
+        <PrivacyPolicyPage onNavigate={navigate} />
 
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}

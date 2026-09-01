@@ -20,4 +20,5 @@ export const seoRoutes = [
   "/services/creation-site-web",
   "/services/creation-site-web-besancon",
   "/mentions-legales",
+  "/politique-de-confidentialite",
 ];
