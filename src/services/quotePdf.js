@@ -200,8 +200,8 @@ export const generateQuotePdf = ({ request, quote }) => {
   doc.setFontSize(8.5);
   doc.setTextColor(...mutedText);
   doc.text("Digital Lab — Olena Mykhalska", margin, pageHeight - 17);
-  doc.text("Belfort, France", margin, pageHeight - 12);
-  doc.text("SIRET: 10575928600013", pageWidth - margin, pageHeight - 12, { align: "right" });
+  doc.text("Besançon, France", margin, pageHeight - 12);
+  doc.text("SIRET: 10575928600021", pageWidth - margin, pageHeight - 12, { align: "right" });
 
   doc.save(getQuotePdfFileName(request, quote));
 };

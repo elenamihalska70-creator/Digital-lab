@@ -969,7 +969,7 @@
 }
 
 .project-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
   align-items: stretch;
 }
@@ -1247,6 +1247,84 @@
   .soft-hover.reveal-on-scroll.is-visible:hover,
   .ai-roadmap-list .roadmap-mini-card:hover {
     transform: none;
+  }
+}
+
+/* Compact "AI lab" section: internal experiments, kept visually lighter than the portfolio. */
+.section.ai-lab-section {
+  padding-top: clamp(24px, 4vw, 48px);
+}
+
+.ai-lab-experiments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-lab-experiment {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 24px 22px;
+  border: 1px solid rgba(199, 168, 255, 0.16);
+  border-radius: 22px;
+}
+
+.ai-lab-experiment-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ai-lab-experiment h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ai-lab-status {
+  padding: 6px 10px;
+  border: 1px solid rgba(199, 168, 255, 0.28);
+  border-radius: 999px;
+  color: #c7a8ff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.ai-lab-experiment dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.ai-lab-experiment dt {
+  margin-bottom: 4px;
+  color: #c7a8ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ai-lab-experiment dd {
+  margin: 0;
+  color: #dcd2ff;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .ai-lab-experiments {
+    grid-template-columns: 1fr;
   }
 }
 

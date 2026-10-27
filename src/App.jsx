@@ -2341,6 +2341,11 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
                 ? "Turning existing websites into digital experiences that change how your brand is perceived."
                 : "Transformer des sites existants en expériences digitales qui changent la perception de votre marque."}
             </p>
+            <small>
+              {isEnglish
+                ? "Illustrative AI-generated animation, not a recording of working software."
+                : "Animation illustrative générée par IA, pas une capture de logiciel en fonctionnement."}
+            </small>
 
             <div className="ai-transformation-actions">
               <a
@@ -2991,9 +2996,9 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
             </div>
             <span className="footer-contact-link footer-contact-static">
               <ContactIcon type="mapPin" />
-              <span>Belfort, France</span>
+              <span>Besançon, France</span>
             </span>
-            <span className="footer-siret">SIRET : 10575928600013</span>
+            <span className="footer-siret">SIRET : 10575928600021</span>
           </div>
         </div>
 
@@ -3047,8 +3052,9 @@ function LegalNoticePage({ onNavigate }) {
                 <p>Olena Mykhalska — Digital Lab</p>
                 <p>Entrepreneure individuelle</p>
                 <p>SIREN : 105 759 286</p>
-                <p>SIRET : 105 759 286 00013</p>
-                <p>Belfort, France</p>
+                <p>SIRET : 105 759 286 00021</p>
+                <p>Code APE : 6201Z</p>
+                <p>Besançon, France</p>
                 <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
                 <p>Téléphone : <a href={businessContact.phoneHref}>{businessContact.phoneDisplay}</a></p>
                 <p>Site : <a href={businessContact.url}>{businessContact.url}</a></p>
@@ -3107,7 +3113,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                 <p>Olena Mykhalska — Digital Lab</p>
                 <p>Entrepreneure individuelle</p>
                 <p>SIREN : 105 759 286</p>
-                <p>Belfort, France</p>
+                <p>Besançon, France</p>
                 <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
               </article>
 
@@ -3377,6 +3383,216 @@ const englishProjects = projects.map((project, index) => ({
   ...project,
   ...englishProjectTranslations[index],
 }));
+
+// Showcase cards use their own video frames and link to a product or illustrative video.
+const portfolioShowcaseCards = {
+  audit: {
+    title: "Digital Lab Audit",
+    image: "/projects/digital-lab-audit-poster.webp",
+    video: auditVideoSrc,
+    href: auditLaunchHref,
+    fr: {
+      description:
+        "Diagnostic gratuit de site web pour petites structures : visibilité, confiance, sécurité, RGPD, performance et conversion, avec un score et un plan d’action priorisé.",
+      tags: ["Audit", "SEO", "RGPD", "Bêta"],
+      cta: "Lancer mon audit gratuit",
+    },
+    en: {
+      description:
+        "A free website diagnostic for small businesses: visibility, trust, security, GDPR, performance, and conversion, with a score and a prioritized action plan.",
+      tags: ["Audit", "SEO", "GDPR", "Beta"],
+      cta: "Start my free audit",
+    },
+  },
+  automation: {
+    image: "/projects/automatisation-communications-poster.webp",
+    video: "/videos/automatisation-communications.mp4",
+    href: "/videos/automatisation-communications.mp4",
+    fr: {
+      title: "Automatisation des processus & communications",
+      description: "Automatiser les tâches répétitives et les échanges pour mieux organiser l’activité.",
+      note: "Vidéo illustrative des processus, pas une démonstration de logiciel en production.",
+      tags: ["Automatisation", "Communications", "Illustration vidéo"],
+      cta: "Voir la vidéo",
+    },
+    en: {
+      title: "Process & Communication Automation",
+      description: "Automating repetitive tasks and communications to organize daily operations.",
+      note: "Illustrative process video, not a demonstration of production software.",
+      tags: ["Automation", "Communications", "Video illustration"],
+      cta: "Watch the video",
+    },
+  },
+};
+
+function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDelay }) {
+  const copy = isEnglish ? card.en : card.fr;
+  const title = copy.title || card.title;
+  const isExternal = isExternalLink(card.href);
+  const revealClassName = revealDelay === undefined ? "" : " reveal-on-scroll reveal-card";
+
+  const handleClick = (event) => {
+    if (card === portfolioShowcaseCards.audit) {
+      handleAuditLaunchClick(event, { eventName: auditEvents.homeCta, location: "homepage_portfolio", onNavigate });
+      return;
+    }
+
+    if (card.video) return;
+
+    const target = document.querySelector(card.href);
+
+    if (target) {
+      event.preventDefault();
+      scrollToElementWithHeaderOffset(target);
+    }
+  };
+
+  return (
+    <article
+      className={`glass-card project-card premium-card gradient-border soft-hover${revealClassName}`}
+      style={revealDelay === undefined ? undefined : { "--reveal-delay": revealDelay }}
+      onMouseEnter={handleProjectEnter}
+      onMouseLeave={handleProjectLeave}
+    >
+      <div className="project-media">
+        <img
+          className="project-image"
+          src={card.image}
+          alt={isEnglish ? `Preview of the ${title} project` : `Aperçu du projet ${title}`}
+          loading="lazy"
+          decoding="async"
+        />
+        {card.video && (
+          <DeferredVideo
+            muted
+            loop
+            playsInline
+            poster={card.image}
+            src={card.video}
+            ariaLabel={isEnglish ? `Video preview of the ${title} project` : `Aperçu vidéo du projet ${title}`}
+          />
+        )}
+        <span className="project-media-overlay"></span>
+      </div>
+      <div className="project-body">
+        <h3>{title}</h3>
+        <p>{copy.description}</p>
+        {copy.note && <small>{copy.note}</small>}
+        <div className="tags">
+          {copy.tags.map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
+        </div>
+        <div className="project-actions">
+          <a
+            className="project-link"
+            href={card.href}
+            target={isExternal || card.video ? "_blank" : undefined}
+            rel={isExternal || card.video ? "noreferrer" : undefined}
+            onClick={handleClick}
+          >
+            {copy.cta}
+          </a>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// Internal experiments only: statuses mirror the digital-lab-core registry and none is sold as a product.
+const aiLabExperiments = [
+  {
+    name: "Local Business Discovery",
+    fr: {
+      status: "Prototype en validation",
+      problem:
+        "Repérer les entreprises locales qui pourraient avoir besoin d’un accompagnement digital reste long et très manuel.",
+      solution:
+        "Des workflows n8n qui collectent, normalisent et qualifient des données d’entreprises issues de sources ouvertes, testés sur une zone géographique limitée.",
+    },
+    en: {
+      status: "Prototype in validation",
+      problem: "Finding local businesses that may need digital support is slow and largely manual.",
+      solution:
+        "n8n workflows that collect, normalize, and qualify business data from open sources, tested on a limited geographic area.",
+    },
+  },
+  {
+    name: "ReelsMaker",
+    fr: {
+      status: "MVP, en partie manuel",
+      problem: "Produire régulièrement des vidéos courtes demande beaucoup de temps : idées, accroches, script, montage.",
+      solution:
+        "Un workflow assisté par IA qui prépare la veille de tendances, les accroches, le storyboard, la voix off et les légendes. La publication reste validée à la main.",
+    },
+    en: {
+      status: "MVP, partly manual",
+      problem: "Publishing short videos regularly takes a lot of time: ideas, hooks, scripts, and editing.",
+      solution:
+        "An AI-assisted workflow that prepares trend research, hooks, storyboards, voice-over, and captions. Publishing is still approved by hand.",
+    },
+  },
+  {
+    name: "Digital Lab AI OS",
+    fr: {
+      status: "Prototype interne",
+      problem: "Faire travailler ensemble plusieurs agents et automatisations sans perdre le contrôle ni la traçabilité.",
+      solution:
+        "Une couche d’orchestration multi-agents (n8n, agents spécialisés), avec un suivi en lecture seule de l’état des services.",
+    },
+    en: {
+      status: "Internal prototype",
+      problem: "Getting several agents and automations to work together without losing control or traceability.",
+      solution: "A multi-agent orchestration layer (n8n, specialized agents) with read-only monitoring of service health.",
+    },
+  },
+];
+
+function AILabSection({ isEnglish = false }) {
+  return (
+    <section
+      className="section ai-lab-section reveal-on-scroll reveal-section"
+      id={isEnglish ? "en-ai-lab" : "laboratoire-ia"}
+    >
+      <div className="section-inner">
+        <div className="section-heading">
+          <span>{isEnglish ? "Experiments" : "Expérimentations"}</span>
+          <h2>{isEnglish ? "My AI lab" : "Mon laboratoire IA"}</h2>
+          <p>
+            {isEnglish
+              ? "Internal tools I build to test what AI can automate in prospecting, content, and operations. They are prototypes, not products for sale."
+              : "Des outils internes pour tester ce que l’IA peut automatiser dans la prospection, le contenu et l’organisation. Ce sont des prototypes, pas des produits commercialisés."}
+          </p>
+        </div>
+
+        <ul className="ai-lab-experiments">
+          {aiLabExperiments.map((experiment) => {
+            const copy = isEnglish ? experiment.en : experiment.fr;
+
+            return (
+              <li className="ai-lab-experiment premium-card premium-card-subtle gradient-border soft-hover" key={experiment.name}>
+                <div className="ai-lab-experiment-header">
+                  <h3>{experiment.name}</h3>
+                  <span className="ai-lab-status">{copy.status}</span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>{isEnglish ? "Problem" : "Problème"}</dt>
+                    <dd>{copy.problem}</dd>
+                  </div>
+                  <div>
+                    <dt>{isEnglish ? "Approach tested" : "Solution expérimentée"}</dt>
+                    <dd>{copy.solution}</dd>
+                  </div>
+                </dl>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  );
+}
 
 const englishMissionStepTranslations = [
   { title: "Clear conversation", text: "Everything starts with your business reality, not a rigid spec sheet." },
@@ -3795,6 +4011,7 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
           </div>
 
           <div className="cards-grid project-grid">
+            <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} isEnglish onNavigate={onNavigate} />
             {englishProjects.map((project) => (
               <article
                 className="glass-card project-card premium-card gradient-border soft-hover"
@@ -3854,6 +4071,7 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
                 </div>
               </article>
             ))}
+            <PortfolioShowcaseCard card={portfolioShowcaseCards.automation} isEnglish onNavigate={onNavigate} />
           </div>
 
           <div className="ai-roadmap glass-section premium-card premium-card-subtle gradient-border soft-hover">
@@ -3866,7 +4084,7 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
               </p>
             </div>
             <ul className="ai-roadmap-list">
-              <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Website Transformation</strong><span>AI-assisted website redesign</span></li>
+              <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Website Transformation</strong><span>AI-assisted redesign — illustrative animation available, service in design</span></li>
               <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Growth Engine</strong><span>SEO and marketing content automation</span></li>
               <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Workforce</strong><span>Specialized AI agent architecture</span></li>
             </ul>
@@ -3876,6 +4094,8 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
           </div>
         </div>
       </section>
+
+      <AILabSection isEnglish />
 
       <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} isEnglish />
 
@@ -7118,9 +7338,9 @@ function App() {
             <div className="ai-lab-intro glass-section premium-card premium-card-hero gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "80ms" }}>
               <div className="ai-lab-intro-copy">
                 <span className="ai-lab-kicker">Laboratoire &amp; expérimentation</span>
-                <h3>Laboratoire d’innovation IA</h3>
+                <h3>Des solutions et des expérimentations</h3>
                 <p>
-                  Ces projets constituent mon laboratoire d’innovation autour de l’intelligence artificielle appliquée
+                  Ces projets explorent l’intelligence artificielle appliquée
                   aux entreprises. J’y conçois et développe des solutions SaaS, des assistants IA, des outils métiers
                   et des automatisations destinés à améliorer les processus opérationnels.
                 </p>
@@ -7133,11 +7353,12 @@ function App() {
             </div>
 
             <div className="cards-grid project-grid">
+              <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} onNavigate={navigate} revealDelay="0ms" />
               {projects.map((project, index) => (
                 <article
                   className="glass-card project-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={project.title}
-                  style={{ "--reveal-delay": `${index * 90}ms` }}
+                  style={{ "--reveal-delay": `${(index + 1) * 90}ms` }}
                   onMouseEnter={handleProjectEnter}
                   onMouseLeave={handleProjectLeave}
                 >
@@ -7205,6 +7426,11 @@ function App() {
                   </div>
                 </article>
               ))}
+              <PortfolioShowcaseCard
+                card={portfolioShowcaseCards.automation}
+                onNavigate={navigate}
+                revealDelay={`${(projects.length + 1) * 90}ms`}
+              />
             </div>
 
             <div className="ai-roadmap glass-section premium-card premium-card-subtle gradient-border soft-hover reveal-on-scroll reveal-card" style={{ "--reveal-delay": "120ms" }}>
@@ -7217,7 +7443,7 @@ function App() {
                 </p>
               </div>
               <ul className="ai-roadmap-list">
-                <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Website Transformation</strong><span>Refonte de sites web assistée par IA</span></li>
+                <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Website Transformation</strong><span>Refonte assistée par IA — animation illustrative disponible, offre en conception</span></li>
                 <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Growth Engine</strong><span>Automatisation de contenus SEO et marketing</span></li>
                 <li className="premium-card roadmap-mini-card soft-hover"><strong>AI Workforce</strong><span>Architecture d’agents IA spécialisés</span></li>
               </ul>
@@ -7239,6 +7465,8 @@ function App() {
             </div>
           </div>
         </section>
+
+        <AILabSection />
 
         <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
 
