@@ -2287,6 +2287,34 @@ function ProjectEstimator({ isEnglish = false }) {
 }
 
 function AIWebsiteTransformationSection({ isEnglish = false }) {
+  const videoFrameRef = useRef(null);
+
+  const handleWatchTransformation = (event) => {
+    const frame = videoFrameRef.current;
+    const video = frame?.querySelector("video");
+
+    if (!frame || !video) {
+      return;
+    }
+
+    event.preventDefault();
+    scrollToElementWithHeaderOffset(frame);
+
+    // Explicit request to watch: restart from the beginning and expose native controls (sound, pause).
+    const startPlayback = () => {
+      video.controls = true;
+      video.currentTime = 0;
+      video.play().catch(() => {});
+      video.focus({ preventScroll: true });
+    };
+
+    if (video.readyState > 0) {
+      startPlayback();
+    } else {
+      video.addEventListener("loadedmetadata", startPlayback, { once: true });
+    }
+  };
+
   return (
     <section className="section ai-transformation-section reveal-on-scroll reveal-section">
       <div className="section-inner">
@@ -2315,17 +2343,22 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
             </p>
 
             <div className="ai-transformation-actions">
-              <a className="btn btn-primary" href="#ai-website-transformation-video">
+              <a
+                className="btn btn-primary"
+                href="#ai-website-transformation-video"
+                aria-controls="ai-website-transformation-video"
+                onClick={handleWatchTransformation}
+              >
                 {isEnglish ? "▶ Watch the transformation" : "▶ Voir la transformation"}
               </a>
               <a className="ai-transformation-link" href={isEnglish ? "#en-contact" : "#contact"}>
-                {isEnglish ? "See the full case" : "Voir le cas complet"}
+                {isEnglish ? "Discuss your project" : "Discuter de votre projet"}
               </a>
             </div>
           </div>
 
           <div className="ai-transformation-visual">
-            <div className="ai-transformation-video-frame" id="ai-website-transformation-video">
+            <div className="ai-transformation-video-frame" id="ai-website-transformation-video" ref={videoFrameRef}>
               <DeferredVideo
                 ariaLabel={
                   isEnglish
