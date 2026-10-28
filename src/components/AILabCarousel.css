@@ -1,0 +1,28 @@
+.ai-lab-experiment.ai-lab-has-carousel { padding: 0; gap: 0; overflow: hidden; }
+.ai-lab-has-carousel .ai-lab-experiment-content { display: grid; gap: 22px; padding: 24px 22px 28px; }
+.ai-lab-has-carousel .ai-lab-experiment-header { align-items: flex-start; flex-direction: column; }
+.ai-lab-has-carousel dl { gap: 20px; }
+.ai-lab-carousel { position: relative; margin: 0; aspect-ratio: 16 / 9; background: #100b1d; border-bottom: 1px solid rgba(199, 168, 255, .16); isolation: isolate; overflow: hidden; }
+.ai-lab-carousel-slides, .ai-lab-carousel-slide { position: absolute; inset: 0; }
+.ai-lab-carousel-slide { opacity: 0; transition: opacity 350ms ease; pointer-events: none; }
+.ai-lab-carousel-slide.is-active { opacity: 1; }
+.ai-lab-carousel .ai-lab-carousel-slide img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.ai-lab-carousel .ai-lab-carousel-slide .ai-lab-carousel-image-contain { object-fit: contain; }
+.ai-lab-carousel button { font: inherit; color: #fff; cursor: pointer; border: 1px solid #9b77c5; background: #20132ee8; }
+.ai-lab-carousel button:hover { background: #6535b5; }
+.ai-lab-carousel button:active { background: #8952df; transform: scale(.94); }
+.ai-lab-carousel button:focus-visible { outline: 3px solid #eadbff; outline-offset: -4px; }
+.ai-lab-carousel-arrow { position: absolute; z-index: 2; top: calc(50% - 22px); width: 44px; height: 44px; border-radius: 50%; font-size: 30px !important; line-height: 1; }
+.ai-lab-carousel-arrow.is-previous { left: 8px; }
+.ai-lab-carousel-arrow.is-next { right: 8px; }
+.ai-lab-carousel-dots { position: absolute; z-index: 2; bottom: 0; left: 50%; display: flex; transform: translateX(-50%); }
+.ai-lab-carousel-dots button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; background: #140b20e8; }
+.ai-lab-carousel-dots button:first-child { border-radius: 12px 0 0 0; }
+.ai-lab-carousel-dots button:last-child { border-radius: 0 12px 0 0; }
+.ai-lab-carousel-dots span { width: 7px; height: 7px; background: #ad93c9; border-radius: 50%; }
+.ai-lab-carousel-dots [aria-current="true"] span { background: #fff; box-shadow: 0 0 0 3px #8c55ce; }
+.ai-lab-carousel-pause { position: absolute; z-index: 2; top: 8px; right: 8px; width: 36px; height: 36px; border-radius: 10px; }
+.ai-lab-carousel-pause:disabled { cursor: default; opacity: .7; }
+.ai-lab-carousel figcaption { position: absolute; z-index: 2; top: 8px; bottom: auto; left: 8px; max-width: calc(100% - 64px); padding: 5px 9px; color: #e4d5ff; background: #191022; border: 1px solid #634580; border-radius: 6px; font-size: 10px; line-height: 1.4; }
+.ai-lab-carousel[data-reduced-motion="true"] .ai-lab-carousel-slide { transition: none; }
+@media (prefers-reduced-motion: reduce) { .ai-lab-carousel-slide { transition: none; } }

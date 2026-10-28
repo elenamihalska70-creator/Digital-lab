@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import { AILabCarousel } from "./components/AILabCarousel";
 import { RequestConversation } from "./components/RequestConversation";
 import { RequestDocuments } from "./components/RequestDocuments";
 import { RequestQuotes } from "./components/RequestQuotes";
@@ -3503,6 +3504,7 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
 const aiLabExperiments = [
   {
     name: "Local Business Discovery",
+    images: ["/projects/local-business-discovery.webp", "/projects/local-business-discovery_2.jpg", "/projects/local-business-discovery_3.jpg"],
     fr: {
       status: "Prototype en validation",
       problem:
@@ -3519,6 +3521,7 @@ const aiLabExperiments = [
   },
   {
     name: "ReelsMaker",
+    images: ["/projects/reelsmaker.webp", "/projects/reelsmaker_2.jpg", "/projects/reelsmaker_3.jpg"],
     fr: {
       status: "MVP, en partie manuel",
       problem: "Produire régulièrement des vidéos courtes demande beaucoup de temps : idées, accroches, script, montage.",
@@ -3534,6 +3537,7 @@ const aiLabExperiments = [
   },
   {
     name: "Digital Lab AI OS",
+    images: ["/projects/digital-lab-ai-os.webp", "/projects/digital-lab-ai-os-2.jpg", "/projects/digital-lab-ai-os-3.jpg"],
     fr: {
       status: "Prototype interne",
       problem: "Faire travailler ensemble plusieurs agents et automatisations sans perdre le contrôle ni la traçabilité.",
@@ -3570,21 +3574,24 @@ function AILabSection({ isEnglish = false }) {
             const copy = isEnglish ? experiment.en : experiment.fr;
 
             return (
-              <li className="ai-lab-experiment premium-card premium-card-subtle gradient-border soft-hover" key={experiment.name}>
-                <div className="ai-lab-experiment-header">
-                  <h3>{experiment.name}</h3>
-                  <span className="ai-lab-status">{copy.status}</span>
+              <li className="ai-lab-experiment ai-lab-has-carousel premium-card premium-card-subtle gradient-border soft-hover" key={experiment.name}>
+                <AILabCarousel images={experiment.images} name={experiment.name} isEnglish={isEnglish} />
+                <div className="ai-lab-experiment-content">
+                  <div className="ai-lab-experiment-header">
+                    <h3>{experiment.name}</h3>
+                    <span className="ai-lab-status">{copy.status}</span>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>{isEnglish ? "Problem" : "Problème"}</dt>
+                      <dd>{copy.problem}</dd>
+                    </div>
+                    <div>
+                      <dt>{isEnglish ? "Approach tested" : "Solution expérimentée"}</dt>
+                      <dd>{copy.solution}</dd>
+                    </div>
+                  </dl>
                 </div>
-                <dl>
-                  <div>
-                    <dt>{isEnglish ? "Problem" : "Problème"}</dt>
-                    <dd>{copy.problem}</dd>
-                  </div>
-                  <div>
-                    <dt>{isEnglish ? "Approach tested" : "Solution expérimentée"}</dt>
-                    <dd>{copy.solution}</dd>
-                  </div>
-                </dl>
               </li>
             );
           })}
