@@ -507,7 +507,7 @@ const businessContact = {
 };
 
 const siteUrl = "https://www.digitallab.studio";
-const auditVideoSrc = "/videos/Digitallab_audit.mp4";
+const auditVideoSrc = "/videos/digitallab-audit-site-web.mp4";
 const auditVideoPoster = "/logo-digital-lab.png";
 
 const auditBenefits = [
@@ -3389,7 +3389,7 @@ const englishProjects = projects.map((project, index) => ({
 const portfolioShowcaseCards = {
   audit: {
     title: "Digital Lab Audit",
-    image: "/projects/digital-lab-audit-poster.webp",
+    image: "/projects/digitallab-audit-site-poster.webp",
     video: auditVideoSrc,
     href: auditLaunchHref,
     fr: {
@@ -3406,9 +3406,9 @@ const portfolioShowcaseCards = {
     },
   },
   automation: {
-    image: "/projects/automatisation-communications-poster.webp",
-    video: "/videos/automatisation-communications.mp4",
-    href: "/videos/automatisation-communications.mp4",
+    image: "/projects/automatisation-communications-web-poster.webp",
+    video: "/videos/automatisation-communications-web.mp4",
+    href: "/videos/automatisation-communications-web.mp4",
     fr: {
       title: "Automatisation des processus & communications",
       description: "Automatiser les tâches répétitives et les échanges pour mieux organiser l’activité.",
@@ -3455,7 +3455,7 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
       onMouseEnter={handleProjectEnter}
       onMouseLeave={handleProjectLeave}
     >
-      <div className="project-media">
+      <div className="project-media showcase-media">
         <img
           className="project-image"
           src={card.image}
@@ -3504,7 +3504,7 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
 const aiLabExperiments = [
   {
     name: "Local Business Discovery",
-    images: ["/projects/local-business-discovery.webp", "/projects/local-business-discovery_2.jpg", "/projects/local-business-discovery_3.jpg"],
+    images: ["/projects/lab/local-business-discovery-1.webp", "/projects/lab/local-business-discovery-2.webp", "/projects/lab/local-business-discovery-3.webp"],
     fr: {
       status: "Prototype en validation",
       problem:
@@ -3521,7 +3521,7 @@ const aiLabExperiments = [
   },
   {
     name: "ReelsMaker",
-    images: ["/projects/reelsmaker.webp", "/projects/reelsmaker_2.jpg", "/projects/reelsmaker_3.jpg"],
+    images: ["/projects/lab/reelsmaker-1.webp", "/projects/lab/reelsmaker-2.webp", "/projects/lab/reelsmaker-3.webp"],
     fr: {
       status: "MVP, en partie manuel",
       problem: "Produire régulièrement des vidéos courtes demande beaucoup de temps : idées, accroches, script, montage.",
@@ -3537,7 +3537,7 @@ const aiLabExperiments = [
   },
   {
     name: "Digital Lab AI OS",
-    images: ["/projects/digital-lab-ai-os.webp", "/projects/digital-lab-ai-os-2.jpg", "/projects/digital-lab-ai-os-3.jpg"],
+    images: ["/projects/lab/digital-lab-ai-os-1.webp", "/projects/lab/digital-lab-ai-os-2.webp", "/projects/lab/digital-lab-ai-os-3.webp"],
     fr: {
       status: "Prototype interne",
       problem: "Faire travailler ensemble plusieurs agents et automatisations sans perdre le contrôle ni la traçabilité.",
@@ -6836,7 +6836,9 @@ function App() {
       (entries) => {
         entries.forEach((entry) => revealItem(entry, observer));
       },
-      { threshold: 0.18 },
+      // A ratio threshold is never reached by sections taller than the viewport (stacked project cards on mobile),
+      // so reveal as soon as the element's top enters the lower 85% of the viewport.
+      { threshold: 0, rootMargin: "0px 0px -15% 0px" },
     );
 
     revealItems.forEach((item) => observer.observe(item));

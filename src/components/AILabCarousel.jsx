@@ -73,7 +73,6 @@ export function AILabCarousel({ images, name, isEnglish = false }) {
             aria-hidden={index !== slide.index} role="group"
             aria-label={isEnglish ? `Image ${index + 1} of ${images.length}` : `Image ${index + 1} sur ${images.length}`}>
             <img src={slide.loaded.includes(index) ? image : undefined}
-              className={image === "/projects/digital-lab-ai-os-2.jpg" ? "ai-lab-carousel-image-contain" : undefined}
               alt={`${name} — ${label}, ${index + 1}/${images.length}`}
               width="1600" height="900" loading={index === 0 ? "eager" : "lazy"} decoding="async" />
           </div>

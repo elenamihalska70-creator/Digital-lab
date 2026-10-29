@@ -1306,6 +1306,13 @@
   margin: 0;
 }
 
+.showcase-media .project-image,
+.showcase-media video {
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+}
+
 .ai-lab-experiment dt {
   margin-bottom: 4px;
   color: #c7a8ff;
