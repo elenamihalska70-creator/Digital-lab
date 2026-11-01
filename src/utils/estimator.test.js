@@ -134,3 +134,69 @@ test("Delivery-time logic is preserved except for fully excluded duplicate featu
   assert.equal(result({ urgency: "Rapide" }).delay, "5–6 jours ouvrés");
   assert.equal(result({ urgency: "Urgent" }).delay, "4–5 jours ouvrés");
 });
+
+// LOT SM-01 — recurring social media pricing must stay separate from one-off projects.
+import {
+  getReelsPrice,
+  getSocialMediaEstimate,
+  SOCIAL_MEDIA_PLANS,
+} from "./estimator.js";
+
+test("One-off chatbot estimates are unchanged by the recurring pricing module", () => {
+  assert.deepEqual(result({ need: chatbot, features: ["Chatbot"] }), {
+    type: "Intermédiaire",
+    budget: "à partir de 800€",
+    delay: "2–3 semaines",
+    message: "Votre projet demande plusieurs éléments à coordonner. Une première version claire peut être créée rapidement.",
+  });
+  assert.equal(budget({ need: chatbot, complexity: advanced, features: ["Chatbot", "Email automatique"], urgency: "Urgent" }), 2000);
+  assert.equal(result({ need: chatbot }).kind, undefined);
+});
+
+test("Social media plans match the launch and reference prices", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(SOCIAL_MEDIA_PLANS).map(([key, plan]) => [key, [plan.launchPrice, plan.referencePrice]])),
+    { presence: [149, 190], visibilite: [299, 390], croissance: [549, 690] },
+  );
+  for (const plan of Object.keys(SOCIAL_MEDIA_PLANS)) {
+    const estimate = getSocialMediaEstimate({ plan });
+    assert.equal(estimate.kind, "recurring");
+    assert.equal(estimate.launchMonthly, SOCIAL_MEDIA_PLANS[plan].launchPrice);
+    assert.equal(estimate.referenceMonthly, SOCIAL_MEDIA_PLANS[plan].referencePrice);
+    assert.equal(estimate.oneTime, 0);
+    assert.equal(estimate.launchMonths, 3);
+  }
+});
+
+test("Reels pricing uses the cheapest exact combination of units and packs", () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 8, 12].map(getReelsPrice), [0, 69, 138, 207, 249, 318, 449, 698]);
+  assert.equal(getReelsPrice(-2), 0);
+});
+
+test("Included posts, platforms and Reels are never charged twice", () => {
+  const croissance = getSocialMediaEstimate({ plan: "croissance", platforms: 3, reels: 2 });
+  assert.equal(croissance.launchMonthly, 549);
+  assert.deepEqual(croissance.addons, { posts: 0, platforms: 0, reels: 0 });
+  // Asking for fewer than included keeps the plan price, without a discount.
+  assert.equal(getSocialMediaEstimate({ plan: "croissance", platforms: 1, reels: 0 }).launchMonthly, 549);
+  // Only the Reels beyond the two included are charged: 4 extra = one pack.
+  assert.equal(getSocialMediaEstimate({ plan: "croissance", reels: 6 }).addons.reels, 249);
+  assert.equal(getSocialMediaEstimate({ plan: "visibilite", reels: 1 }).addons.reels, 0);
+});
+
+test("Add-ons are monthly and the setup audit is one-time only", () => {
+  const estimate = getSocialMediaEstimate({ plan: "presence", extraPosts: 4, platforms: 3, reels: 4, setupAudit: true });
+  assert.deepEqual(estimate.addons, { posts: 80, platforms: 80, reels: 249 });
+  assert.equal(estimate.launchMonthly, 149 + 80 + 80 + 249);
+  assert.equal(estimate.referenceMonthly, 190 + 80 + 80 + 249);
+  assert.equal(estimate.oneTime, 150);
+  assert.deepEqual(estimate.totals, { posts: 12, platforms: 3, reels: 4 });
+});
+
+test("Invalid social media inputs fall back safely", () => {
+  const estimate = getSocialMediaEstimate({ plan: "unknown", extraPosts: -3, platforms: 99, reels: "x" });
+  assert.equal(estimate.plan, "visibilite");
+  assert.equal(estimate.totals.platforms, 4);
+  assert.equal(estimate.added.posts, 0);
+  assert.equal(estimate.totals.reels, 1);
+});

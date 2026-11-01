@@ -11320,3 +11320,461 @@ html {
     transform: none;
   }
 }
+
+/* LOT SM-01 — social media service page */
+.sm-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 56px;
+  align-items: center;
+}
+
+.sm-hero .case-hero-copy h1 {
+  font-size: clamp(38px, 4.6vw, 64px);
+}
+
+.sm-hero-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 30px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-hero-points li {
+  padding: 9px 14px;
+  border: 1px solid rgba(199, 168, 255, 0.24);
+  border-radius: 999px;
+  color: #f0ebff;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sm-hero-visual,
+.sm-example {
+  margin: 0;
+}
+
+.sm-hero-visual img,
+.sm-example img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid rgba(199, 168, 255, 0.22);
+  border-radius: 24px;
+  box-shadow: 0 32px 110px rgba(111, 61, 255, 0.24);
+}
+
+.sm-hero-visual figcaption,
+.sm-example figcaption {
+  margin-top: 12px;
+  color: #cfc4f5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sm-section-heading {
+  max-width: 760px;
+  margin-bottom: 34px;
+}
+
+.sm-section-heading > span {
+  display: inline-flex;
+  margin-bottom: 14px;
+  color: #c7a8ff;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sm-section-heading h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(30px, 3.4vw, 46px);
+  line-height: 1.1;
+  font-weight: 500;
+}
+
+.sm-section-heading p {
+  margin: 18px 0 0;
+  color: #dcd2ff;
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.sm-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.sm-card h3,
+.sm-workflow h3,
+.sm-plan h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.sm-card p,
+.sm-workflow p {
+  margin: 14px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.sm-list-muted li::before {
+  background: rgba(199, 168, 255, 0.4);
+  box-shadow: none;
+}
+
+.sm-workflow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-step-number {
+  display: block;
+  margin-bottom: 16px;
+  color: #9b6dff;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.sm-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+
+.sm-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-plan .case-list {
+  flex: 1;
+  margin-bottom: 28px;
+}
+
+.sm-plan .btn {
+  justify-content: center;
+  width: 100%;
+}
+
+.sm-plan.is-recommended {
+  border-color: rgba(199, 168, 255, 0.55);
+  box-shadow:
+    0 30px 100px rgba(111, 61, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.sm-plan-badge {
+  align-self: flex-start;
+  margin-bottom: 14px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #160a2c;
+  font-size: 13px;
+  font-weight: 800;
+  background: #c7a8ff;
+}
+
+.case-panel p.sm-plan-audience {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.case-panel p.sm-plan-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+  color: #ffffff;
+}
+
+.sm-plan-price strong {
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.sm-plan-price span {
+  display: grid;
+  color: #ebe6ff;
+  font-size: 16px;
+}
+
+.sm-plan-price small {
+  color: #c7a8ff;
+  font-size: 13px;
+}
+
+.case-panel p.sm-plan-reference {
+  margin-top: 8px;
+  color: #cfc4f5;
+  font-size: 15px;
+}
+
+.sm-config-hint {
+  margin: 12px 0 0;
+  color: #cfc4f5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sm-config-result h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.sm-config-breakdown {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0 0;
+  padding: 0;
+  color: #ebe6ff;
+  font-size: 15px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.sm-config-result .btn {
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.sm-examples-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.sm-reels-section {
+  background: radial-gradient(circle at 80% 20%, rgba(155, 109, 255, 0.14), transparent 40%);
+}
+
+.sm-reels-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 40px;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.sm-reel-storyboard {
+  justify-self: center;
+  width: min(280px, 100%);
+  aspect-ratio: 9 / 16;
+  padding: 26px 22px;
+  border: 1px solid rgba(199, 168, 255, 0.35);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(155, 109, 255, 0.35), transparent 45%),
+    rgba(11, 7, 20, 0.9);
+  box-shadow: 0 30px 100px rgba(111, 61, 255, 0.3);
+}
+
+.sm-reel-label {
+  display: block;
+  margin-bottom: 22px;
+  color: #c7a8ff;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sm-reel-storyboard ol {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-reel-storyboard li {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  color: #ffffff;
+  font-size: 17px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.sm-reel-storyboard strong {
+  color: #c7a8ff;
+  font-size: 13px;
+}
+
+.sm-reels-quote {
+  margin: 28px 0 0;
+  color: #dcd2ff;
+  font-size: 17px;
+  text-align: center;
+}
+
+.sm-text-button {
+  padding: 0;
+  border: 0;
+  color: #c7a8ff;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  background: none;
+}
+
+.sm-text-button:hover {
+  color: #ffffff;
+}
+
+.sm-faq {
+  display: grid;
+  gap: 14px;
+  max-width: 900px;
+}
+
+.sm-faq-item {
+  padding: 22px 28px;
+}
+
+.sm-faq-item summary {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sm-faq-item p {
+  margin-top: 14px;
+  font-size: 16px;
+}
+
+.sm-request {
+  max-width: 900px;
+}
+
+.sm-related-links {
+  margin: 24px 0 0;
+  color: #dcd2ff;
+  font-size: 16px;
+}
+
+.sm-related-links a,
+.sm-page .case-section a:not(.btn) {
+  color: #c7a8ff;
+}
+
+.sm-page button:focus-visible,
+.sm-page a:focus-visible,
+.sm-faq-item summary:focus-visible {
+  outline: 2px solid #c7a8ff;
+  outline-offset: 3px;
+}
+
+.contact-offer-summary {
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(199, 168, 255, 0.4);
+  border-radius: 18px;
+  background: rgba(155, 109, 255, 0.12);
+}
+
+.contact-offer-summary strong {
+  color: #c7a8ff;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.contact-offer-summary p {
+  margin: 8px 0;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.contact-offer-summary small {
+  color: #cfc4f5;
+  font-size: 13px;
+}
+
+@media (max-width: 1080px) {
+  .sm-card-grid,
+  .sm-workflow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .sm-hero-grid,
+  .sm-reels-layout,
+  .sm-pricing-grid,
+  .sm-examples-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sm-configurator .estimator-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sm-config-result {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-card-grid,
+  .sm-workflow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sm-faq-item {
+    padding: 18px 20px;
+  }
+
+  .sm-plan-price strong {
+    font-size: 36px;
+  }
+}
+
+/* Badge sits inside .case-panel, whose direct-span rule would recolor it. */
+.case-panel > .sm-plan-badge {
+  margin-bottom: 14px;
+  color: #160a2c;
+  font-size: 13px;
+  text-transform: none;
+}
+
+.sm-reels-grid .sm-plan > p:last-of-type {
+  margin-bottom: 24px;
+}
+
+.sm-reels-grid .sm-plan .btn {
+  margin-top: auto;
+}
+
+.sm-reel-storyboard {
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-reel-storyboard ol {
+  flex: 1;
+  align-content: space-evenly;
+}

@@ -152,3 +152,98 @@ export function getEstimatorResult(answers) {
     message: messages[type],
   };
 }
+
+// Recurring social media subscriptions (LOT SM-01). Kept apart from
+// getEstimatorResult so monthly fees never mix with one-off project budgets.
+// Every amount below is provisional and must be validated by the owner.
+export const SOCIAL_MEDIA_LAUNCH_MONTHS = 3;
+export const SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT = 5;
+
+// Each plan lists what its monthly price already covers, so add-ons are only
+// charged beyond these quantities.
+export const SOCIAL_MEDIA_PLANS = {
+  presence: { name: "Présence", launchPrice: 149, referencePrice: 190, posts: 8, platforms: 1, reels: 0 },
+  visibilite: { name: "Visibilité", launchPrice: 299, referencePrice: 390, posts: 12, platforms: 2, reels: 1 },
+  croissance: { name: "Croissance", launchPrice: 549, referencePrice: 690, posts: 16, platforms: 3, reels: 2 },
+};
+
+export const SOCIAL_MEDIA_ADDONS = {
+  extraPost: 20,
+  extraPlatform: 40,
+  setupAudit: 150,
+};
+
+export const SOCIAL_MEDIA_MAX_PLATFORMS = 4;
+
+// Standalone Reels offer. Complex videos (shooting, motion design, long
+// editing) stay on quote and are never priced here.
+export const REELS_PACKS = [
+  { quantity: 1, price: 69 },
+  { quantity: 4, price: 249 },
+  { quantity: 8, price: 449 },
+];
+
+// Cheapest exact combination of units and packs for a monthly Reels quantity.
+export function getReelsPrice(quantity) {
+  const count = Math.max(0, Math.floor(Number(quantity) || 0));
+  const cheapest = [0];
+
+  for (let total = 1; total <= count; total += 1) {
+    cheapest[total] = Math.min(
+      ...REELS_PACKS.filter((pack) => pack.quantity <= total).map(
+        (pack) => cheapest[total - pack.quantity] + pack.price,
+      ),
+    );
+  }
+
+  return cheapest[count];
+}
+
+const clampCount = (value, maximum = Infinity) => Math.min(maximum, Math.max(0, Math.floor(Number(value) || 0)));
+
+export function getSocialMediaEstimate({
+  plan = "visibilite",
+  extraPosts = 0,
+  platforms,
+  reels,
+  setupAudit = false,
+} = {}) {
+  const selectedPlan = SOCIAL_MEDIA_PLANS[plan] ?? SOCIAL_MEDIA_PLANS.visibilite;
+  const totalPlatforms = Math.max(
+    selectedPlan.platforms,
+    clampCount(platforms ?? selectedPlan.platforms, SOCIAL_MEDIA_MAX_PLATFORMS),
+  );
+  const totalReels = Math.max(selectedPlan.reels, clampCount(reels ?? selectedPlan.reels));
+  const addedPosts = clampCount(extraPosts);
+  const addedPlatforms = totalPlatforms - selectedPlan.platforms;
+  const addedReels = totalReels - selectedPlan.reels;
+
+  const addons = {
+    posts: addedPosts * SOCIAL_MEDIA_ADDONS.extraPost,
+    platforms: addedPlatforms * SOCIAL_MEDIA_ADDONS.extraPlatform,
+    reels: getReelsPrice(addedReels),
+  };
+  const monthlyAddons = addons.posts + addons.platforms + addons.reels;
+
+  return {
+    kind: "recurring",
+    plan: plan in SOCIAL_MEDIA_PLANS ? plan : "visibilite",
+    planName: selectedPlan.name,
+    included: {
+      posts: selectedPlan.posts,
+      platforms: selectedPlan.platforms,
+      reels: selectedPlan.reels,
+    },
+    totals: {
+      posts: selectedPlan.posts + addedPosts,
+      platforms: totalPlatforms,
+      reels: totalReels,
+    },
+    added: { posts: addedPosts, platforms: addedPlatforms, reels: addedReels },
+    addons,
+    launchMonthly: selectedPlan.launchPrice + monthlyAddons,
+    referenceMonthly: selectedPlan.referencePrice + monthlyAddons,
+    launchMonths: SOCIAL_MEDIA_LAUNCH_MONTHS,
+    oneTime: setupAudit ? SOCIAL_MEDIA_ADDONS.setupAudit : 0,
+  };
+}

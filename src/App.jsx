@@ -17,11 +17,22 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
-import { getEstimatorResult } from "./utils/estimator";
+import {
+  getEstimatorResult,
+  getReelsPrice,
+  getSocialMediaEstimate,
+  REELS_PACKS,
+  SOCIAL_MEDIA_ADDONS,
+  SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT,
+  SOCIAL_MEDIA_LAUNCH_MONTHS,
+  SOCIAL_MEDIA_MAX_PLATFORMS,
+  SOCIAL_MEDIA_PLANS,
+} from "./utils/estimator";
 
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
+const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
 const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl;
@@ -146,6 +157,36 @@ const services = [
     },
   },
   {
+    icon: "social",
+    title: "Réseaux sociaux & Reels",
+    summary: "Publier régulièrement, sans y passer vos soirées.",
+    problem: "Vos réseaux sont irréguliers faute de temps, d’idées ou de visuels prêts à publier.",
+    canDo: "Je prépare un calendrier, les visuels, les textes et les Reels, puis je publie après votre validation.",
+    expectedResult: "Une présence régulière et cohérente, avec un abonnement mensuel clair.",
+    details: ["Calendrier éditorial", "Visuels", "Textes", "Reels", "Publication", "Bilan mensuel"],
+    examples:
+      "Gestion mensuelle Instagram, Facebook, LinkedIn ou Google Business Profile, création de visuels, rédaction de légendes, Reels et vidéos courtes, bilan mensuel.",
+    images: [
+      "/projects/social/social-publication-1.webp",
+      "/projects/social/social-publication-2.webp",
+      "/projects/social/social-publication-3.webp",
+    ],
+    gallery: {
+      type: "carousel",
+      images: [
+        "/projects/social/social-publication-1.webp",
+        "/projects/social/social-publication-2.webp",
+        "/projects/social/social-publication-3.webp",
+      ],
+    },
+    transformation: {
+      before: ["publications irrégulières", "visuels improvisés", "aucun suivi"],
+      after: ["calendrier mensuel", "visuels cohérents", "bilan chaque mois"],
+      result: "Vos réseaux restent actifs et reflètent sérieusement votre activité.",
+    },
+    learnMoreHref: socialMediaServicePath,
+  },
+  {
     icon: "connect",
     title: "Automatisation & outils connectés",
     summary: "Libérer du temps pour l’essentiel.",
@@ -266,6 +307,7 @@ const services = [
 const navLinks = [
   { label: "Audit gratuit", href: auditLaunchHref, emphasized: true },
   { label: "Services", href: "/#services" },
+  { label: "Réseaux sociaux", href: socialMediaServicePath },
   { label: "Projets", href: "/#projets" },
   { label: "Méthode", href: "/#method" },
   { label: "À propos", href: "/#about" },
@@ -278,7 +320,7 @@ const navLinks = [
 // navLinks, deliberately kept as a separate array so translating a label
 // never implies a translated destination: every href above still points at
 // the existing French sections/pages (no /en/services/... routes exist).
-const englishNavLabels = ["Free audit", "Services", "Projects", "Method", "About", "Blog", "FAQ", "Contact"];
+const englishNavLabels = ["Free audit", "Services", "Social media", "Projects", "Method", "About", "Blog", "FAQ", "Contact"];
 
 const missionSteps = [
   {
@@ -611,6 +653,8 @@ const contactProjectTypes = [
   "Automatisation",
   "Chatbot / assistant IA",
   "MVP / prototype",
+  "Réseaux sociaux",
+  "Reels",
   "Autre",
 ];
 
@@ -1053,6 +1097,15 @@ const servicePages = [
       secondaryHref: "/#contact",
     },
   },
+  {
+    // Rendered by SocialMediaServicePage; only the routing and SEO fields are read here.
+    slug: "gestion-reseaux-sociaux",
+    customPage: "social-media",
+    title: "Gestion des réseaux sociaux pour TPE, indépendants et associations",
+    metaTitle: "Gestion des réseaux sociaux pour TPE et indépendants : abonnement mensuel | Digital Lab",
+    metaDescription:
+      "Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. Tarif de lancement dès 149 €/mois, Reels dès 69 €.",
+  },
 ];
 
 const optimizedImages = {
@@ -1100,6 +1153,19 @@ const optimizedImages = {
       "/projects/microassist (2)-640.webp 640w, /projects/microassist (2)-960.webp 960w, /projects/microassist (2).webp 1809w",
   },
 };
+
+// Social media post examples: full-size width differs per screenshot.
+[
+  [1, 1088],
+  [2, 1100],
+  [3, 1122],
+].forEach(([index, fullWidth]) => {
+  const base = `/projects/social/social-publication-${index}`;
+  optimizedImages[`${base}.webp`] = {
+    src: `${base}.webp`,
+    srcSet: `${base}-640.webp 640w, ${base}-960.webp 960w, ${base}.webp ${fullWidth}w`,
+  };
+});
 
 const getOptimizedImage = (src) => optimizedImages[src] ?? { src };
 
@@ -1364,6 +1430,45 @@ const applyPageMetadata = (pathname) => {
   } else {
     removeJsonLd("audit-landing-structured-data");
   }
+
+  if (pathname === socialMediaServicePath) {
+    setJsonLd("social-media-structured-data", {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "@id": `${metadata.canonical}#service`,
+          name: "Gestion des réseaux sociaux Digital Lab",
+          serviceType: "Gestion mensuelle des réseaux sociaux et création de Reels",
+          description: metadata.description,
+          url: metadata.canonical,
+          areaServed: "France",
+          provider: {
+            "@type": "ProfessionalService",
+            name: "Digital Lab",
+            url: siteUrl,
+          },
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Accueil", item: siteUrl },
+            { "@type": "ListItem", position: 2, name: "Gestion des réseaux sociaux", item: metadata.canonical },
+          ],
+        },
+        {
+          "@type": "FAQPage",
+          mainEntity: socialMediaFaq.map(({ question, answer }) => ({
+            "@type": "Question",
+            name: question,
+            acceptedAnswer: { "@type": "Answer", text: answer },
+          })),
+        },
+      ],
+    });
+  } else {
+    removeJsonLd("social-media-structured-data");
+  }
 };
 
 const trackAuditCta = (eventName, location) => {
@@ -1504,6 +1609,7 @@ function SolutionIcon({ type }) {
     seo: "M10.5 5a5.5 5.5 0 0 1 4.3 8.9l3.6 3.6-1.4 1.4-3.6-3.6A5.5 5.5 0 1 1 10.5 5Zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 1.2 1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3 1-2.1Z",
     connect: "M7.5 7a3.5 3.5 0 0 1 3.3 2.4h2.4A3.5 3.5 0 1 1 13.2 12h-2.4A3.5 3.5 0 1 1 7.5 7Zm0 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm9 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z",
     mvp: "M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 17.5v-11Zm3 1.5v2h8V8H8Zm0 4v2h5v-2H8Zm0 4v2h8v-2H8Z",
+    social: "M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7Zm3 4.2 5.4 2.8-5.4 2.8V9.2Z",
   };
 
   return (
@@ -2396,13 +2502,29 @@ function isSupabaseAccessError(error) {
   );
 }
 
-function ContactForm({ onAuthOpen, isEnglish = false }) {
+// `prefill` ({ projectType, message, summary }) comes from an offer CTA. The
+// summary is appended on submit so the selected offer survives message edits.
+function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitted }) {
   const { session } = useAuth();
   const [form, setForm] = useState(initialContactForm);
+  const [appliedPrefill, setAppliedPrefill] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
   const statusRef = useRef(null);
   const sessionEmail = session?.user?.email ?? "";
+
+  if (prefill && prefill !== appliedPrefill) {
+    setAppliedPrefill(prefill);
+    setForm((currentForm) => ({
+      ...currentForm,
+      projectType: prefill.projectType,
+      // Keep a message the visitor wrote themselves; replace only empty or prefilled text.
+      message:
+        !currentForm.message.trim() || currentForm.message === appliedPrefill?.message
+          ? prefill.message
+          : currentForm.message,
+    }));
+  }
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -2419,12 +2541,15 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
     setSubmitStatus({ type: "", message: "" });
 
     const email = form.email.trim() || sessionEmail;
+    const offerSummary = prefill?.summary
+      ? `\n\n${isEnglish ? "— Selected offer —" : "— Offre sélectionnée —"}\n${prefill.summary}`
+      : "";
     const contactPayload = {
       name: form.name.trim(),
       email,
       company: form.company.trim(),
       projectType: form.projectType,
-      message: form.message.trim(),
+      message: `${form.message.trim()}${offerSummary}`,
     };
     const { error } = await createContactRequest({
       userId: session?.user?.id,
@@ -2477,6 +2602,7 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
     });
     setForm({ ...initialContactForm, email: sessionEmail });
     setIsSending(false);
+    onSubmitted?.(prefill);
     window.setTimeout(() => {
       statusRef.current?.focus();
       statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2485,6 +2611,17 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
 
   return (
     <form className="contact-form reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }} onSubmit={handleSubmit}>
+      {prefill?.summary && (
+        <div className="contact-offer-summary" aria-live="polite">
+          <strong>{isEnglish ? "Selected offer" : "Offre sélectionnée"}</strong>
+          <p>{prefill.summary}</p>
+          <small>
+            {isEnglish
+              ? "This summary is attached to your request."
+              : "Ce récapitulatif est joint automatiquement à votre demande."}
+          </small>
+        </div>
+      )}
       <div className="contact-form-grid">
         <label className="contact-field" htmlFor="contact-name">
           {isEnglish ? "Name" : "Nom"}
@@ -3265,6 +3402,14 @@ const englishServiceTranslations = [
     details: ["SEO tags", "Heading structure", "Copy", "Alt text", "Internal linking", "Performance"],
   },
   {
+    title: "Social media & Reels",
+    summary: "Post consistently without spending your evenings on it.",
+    problem: "Your social accounts are irregular for lack of time, ideas, or ready-to-post visuals.",
+    canDo: "I prepare a calendar, visuals, captions, and Reels, then publish once you approve them.",
+    expectedResult: "A regular, consistent presence with a clear monthly subscription.",
+    details: ["Content calendar", "Visuals", "Captions", "Reels", "Publishing", "Monthly review"],
+  },
+  {
     title: "Business automation",
     summary: "Free up time for what matters.",
     problem: "Your follow-up relies on too much copy-pasting, manual messages, or scattered files.",
@@ -3884,6 +4029,8 @@ const contactProjectTypeOptions = [
   { value: "Automatisation", label: "Automation" },
   { value: "Chatbot / assistant IA", label: "AI chatbot / assistant" },
   { value: "MVP / prototype", label: "MVP / prototype" },
+  { value: "Réseaux sociaux", label: "Social media" },
+  { value: "Reels", label: "Reels / short videos" },
   { value: "Autre", label: "Other" },
 ];
 
@@ -4559,7 +4706,11 @@ function ProjectCasePage({ project, onNavigate }) {
   );
 }
 
-function ServicePage({ servicePage, onNavigate }) {
+function ServicePage({ servicePage, onNavigate, onAuthOpen }) {
+  if (servicePage?.customPage === "social-media") {
+    return <SocialMediaServicePage onNavigate={onNavigate} onAuthOpen={onAuthOpen} />;
+  }
+
   if (!servicePage) {
     return (
       <main className="case-page fade-in-page">
@@ -4753,6 +4904,666 @@ function ServicePage({ servicePage, onNavigate }) {
               {servicePage.cta.primaryLabel}
             </a>
           </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+// LOT SM-01 — social media subscription page. Prices come from
+// utils/estimator.js; the tax label must be confirmed by the owner before
+// publishing (HT, TTC or "TVA non applicable, art. 293 B du CGI").
+const socialMediaTaxLabel = "HT";
+const socialMediaRequestAnchor = "demande-reseaux-sociaux";
+
+const formatEuros = (amount) => `${new Intl.NumberFormat("fr-FR").format(amount)}\u00a0€`;
+const formatMonthlyPrice = (amount) => `${formatEuros(amount)} ${socialMediaTaxLabel}/mois`;
+const pluralize = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`;
+
+const socialMediaPlanCopy = {
+  presence: {
+    audience: "Pour garder une présence régulière et rassurante sur votre réseau principal.",
+    extras: ["Bilan mensuel synthétique"],
+  },
+  visibilite: {
+    audience: "Pour publier plus souvent sur deux réseaux et commencer la vidéo courte.",
+    extras: ["Bilan mensuel avec recommandations"],
+    recommended: true,
+  },
+  croissance: {
+    audience: "Pour une présence soutenue sur plusieurs réseaux, avec plus de vidéo.",
+    extras: ["Bilan mensuel et point stratégique de 30 minutes"],
+  },
+};
+
+const getSocialMediaPlanFeatures = (planKey) => {
+  const plan = SOCIAL_MEDIA_PLANS[planKey];
+
+  return [
+    `${plan.posts} publications par mois`,
+    pluralize(plan.platforms, "réseau social", "réseaux sociaux"),
+    plan.reels ? `${pluralize(plan.reels, "Reel inclus", "Reels inclus")} chaque mois` : "Reels disponibles en option",
+    "Calendrier éditorial, visuels et légendes",
+    "Publication après votre validation",
+    ...socialMediaPlanCopy[planKey].extras,
+  ];
+};
+
+const socialMediaBenefits = [
+  {
+    title: "Une présence régulière",
+    text: "Vos comptes restent actifs chaque semaine, même pendant vos périodes les plus chargées.",
+  },
+  {
+    title: "Une image cohérente",
+    text: "Visuels, ton et messages suivent une même ligne, alignée avec votre site et votre activité.",
+  },
+  {
+    title: "Du temps libéré",
+    text: "Vous validez un calendrier au lieu de chercher chaque soir quoi publier.",
+  },
+  {
+    title: "Un suivi lisible",
+    text: "Chaque mois, un bilan simple indique ce qui a été publié et ce qu’il faut ajuster.",
+  },
+];
+
+const socialMediaIncluded = [
+  "Analyse de vos comptes et de votre ligne éditoriale",
+  "Calendrier mensuel des publications à valider",
+  "Création des visuels aux formats de chaque réseau",
+  "Rédaction des légendes et choix des hashtags",
+  "Programmation et publication après votre accord",
+  "Bilan mensuel des publications réalisées",
+];
+
+const socialMediaExcluded = [
+  "Budget de publicité payante",
+  "Tournage ou shooting photo sur place",
+  "Réponse en continu aux messages et commentaires",
+];
+
+const socialMediaWorkflow = [
+  {
+    title: "Échange de départ",
+    text: "Nous faisons le point sur votre activité, vos clients, vos réseaux et le ton à adopter.",
+  },
+  {
+    title: "Calendrier du mois",
+    text: "Je vous envoie les sujets et les dates prévues. Vous validez ou demandez des ajustements.",
+  },
+  {
+    title: "Création et validation",
+    text: "Visuels, textes et Reels sont préparés puis soumis à votre accord avant toute publication.",
+  },
+  {
+    title: "Publication et bilan",
+    text: "Les contenus sont publiés aux dates prévues, puis un bilan mensuel prépare le mois suivant.",
+  },
+];
+
+const socialMediaExamples = [
+  {
+    image: "/projects/social/social-publication-1.webp",
+    width: 1088,
+    height: 714,
+    alt: "Écran de création d’une publication Instagram en carrousel pour la marque Éclat Lifestyle : photo d’une lampe en bois et papier, légende sur la fabrication artisanale",
+    caption: "Carrousel produit avec légende rédigée, prêt pour validation.",
+  },
+  {
+    image: "/projects/social/social-publication-2.webp",
+    width: 1100,
+    height: 730,
+    alt: "Écran de création d’une publication pour Éclat Lifestyle : photo d’un coussin en lin et légende mettant en avant l’avis d’une cliente",
+    caption: "Publication autour d’un avis client, au ton de la marque.",
+  },
+  {
+    image: "/projects/social/social-publication-3.webp",
+    width: 1122,
+    height: 706,
+    alt: "Écran de préparation d’une publication sponsorisée pour Éclat Lifestyle : salon aux tons verts et ocre, ciblage, budget et format indiqués dans la légende",
+    caption: "Préparation d’une campagne : audience, format et budget définis avant lancement.",
+  },
+];
+
+const reelsOffers = REELS_PACKS.map((pack) => ({
+  ...pack,
+  title: pack.quantity === 1 ? "1 Reel à l’unité" : `Pack ${pack.quantity} Reels`,
+  priceLabel: pack.quantity === 1 ? `${formatEuros(pack.price)} ${socialMediaTaxLabel}` : formatMonthlyPrice(pack.price),
+  note: pack.quantity === 1 ? "Idéal pour tester ou annoncer un événement." : `Soit ${pack.quantity} vidéos courtes livrées chaque mois.`,
+}));
+
+const reelsIncluded = [
+  "Idée, accroche et script court",
+  "Montage vertical 9:16 à partir de vos photos et vidéos",
+  "Sous-titres, musique libre de droits et texte à l’écran",
+  "Une série de retouches avant livraison",
+];
+
+const socialMediaFaq = [
+  {
+    question: "Est-ce que je valide les publications avant leur mise en ligne ?",
+    answer:
+      "Oui. Rien n’est publié sans votre accord : vous recevez le calendrier du mois, puis les visuels et textes à valider.",
+  },
+  {
+    question: "Quels réseaux sociaux pouvez-vous gérer ?",
+    answer:
+      "Instagram, Facebook, LinkedIn et Google Business Profile. Un autre réseau peut être étudié lors du premier échange.",
+  },
+  {
+    question: "Dois-je fournir des photos ou des vidéos ?",
+    answer:
+      "Vos propres photos et vidéos rendent les publications plus authentiques. À défaut, les visuels sont créés à partir de vos contenus existants et de ressources libres de droits.",
+  },
+  {
+    question: "Comment fonctionne le tarif de lancement ?",
+    answer: `Il est réservé aux ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients de l’offre et s’applique pendant les ${SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le tarif de référence s’applique ensuite, comme indiqué sur chaque formule.`,
+  },
+  {
+    question: "Y a-t-il une durée d’engagement ?",
+    answer:
+      "La durée, les conditions de résiliation et le détail des prestations sont précisés dans le devis, avant tout démarrage.",
+  },
+  {
+    question: "Garantissez-vous un nombre d’abonnés ou de ventes ?",
+    answer:
+      "Non. Aucun prestataire sérieux ne peut garantir ces résultats. L’objectif est une présence régulière, cohérente et suivie, que nous ajustons chaque mois.",
+  },
+  {
+    question: "Puis-je commander des Reels sans abonnement ?",
+    answer:
+      "Oui. L’offre Reels est indépendante : un Reel à l’unité ou un pack mensuel, sans souscrire à la gestion des réseaux sociaux.",
+  },
+];
+
+const buildSocialMediaRequest = (estimate) => {
+  const lines = [
+    `Abonnement réseaux sociaux — formule ${estimate.planName}`,
+    `${estimate.totals.posts} publications/mois · ${pluralize(estimate.totals.platforms, "réseau", "réseaux")} · ${pluralize(estimate.totals.reels, "Reel", "Reels")}/mois`,
+    `Tarif de lancement : ${formatMonthlyPrice(estimate.launchMonthly)} pendant ${estimate.launchMonths} mois (${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients), puis ${formatMonthlyPrice(estimate.referenceMonthly)}`,
+    estimate.oneTime
+      ? `Audit de départ et mise en place : ${formatEuros(estimate.oneTime)} ${socialMediaTaxLabel}, une seule fois`
+      : "Sans audit de départ",
+    "Estimation indicative, à confirmer par devis.",
+  ];
+
+  return {
+    offer: `social_${estimate.plan}`,
+    projectType: "Réseaux sociaux",
+    message: `Bonjour, je souhaite démarrer avec la formule ${estimate.planName}. Mon activité : `,
+    summary: lines.join("\n"),
+  };
+};
+
+const buildReelsRequest = (pack) =>
+  pack
+    ? {
+        offer: `reels_${pack.quantity}`,
+        projectType: "Reels",
+        message: "Bonjour, je souhaite commander des Reels. Mon activité et mon idée : ",
+        summary: [
+          `Offre Reels — ${pack.quantity === 1 ? "1 Reel à l’unité" : `pack ${pack.quantity} Reels par mois`}`,
+          `Prix : ${pack.quantity === 1 ? `${formatEuros(pack.price)} ${socialMediaTaxLabel}` : formatMonthlyPrice(pack.price)}`,
+          "Estimation indicative, à confirmer par devis.",
+        ].join("\n"),
+      }
+    : {
+        offer: "reels_complex",
+        projectType: "Reels",
+        message: "Bonjour, j’ai un projet de vidéo plus complexe (tournage, motion design ou montage long) : ",
+        summary: "Offre Reels — vidéo complexe, sur devis",
+      };
+
+function SocialMediaConfigurator({ onRequest }) {
+  const [options, setOptions] = useState({ plan: "visibilite", platforms: 2, extraPosts: 0, reels: 1, setupAudit: false });
+  const estimate = getSocialMediaEstimate(options);
+  const included = estimate.included;
+  const updateOption = (key, value) => setOptions((currentOptions) => ({ ...currentOptions, [key]: value }));
+  const choose = (key, values, renderLabel, selectedValue) => (
+    <div className="estimator-options compact" role="group" aria-labelledby={`sm-config-${key}`}>
+      {values.map((value) => (
+        <button
+          className={selectedValue === value ? "is-selected" : ""}
+          key={value}
+          type="button"
+          aria-pressed={selectedValue === value}
+          onClick={() => updateOption(key, value)}
+        >
+          {renderLabel(value)}
+        </button>
+      ))}
+    </div>
+  );
+  const platformValues = Array.from(
+    { length: SOCIAL_MEDIA_MAX_PLATFORMS - included.platforms + 1 },
+    (_, index) => included.platforms + index,
+  );
+  const reelValues = [0, 1, 2, 4, 8].filter((value) => value >= included.reels);
+  const addonLines = [
+    estimate.added.posts > 0 && `${estimate.added.posts} publications supplémentaires : +${formatEuros(estimate.addons.posts)}`,
+    estimate.added.platforms > 0 &&
+      `${pluralize(estimate.added.platforms, "réseau supplémentaire", "réseaux supplémentaires")} : +${formatEuros(estimate.addons.platforms)}`,
+    estimate.added.reels > 0 &&
+      `${pluralize(estimate.added.reels, "Reel supplémentaire", "Reels supplémentaires")} : +${formatEuros(estimate.addons.reels)}`,
+  ].filter(Boolean);
+
+  return (
+    <div className="estimator-panel sm-configurator">
+      <div className="estimator-grid">
+        <div className="estimator-questions">
+          <div className="estimator-question">
+            <h3 id="sm-config-plan">Formule</h3>
+            {choose("plan", Object.keys(SOCIAL_MEDIA_PLANS), (key) => SOCIAL_MEDIA_PLANS[key].name, estimate.plan)}
+          </div>
+          <div className="estimator-question">
+            <h3 id="sm-config-platforms">Nombre de réseaux sociaux</h3>
+            {choose(
+              "platforms",
+              platformValues,
+              (value) => (value === included.platforms ? `${value} (inclus)` : `${value}`),
+              estimate.totals.platforms,
+            )}
+            <p className="sm-config-hint">+{formatEuros(SOCIAL_MEDIA_ADDONS.extraPlatform)} par mois et par réseau au-delà de la formule.</p>
+          </div>
+          <div className="estimator-question">
+            <h3 id="sm-config-extraPosts">Publications supplémentaires par mois</h3>
+            {choose("extraPosts", [0, 4, 8], (value) => (value ? `+${value}` : "Aucune"), estimate.added.posts)}
+            <p className="sm-config-hint">
+              {included.posts} publications incluses, puis {formatEuros(SOCIAL_MEDIA_ADDONS.extraPost)} par publication.
+            </p>
+          </div>
+          <div className="estimator-question">
+            <h3 id="sm-config-reels">Reels par mois</h3>
+            {choose(
+              "reels",
+              reelValues,
+              (value) => (value === included.reels ? `${value} (inclus)` : `${value}`),
+              estimate.totals.reels,
+            )}
+            <p className="sm-config-hint">Les Reels au-delà de la formule suivent le tarif de l’offre Reels.</p>
+          </div>
+          <div className="estimator-question">
+            <h3>Démarrage</h3>
+            <div className="estimator-checkboxes">
+              <label className={options.setupAudit ? "is-selected" : ""}>
+                <input
+                  checked={options.setupAudit}
+                  type="checkbox"
+                  onChange={(event) => updateOption("setupAudit", event.target.checked)}
+                />
+                <span>
+                  Audit de départ et mise en place des comptes — {formatEuros(SOCIAL_MEDIA_ADDONS.setupAudit)} {socialMediaTaxLabel},
+                  une seule fois
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <aside className="estimator-result sm-config-result" aria-live="polite">
+          <span>Estimation mensuelle</span>
+          <h3>Formule {estimate.planName}</h3>
+          <div className="result-metrics">
+            <div>
+              <small>Les {estimate.launchMonths} premiers mois</small>
+              <strong>{formatMonthlyPrice(estimate.launchMonthly)}</strong>
+            </div>
+            <div>
+              <small>Ensuite</small>
+              <strong>{formatMonthlyPrice(estimate.referenceMonthly)}</strong>
+            </div>
+          </div>
+          <ul className="sm-config-breakdown">
+            <li>
+              {estimate.totals.posts} publications · {pluralize(estimate.totals.platforms, "réseau", "réseaux")} ·{" "}
+              {pluralize(estimate.totals.reels, "Reel", "Reels")} par mois
+            </li>
+            {addonLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+            <li>
+              {estimate.oneTime
+                ? `Frais unique de mise en place : ${formatEuros(estimate.oneTime)} ${socialMediaTaxLabel}`
+                : "Aucun frais de mise en place"}
+            </li>
+          </ul>
+          <p className="estimator-note">
+            Tarif de lancement réservé aux {SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients. Estimation indicative : le
+            devis final précise le contenu exact et les conditions.
+          </p>
+          <button className="btn btn-primary" type="button" onClick={() => onRequest(buildSocialMediaRequest(estimate), "configurator")}>
+            Demander cette formule
+          </button>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
+  const [requestPrefill, setRequestPrefill] = useState(null);
+
+  const handleNavigateTo = (target) => (event) => {
+    event.preventDefault();
+    onNavigate(target);
+  };
+
+  const scrollToSection = (id) => (event) => {
+    event.preventDefault();
+    scrollToElementWithHeaderOffset(`#${id}`);
+  };
+
+  const requestOffer = (request, location) => {
+    trackEvent("social_media_offer_select", { offer: request.offer, cta_location: location });
+    setRequestPrefill({ ...request });
+    window.setTimeout(() => {
+      scrollToElementWithHeaderOffset(`#${socialMediaRequestAnchor}`);
+      document.getElementById("contact-name")?.focus({ preventScroll: true });
+    }, 0);
+  };
+
+  const handleSubmitted = (request) => {
+    trackEvent("social_media_request_submit", { offer: request?.offer ?? "none" });
+    setRequestPrefill(null);
+  };
+
+  return (
+    <main className="case-page sm-page fade-in-page">
+      <section className="case-hero sm-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <button className="back-button" type="button" onClick={() => onNavigate("/#services")}>
+            Retour
+          </button>
+
+          <div className="sm-hero-grid">
+            <div className="case-hero-copy">
+              <span>Gestion des réseaux sociaux</span>
+              <h1>Des réseaux sociaux actifs, sans y passer vos soirées</h1>
+              <p>
+                Digital Lab prépare, crée et publie vos contenus chaque mois pour les TPE, indépendants et
+                associations. Vous validez, nous publions.
+              </p>
+              <div className="case-actions">
+                <a className="btn btn-primary" href="#formules" onClick={scrollToSection("formules")}>
+                  Voir les formules
+                </a>
+                <a className="btn btn-secondary" href="#reels" onClick={scrollToSection("reels")}>
+                  Commander des Reels
+                </a>
+              </div>
+              <ul className="sm-hero-points">
+                <li>Abonnement mensuel dès {formatMonthlyPrice(SOCIAL_MEDIA_PLANS.presence.launchPrice)}</li>
+                <li>Rien n’est publié sans votre accord</li>
+                <li>Bilan clair chaque mois</li>
+              </ul>
+            </div>
+
+            <figure className="sm-hero-visual">
+              <img
+                alt={socialMediaExamples[0].alt}
+                decoding="async"
+                height={socialMediaExamples[0].height}
+                sizes="(max-width: 900px) 92vw, 560px"
+                src={getOptimizedImage(socialMediaExamples[0].image).src}
+                srcSet={getOptimizedImage(socialMediaExamples[0].image).srcSet}
+                width={socialMediaExamples[0].width}
+              />
+              <figcaption>Exemple de publication préparée par Digital Lab, avant validation.</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section className="case-section" aria-labelledby="sm-benefits-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span>Ce que vous y gagnez</span>
+            <h2 id="sm-benefits-title">Une présence en ligne qui tient dans la durée</h2>
+          </div>
+          <div className="sm-card-grid">
+            {socialMediaBenefits.map((benefit) => (
+              <article className="case-panel sm-card" key={benefit.title}>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="case-section case-section-tight" aria-labelledby="sm-offer-title">
+        <div className="case-shell case-detail-grid">
+          <article className="case-panel">
+            <span>L’offre</span>
+            <h2 id="sm-offer-title">Ce qui est inclus chaque mois</h2>
+            <ul className="case-list">
+              {socialMediaIncluded.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="case-panel">
+            <span>Pour être clair</span>
+            <h2>Ce qui n’est pas inclus</h2>
+            <ul className="case-list sm-list-muted">
+              {socialMediaExcluded.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <p>Ces éléments peuvent être ajoutés sur devis si votre activité en a besoin.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="case-section" aria-labelledby="sm-workflow-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span>Méthode</span>
+            <h2 id="sm-workflow-title">Comment se déroule un mois</h2>
+          </div>
+          <ol className="sm-workflow">
+            {socialMediaWorkflow.map((step, index) => (
+              <li className="case-panel" key={step.title}>
+                <span className="sm-step-number" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="case-section" id="formules" aria-labelledby="sm-pricing-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span>Formules</span>
+            <h2 id="sm-pricing-title">Trois abonnements mensuels, un tarif de lancement</h2>
+            <p>
+              Tarif de lancement réservé aux {SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients de l’offre, appliqué
+              pendant les {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le tarif de référence s’applique ensuite.
+            </p>
+          </div>
+
+          <div className="sm-pricing-grid">
+            {Object.entries(SOCIAL_MEDIA_PLANS).map(([planKey, plan]) => (
+              <article
+                className={`case-panel sm-plan${socialMediaPlanCopy[planKey].recommended ? " is-recommended" : ""}`}
+                key={planKey}
+                aria-labelledby={`sm-plan-${planKey}`}
+              >
+                {socialMediaPlanCopy[planKey].recommended && <span className="sm-plan-badge">Recommandée pour démarrer</span>}
+                <h3 id={`sm-plan-${planKey}`}>{plan.name}</h3>
+                <p className="sm-plan-audience">{socialMediaPlanCopy[planKey].audience}</p>
+                <p className="sm-plan-price">
+                  <strong>{formatEuros(plan.launchPrice)}</strong>
+                  <span>
+                    {socialMediaTaxLabel}/mois
+                    <small>les {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois</small>
+                  </span>
+                </p>
+                <p className="sm-plan-reference">Puis {formatMonthlyPrice(plan.referencePrice)} (tarif de référence)</p>
+                <ul className="case-list">
+                  {getSocialMediaPlanFeatures(planKey).map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                <button
+                  className={`btn ${socialMediaPlanCopy[planKey].recommended ? "btn-primary" : "btn-secondary"}`}
+                  type="button"
+                  onClick={() => requestOffer(buildSocialMediaRequest(getSocialMediaEstimate({ plan: planKey })), "pricing_card")}
+                >
+                  Choisir {plan.name}
+                </button>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="case-section case-section-tight" aria-labelledby="sm-config-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span>Sur mesure</span>
+            <h2 id="sm-config-title">Composez votre abonnement</h2>
+            <p>Ajoutez des réseaux, des publications ou des Reels : seuls les éléments au-delà de votre formule sont facturés.</p>
+          </div>
+          <SocialMediaConfigurator onRequest={requestOffer} />
+        </div>
+      </section>
+
+      <section className="case-section" aria-labelledby="sm-examples-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span>Exemples</span>
+            <h2 id="sm-examples-title">Des publications préparées avec soin</h2>
+            <p>Captures de publications préparées par Digital Lab avant validation. Aucune statistique n’est présentée ici.</p>
+          </div>
+          <div className="sm-examples-grid">
+            {socialMediaExamples.map((example) => {
+              const optimizedImage = getOptimizedImage(example.image);
+
+              return (
+                <figure className="sm-example" key={example.image}>
+                  <img
+                    alt={example.alt}
+                    decoding="async"
+                    height={example.height}
+                    loading="lazy"
+                    sizes="(max-width: 900px) 92vw, 380px"
+                    src={optimizedImage.src}
+                    srcSet={optimizedImage.srcSet}
+                    width={example.width}
+                  />
+                  <figcaption>{example.caption}</figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="case-section sm-reels-section" id="reels" aria-labelledby="sm-reels-title">
+        <div className="case-shell">
+          <div className="sm-reels-layout">
+            <div>
+              <div className="sm-section-heading">
+                <span>Offre Reels</span>
+                <h2 id="sm-reels-title">Des vidéos courtes, avec ou sans abonnement</h2>
+                <p>Des Reels prêts à publier sur Instagram, Facebook ou TikTok, à l’unité ou en pack mensuel.</p>
+              </div>
+              <ul className="case-list">
+                {reelsIncluded.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="sm-reel-storyboard" aria-label="Structure type d’un Reel">
+              <span className="sm-reel-label">Structure type d’un Reel</span>
+              <ol>
+                <li>
+                  <strong>0–3 s</strong> Accroche
+                </li>
+                <li>
+                  <strong>3–20 s</strong> Votre message
+                </li>
+                <li>
+                  <strong>Fin</strong> Appel à l’action
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="sm-pricing-grid sm-reels-grid">
+            {reelsOffers.map((pack) => (
+              <article className="case-panel sm-plan" key={pack.quantity} aria-labelledby={`sm-reels-${pack.quantity}`}>
+                <h3 id={`sm-reels-${pack.quantity}`}>{pack.title}</h3>
+                <p className="sm-plan-price">
+                  <strong>{pack.priceLabel}</strong>
+                </p>
+                <p className="sm-plan-audience">{pack.note}</p>
+                {pack.quantity > 1 && (
+                  <p className="sm-plan-reference">
+                    Soit environ {formatEuros(Math.round(pack.price / pack.quantity))} par Reel, contre{" "}
+                    {formatEuros(getReelsPrice(1))} à l’unité
+                  </p>
+                )}
+                <button className="btn btn-secondary" type="button" onClick={() => requestOffer(buildReelsRequest(pack), "reels_card")}>
+                  Demander {pack.quantity === 1 ? "ce Reel" : "ce pack"}
+                </button>
+              </article>
+            ))}
+          </div>
+          <p className="sm-reels-quote">
+            Tournage, motion design ou montage long ?{" "}
+            <button className="sm-text-button" type="button" onClick={() => requestOffer(buildReelsRequest(null), "reels_complex")}>
+              Demander un devis pour une vidéo complexe
+            </button>
+          </p>
+        </div>
+      </section>
+
+      <section className="case-section" aria-labelledby="sm-faq-title">
+        <div className="case-shell sm-faq">
+          <div className="sm-section-heading">
+            <span>FAQ</span>
+            <h2 id="sm-faq-title">Questions fréquentes</h2>
+          </div>
+          {socialMediaFaq.map((item) => (
+            <details className="case-panel sm-faq-item" key={item.question}>
+              <summary>{item.question}</summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className="case-section case-final-cta" id={socialMediaRequestAnchor} aria-labelledby="sm-request-title">
+        <div className="case-shell sm-request">
+          <div className="sm-section-heading">
+            <span>Demande</span>
+            <h2 id="sm-request-title">Parlons de vos réseaux sociaux</h2>
+            <p>
+              Choisissez une formule ci-dessus ou décrivez simplement votre besoin. Réponse sous 24–48h avec une
+              proposition adaptée.
+            </p>
+          </div>
+          <ContactForm onAuthOpen={onAuthOpen} prefill={requestPrefill} onSubmitted={handleSubmitted} />
+          <p className="sm-related-links">
+            Vous préférez commencer par votre site ?{" "}
+            <a href={auditLandingPath} onClick={handleNavigateTo(auditLandingPath)}>
+              Faire l’audit gratuit
+            </a>{" "}
+            ou{" "}
+            <a href="/services/creation-site-web" onClick={handleNavigateTo("/services/creation-site-web")}>
+              découvrir la création de site web
+            </a>
+            .
+          </p>
         </div>
       </section>
     </main>
@@ -6226,7 +7037,13 @@ function SiteHeader({
   const [activeHref, setActiveHref] = useState("");
   const isAuditPage = pathname === auditLandingPath;
   const isEnglishPath = pathname === englishHomePath;
-  const visibleActiveHref = isAuditPage ? auditLandingPath : pathname === "/" ? activeHref : "";
+  const visibleActiveHref = isAuditPage
+    ? auditLandingPath
+    : pathname === socialMediaServicePath
+      ? socialMediaServicePath
+      : pathname === "/"
+        ? activeHref
+        : "";
   const userEmail = session?.user?.email;
   const userDisplayName = getUserDisplayName(session);
   const hasClientUnreadMessages = Boolean(session && !isAdmin && clientUnreadMessageCount > 0);
@@ -6334,7 +7151,13 @@ function SiteHeader({
               target={isExternalLink(link.href) ? "_blank" : undefined}
               rel={isExternalLink(link.href) ? "noreferrer" : undefined}
               key={link.href}
-              aria-current={visibleActiveHref === link.href ? (isAuditPage ? "page" : "true") : undefined}
+              aria-current={
+                visibleActiveHref === link.href
+                  ? isAuditPage || pathname === socialMediaServicePath
+                    ? "page"
+                    : "true"
+                  : undefined
+              }
               onClick={(event) => {
                 if (link.label === "Audit gratuit") {
                   trackAuditCta(auditEvents.navClick, isAuditPage ? "audit_page_nav" : "global_nav");
@@ -6977,7 +7800,7 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <ServicePage servicePage={activeServicePage} onNavigate={navigate} />
+        <ServicePage servicePage={activeServicePage} onNavigate={navigate} onAuthOpen={() => setIsAuthOpen(true)} />
 
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}

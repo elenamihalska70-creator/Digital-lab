@@ -17,6 +17,7 @@ export const seoRoutes = [
   "/projects/assistant-reservation-ia",
   "/services/automatisation-pme",
   "/services/chatbot-ia",
+  "/services/gestion-reseaux-sociaux",
   "/services/creation-site-web",
   "/services/creation-site-web-besancon",
   "/mentions-legales",
