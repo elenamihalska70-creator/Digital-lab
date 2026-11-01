@@ -1,10 +1,17 @@
+import { isTrackingAllowed } from "./trackingEnvironment.js";
+
 const GA_MEASUREMENT_ID = "G-DPEYZ4C8BD";
 const GTAG_SCRIPT_ID = "google-analytics-gtag";
 
 const getPagePath = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
+// Without initialization window.gtag stays undefined, so trackPageView and
+// trackEvent below become no-ops outside production.
 export const initializeGoogleAnalytics = () => {
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined" ||
+    !isTrackingAllowed({ hostname: window.location.hostname, isProductionBuild: import.meta.env.PROD })
+  ) {
     return;
   }
 

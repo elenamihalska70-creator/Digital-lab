@@ -52,15 +52,21 @@ Les droits sur les captures Éclat Lifestyle n’étant pas confirmés, elles so
 
 Une version de l’image 2 sans photo de profil ni nom a été préparée hors dépôt, utilisable si les droits sont confirmés.
 
-**Attention :** les fichiers source `public/projects/publication1-3.png` sont présents dans le dépôt depuis le premier déploiement et ne font pas partie de ce LOT. `publication2.png` contient la photo de profil et le nom ; il est vraisemblablement accessible sur le site en production. Non modifié sans accord.
+Les fichiers source `public/projects/publication1-3.png` (dont `publication2.png`, avec photo de profil et nom), inutilisés, ont été supprimés de la branche avec accord du propriétaire (correctif final). Ils restent en ligne jusqu’au prochain déploiement et dans l’historique Git public (commit `6087bb5`) : historique non réécrit, sur instruction.
+
+Chaque exemple s’agrandit au clic dans une fenêtre modale native : fermeture par Échap, bouton « Fermer » ou clic/tap en dehors, focus rendu au déclencheur ; sur mobile, l’image s’affiche à 880 px dans une zone défilable.
 
 ## Formulaire et demandes
 
 Chaque CTA pré-sélectionne « Réseaux sociaux » ou « Reels » et joint un récapitulatif (formule, volumes, prix de lancement et ensuite, audit, réserve « estimation indicative ») au message enregistré et envoyé par e-mail. Sans pré-remplissage, le message est transmis inchangé. **Contrainte Supabase `project_type` en production : UNKNOWN** (projet non accessible depuis le compte connecté) ; base non modifiée.
 
+## Mesure d’audience
+
+`src/utils/trackingEnvironment.js` : GA4 et Clarity ne se chargent que dans un build de production servi depuis un hôte non local (localhost, 127.x, ::1, `.local`, adresses privées 10/172.16-31/192.168 exclus). Serveur de développement, prévisualisation locale et prérendu n’envoient plus rien. Conséquence en production : les balises GA4/Clarity ne sont plus figées dans le HTML prérendu (le prérendu tourne sur localhost) ; elles sont injectées au chargement de la page, avec les mêmes identifiants et événements. Les déploiements de prévisualisation Vercel (`*.vercel.app`) restent mesurés comme avant.
+
 ## Validations
 
-- Tests : `node --test src/utils/estimator.test.js src/config/taxMention.test.js` — 39/39. Estimateur de projets ponctuels : 810 combinaisons identiques à `5b710a1`.
+- Tests : `node --test src/utils/estimator.test.js src/config/taxMention.test.js src/utils/trackingEnvironment.test.js` — 42/42. Estimateur de projets ponctuels : 810 combinaisons identiques à `5b710a1`.
 - ESLint : 22 erreurs, 3 avertissements, identiques à `5b710a1`.
 - `npm run build` : réussi, 14 routes prérendues ; avertissement de bundle préexistant.
 - `npm run check:release` : sortie 1 (attendu).
@@ -75,6 +81,5 @@ Limites : pas d’appareil physique, ni Safari/Firefox ; pas de soumission réel
 2. Relecture juridique du projet de CGV et arbitrage des mentions `[À VALIDER]` (durée, résiliation, droits, paiement, consommateurs).
 3. Audit de départ : confirmer 150 €.
 4. Contrainte `project_type` en production.
-5. Fichier `public/projects/publication2.png` en production.
-6. Contenus supposés : bilans, point stratégique, contenu d’un Reel, exclusions, réseaux ; terme « tarif de référence » ou « prix standard ».
-7. P2 préexistant : lien « En savoir plus » des cartes services sans style.
+5. Contenus supposés : bilans, point stratégique, contenu d’un Reel, exclusions, réseaux ; terme « tarif de référence » ou « prix standard ».
+6. Historique Git public contenant `publication2.png` : conservé (pas de réécriture).

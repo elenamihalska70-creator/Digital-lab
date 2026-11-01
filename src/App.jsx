@@ -5244,8 +5244,58 @@ function SocialMediaConfigurator({ onRequest }) {
   );
 }
 
+// Enlarged view of an illustrative example. Native <dialog>: Escape, the close
+// button or a click/tap outside the image closes it; focus returns to the trigger.
+function SocialExampleDialog({ example, returnFocusTarget, onClose }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog.showModal();
+
+    return () => {
+      dialog.close();
+      returnFocusTarget?.focus({ preventScroll: true });
+    };
+  }, [returnFocusTarget]);
+
+  return (
+    <dialog
+      className="sm-zoom-dialog"
+      ref={dialogRef}
+      aria-labelledby="sm-zoom-title"
+      aria-describedby="sm-zoom-caption"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="sm-zoom-header">
+        <div>
+          <h2 id="sm-zoom-title">Exemple illustratif</h2>
+          <p id="sm-zoom-caption">{example.caption}</p>
+        </div>
+        <button className="sm-zoom-close" type="button" onClick={onClose} autoFocus>
+          Fermer <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div className="sm-zoom-frame" tabIndex={0} role="group" aria-label="Image agrandie, défilable">
+        <img alt={example.alt} decoding="async" height={example.height} src={example.image} width={example.width} />
+      </div>
+      <p className="sm-zoom-hint">Faites glisser pour explorer l’image.</p>
+    </dialog>
+  );
+}
+
 function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
   const [requestPrefill, setRequestPrefill] = useState(null);
+  // { index, trigger }: the trigger button receives focus back when the dialog closes.
+  const [zoomedExample, setZoomedExample] = useState(null);
 
   const handleNavigateTo = (target) => (event) => {
     event.preventDefault();
@@ -5450,27 +5500,45 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
             </p>
           </div>
           <div className="sm-examples-grid">
-            {socialMediaExamples.map((example) => {
+            {socialMediaExamples.map((example, index) => {
               const optimizedImage = getOptimizedImage(example.image);
 
               return (
                 <figure className="sm-example" key={example.image}>
-                  <img
-                    alt={example.alt}
-                    decoding="async"
-                    height={example.height}
-                    loading="lazy"
-                    sizes="(max-width: 900px) 92vw, 380px"
-                    src={optimizedImage.src}
-                    srcSet={optimizedImage.srcSet}
-                    width={example.width}
-                  />
+                  <button
+                    className="sm-example-zoom"
+                    type="button"
+                    aria-haspopup="dialog"
+                    aria-label={`Agrandir l’exemple : ${example.caption}`}
+                    onClick={(event) => setZoomedExample({ index, trigger: event.currentTarget })}
+                  >
+                    <img
+                      alt={example.alt}
+                      decoding="async"
+                      height={example.height}
+                      loading="lazy"
+                      sizes="(max-width: 900px) 92vw, 380px"
+                      src={optimizedImage.src}
+                      srcSet={optimizedImage.srcSet}
+                      width={example.width}
+                    />
+                    <span className="sm-example-zoom-hint" aria-hidden="true">
+                      ⤢ Agrandir
+                    </span>
+                  </button>
                   <figcaption>{example.caption}</figcaption>
                 </figure>
               );
             })}
           </div>
         </div>
+        {zoomedExample && (
+          <SocialExampleDialog
+            example={socialMediaExamples[zoomedExample.index]}
+            returnFocusTarget={zoomedExample.trigger}
+            onClose={() => setZoomedExample(null)}
+          />
+        )}
       </section>
 
       <section className="case-section sm-reels-section" id="reels" aria-labelledby="sm-reels-title">
