@@ -1,70 +1,95 @@
 # LOT SM-01 — Digital Lab Social Media — rapport
 
 Date : 1er novembre 2026. Base : `5b710a1`, branche dédiée `feat/sm-01-social-media`.
-Aucun push, aucun déploiement, aucune modification CRM/n8n. Publication soumise à validation explicite.
+Aucun merge, push ou déploiement ; aucune modification de base de données, CRM ou n8n.
+Revue technique : elle ne constitue pas une validation juridique.
 
-## Changements
+**Statut de publication : BLOQUÉ** — `npm run check:release` échoue tant que le régime TVA n’est pas confirmé.
+
+## Contenu du LOT
 
 | Fichier | Rôle |
 | --- | --- |
 | `src/utils/estimator.js` | Tarification récurrente séparée : formules, options mensuelles, frais unique, offre Reels. `getEstimatorResult` (projets ponctuels) inchangé |
-| `src/utils/estimator.test.js` | 6 tests ajoutés : régression chatbot, prix, Reels, absence de double comptage, frais unique, entrées invalides |
-| `src/App.jsx` | Page `/services/gestion-reseaux-sociaux`, carte service accueil FR/EN, lien de navigation, types de demande « Réseaux sociaux » et « Reels », pré-remplissage du formulaire de contact, JSON-LD |
-| `src/App.css` | Styles `sm-*` de la page et encadré « Offre sélectionnée » du formulaire |
+| `src/config/taxMention.js` | Configuration unique de la mention fiscale (`TAX_REGIME`, non confirmé = `null`) |
+| `scripts/check-release.mjs`, `package.json` | `npm run check:release` : contrôle avant publication, échoue tant qu’un réglage bloquant n’est pas confirmé |
+| `src/App.jsx` | Page `/services/gestion-reseaux-sociaux`, carte service accueil FR/EN, lien de navigation, types de demande « Réseaux sociaux » et « Reels », pré-remplissage du formulaire, JSON-LD |
+| `src/App.css` | Styles `sm-*`, encadré « Offre sélectionnée », retours à la ligne du « Message initial » dans les dossiers |
+| `src/utils/estimator.test.js`, `src/config/taxMention.test.js` | 10 tests ajoutés au total |
 | `seo-routes.config.js`, `vite.config.js` | Route ajoutée au sitemap et au prérendu (priorité 0.8, mensuelle) |
-| `public/projects/social/*.webp` | 3 captures de publications existantes du dépôt (`publication1-3.png`), converties en WebP 640/960/pleine taille |
+| `public/projects/social/*.webp` | 3 captures de publications existantes du dépôt (`publication1-3.png`), WebP 640/960/pleine taille |
 
-## Page et parcours
+## Offre
 
-Hero, bénéfices, inclus / non inclus, méthode en 4 étapes, 3 formules, configurateur, exemples visuels, section Reels distincte (`#reels`), FAQ (7 questions, identiques au JSON-LD `FAQPage`), formulaire de demande intégré.
+| Formule | Lancement | Ensuite | Publications | Réseaux | Reels inclus |
+| --- | --- | --- | --- | --- | --- |
+| Présence | 149 €/mois | 190 €/mois | 4 | 1 | 0 |
+| Visibilité | 299 €/mois | 390 €/mois | 8 | 2 | 0 |
+| Croissance | 549 €/mois | 690 €/mois | 12 | 2 | 2 |
 
-Chaque CTA (carte formule, configurateur, pack Reels, vidéo complexe) pré-sélectionne le type de demande et affiche un récapitulatif de l’offre. Ce récapitulatif est ajouté au message envoyé (table `contact_requests` et email `/api/send-contact-email`), même si le visiteur réécrit son message. Un message déjà saisi n’est pas écrasé lors d’un changement d’offre. Événements GA4 : `social_media_offer_select` et `social_media_request_submit` (paramètre `offer`).
+Lancement réservé aux 5 premiers clients, pendant les 3 premiers mois. Pas de prix barré, de pourcentage de remise, de compte à rebours ni de compteur de places. Reels : 69 € l’unité, 249 €/mois (4), 449 €/mois (8), vidéo complexe sur devis.
 
-## Hypothèses tarifaires à valider
+**Non approuvé** (dans `SOCIAL_MEDIA_ADDONS` et le texte de la page) : 20 €/publication supplémentaire, 40 €/mois par réseau supplémentaire, audit de départ 150 € ; bilans mensuels et point stratégique de 30 min ; contenu d’un Reel ; liste « non inclus » ; réseaux gérés.
 
-Les montants fournis sont repris tels quels : Présence 149/190 €, Visibilité 299/390 €, Croissance 549/690 €, Reels 69 € l’unité, 249 €/mois (4), 449 €/mois (8), vidéo complexe sur devis. Les éléments suivants sont **des hypothèses** à confirmer, tous centralisés dans `src/utils/estimator.js` ou en tête du bloc `LOT SM-01` de `App.jsx` :
+## Mention fiscale (bloquant)
 
-- Contenu des formules : aligné lors de la revue sur le tableau du propriétaire — Présence 4 publications / 1 réseau ; Visibilité 8 / 2 ; Croissance 12 / 2 / 2 Reels. Restent des hypothèses : bilans mensuels et point stratégique de 30 min (Croissance).
-- Options : 20 € par publication supplémentaire, 40 €/mois par réseau supplémentaire, audit de départ et mise en place 150 € (unique, optionnel).
-- Reels au-delà de la formule : combinaison exacte la moins chère d’unités et de packs (ex. 6 Reels = 249 + 2 × 69).
-- Contenu d’un Reel : script, montage 9:16 à partir des médias du client, sous-titres, musique libre de droits, une série de retouches.
-- Non inclus : budget publicitaire, tournage/shooting, modération en continu.
-- Réseaux gérés : Instagram, Facebook, LinkedIn, Google Business Profile.
+`TAX_REGIME = null` dans `src/config/taxMention.js` : le régime TVA n’est pas confirmé. Valeurs prévues : `HT`, `TTC`, `FRANCHISE` (« TVA non applicable, art. 293 B du CGI »).
 
-## Points juridiques à revoir avant publication
+Tant qu’il est `null`, aucun prix de l’offre n’affiche HT/TTC, aucune note fiscale n’apparaît et `npm run check:release` sort en erreur. Une fois défini, la même valeur alimente tous les prix de la page, la méta-description, le récapitulatif joint à la demande et une note sous les formules. Le contrôle n’est pas branché sur `npm run build` afin de ne pas bloquer les prévisualisations : il doit être lancé avant toute mise en production.
 
-- **TVA** : le statut n’est indiqué nulle part sur le site. Libellé provisoire « HT » dans une seule constante (`socialMediaTaxLabel`). À remplacer par TTC ou « TVA non applicable, art. 293 B du CGI » selon le régime.
-- **Tarif de lancement** : présenté comme « 149 € les 3 premiers mois, puis 190 € (tarif de référence) », sans prix barré ni pourcentage de remise. Les tarifs de référence n’ayant jamais été pratiqués, un prix barré pourrait être assimilé à une réduction trompeuse. Aucun compte à rebours ni compteur de places restantes.
-- **Durée d’engagement / résiliation** : non définies ; la FAQ renvoie au devis. À compléter dans des CGV.
-- **Méta-description** : mentionne « dès 149 €/mois » ; à mettre à jour à la fin de l’offre de lancement.
-- **Visuels Éclat Lifestyle** : captures de publications préparées, déjà présentes dans le dépôt depuis le premier déploiement mais jamais publiées. Confirmer le droit de les montrer (client réel ou projet de démonstration). Aucune statistique ni capture de performance n’est affichée. La capture 2 laisse apparaître partiellement le nom d’un compte personnel.
+Emplacements affichant un prix de l’offre : cartes formules, prix de référence, configurateur (montants, détail, aides), cartes Reels, comparaison par Reel, récapitulatif de demande, méta-description. Hors périmètre : l’estimateur de projets ponctuel existant affiche « à partir de X€ » sans mention.
+
+## Cohérence commerciale — forfaits et options
+
+Calculé avec `getSocialMediaEstimate` ; aucun prix modifié. Les exemples A et B sont des illustrations.
+
+| Formule | €/publication (lancement / ensuite) |
+| --- | --- |
+| Présence | 37,25 / 47,50 |
+| Visibilité | 37,38 / 48,75 |
+| Croissance | 45,75 / 57,50 (Reels inclus) |
+
+| Comparaison (options / forfait) | Actuel 20 €/40 € | Exemple A 30 €/50 € | Exemple B 45 €/60 € |
+| --- | --- | --- | --- |
+| Présence + 4 publ. + 1 réseau ≈ Visibilité — lancement | 269 / 299 ✗ | 319 / 299 ✓ | 389 / 299 ✓ |
+| — ensuite | 310 / 390 ✗ | 360 / 390 ✗ | 430 / 390 ✓ |
+| Visibilité + 4 publ. + 2 Reels ≈ Croissance — lancement | 517 / 549 ✗ | 557 / 549 ✓ | 617 / 549 ✓ |
+| — ensuite | 608 / 690 ✗ | 648 / 690 ✗ | 708 / 690 ✓ |
+| Présence + 8 publ. + 1 réseau + 2 Reels ≈ Croissance — lancement | 487 / 549 ✗ | 577 / 549 ✓ | 707 / 549 ✓ |
+| — ensuite | 528 / 690 ✗ | 618 / 690 ✗ | 748 / 690 ✓ |
+
+Seuils : publication supplémentaire ≥ 40,50 € ; à ce prix, réseau supplémentaire ≥ 38 €. En dessous, assembler une formule inférieure et des options coûte moins cher que la formule supérieure. Constat annexe : Visibilité ajoute un réseau sans baisser le prix par publication par rapport à Présence.
+
+## Formulaire et demandes
+
+Chaque CTA pré-sélectionne le type « Réseaux sociaux » ou « Reels » et affiche un récapitulatif (formule, volumes, prix de lancement et ensuite, audit, réserve « estimation indicative »). Le récapitulatif est ajouté au message envoyé, que le visiteur réécrive ou non son texte ; un message déjà saisi n’est pas écrasé lors d’un changement d’offre. Sans pré-remplissage (formulaires de l’accueil FR/EN), le message est transmis inchangé.
+
+`project_type` est un texte libre côté code (espaces client/admin, devis, PDF). **Contrainte Supabase en production : UNKNOWN** — le projet du site (`gcsqoluyfgkpwhtbpnzj`) n’est pas accessible depuis le compte Supabase connecté ; la base n’a pas été modifiée.
+
+## Visuels
+
+- Image 2 : photo de profil personnelle et haut d’un nom (« Elena Mikh… ») partiellement visibles sous l’encart Éclat Lifestyle.
+- Droits d’usage non confirmés pour les trois captures (marque, photos produits, avis « Clara » dans la légende).
+- Éléments d’interface Meta visibles autour des captures.
+- Rendu contrôlé à 1440, 1280, 1024, 768, 390 et 320 px ; cohérent avec le design existant (panneaux sombres, accents violets). Images non remplacées.
 
 ## Validations
 
-- Tests : `node --test src/utils/estimator.test.js` — 34/34 (28 existants + 6). Le résultat chatbot est identique à celui du moteur de `HEAD` (comparaison directe).
-- ESLint : 22 erreurs et 3 avertissements, identiques à `HEAD` ; aucun nouveau diagnostic.
-- `npm run build` : réussi, 14 routes prérendues dont la nouvelle (titre, canonical, `index, follow`, un seul `h1`, JSON-LD présent). Avertissement de bundle > 500 Ko préexistant.
-- `git diff --check` : réussi.
-- Chromium (Playwright, Supabase et email interceptés, aucune donnée réelle écrite) : 41 contrôles automatisés réussis, dont calculs du configurateur, absence de double comptage, pré-remplissage, payload base et email, événements GA4, navigation FR/EN, menu mobile, absence de débordement à 1440/1024/390/320 px, FAQ au clavier, aucune erreur JS. Un contrôle a échoué à cause d’une attente erronée dans le script (le récapitulatif correspondait bien à l’état du configurateur).
+- Tests : `node --test src/utils/estimator.test.js src/config/taxMention.test.js` — 38/38. Résultat chatbot identique au moteur de `5b710a1`.
+- ESLint : 22 erreurs, 3 avertissements, identiques à `5b710a1` ; aucun nouveau diagnostic.
+- `npm run build` : réussi, 14 routes prérendues. Avertissement de bundle > 500 Ko préexistant.
+- SEO prérendu : title, description, canonical, `og:url`, `index, follow`, 1 `h1`, 10 `h2` ; JSON-LD `Service`, `BreadcrumbList`, `FAQPage` (7 questions, identiques à la FAQ visible), absent des autres routes ; route présente dans `sitemap.xml`.
+- `npm run check:release` : sortie 1 (attendu tant que la TVA n’est pas confirmée).
+- Chromium (Supabase, email et analytics interceptés) : 55/55 contrôles — absence de mention fiscale, contenu des formules, configurateur, pré-remplissage, payloads base/email, régression des formulaires d’accueil FR/EN, événements GA4, navigation, clavier, débordement.
+- Fusion simulée avec le travail non commité de `main` (`git stash create` + `git merge-tree`, sans modification) : aucun conflit.
 
-Limites : pas d’appareil physique, ni Safari/Firefox. La soumission réelle vers Supabase n’a pas été testée ; `project_type` étant un texte libre dans le code, vérifier qu’aucune contrainte en base ne rejette « Réseaux sociaux » ou « Reels ».
+Limites : pas d’appareil physique, ni Safari/Firefox ; pas de soumission réelle vers Supabase.
 
-## Revue et durcissement (1er novembre 2026)
+## Décisions requises avant publication
 
-Revue technique ; elle ne constitue pas une validation juridique.
-
-### Corrections effectuées
-
-| Fichier | Correction |
-| --- | --- |
-| `src/utils/estimator.js` | Contenu des formules aligné sur le tableau validé : 4/1/0, 8/2/0, 12/2/2 (publications/réseaux/Reels) |
-| `src/App.jsx` | État initial du configurateur à zéro (sinon Visibilité ajoutait un Reel payant par défaut) ; textes d’audience des formules ; mention fiscale unique `socialMediaTaxLabel` en tête de fichier, utilisée par tous les prix de la page, la méta-description et le récapitulatif ; `aria-live` limité aux prix ; libellé accessible du storyboard Reels |
-| `src/App.css` | Retours à la ligne conservés dans « Message initial » des dossiers client/admin (le récapitulatif d’offre s’affichait sur une ligne) |
-| `src/utils/estimator.test.js` | Contenu des formules, prix nu de chaque formule, changement de formule |
-
-### Points ouverts
-
-- **P1 — cohérence des options** : avec 20 €/publication et 40 €/réseau, Présence + 4 publications + 1 réseau = 269 € (310 € ensuite) < Visibilité 299 € (390 €) ; Visibilité + 4 publications + 2 Reels = 517 € (608 €) < Croissance 549 € (690 €). Les options rendent les formules supérieures moins intéressantes. Exemple de grille cohérente : 45 €/publication et 60 €/réseau. Décision propriétaire.
-- **P1 — image 2** : photo de profil personnelle et haut d’un nom (« Elena Mikh… ») partiellement visibles sous l’encart Éclat Lifestyle. Droits d’usage de la marque et des photos à confirmer pour les trois captures.
-- **P1 — contrainte base** : le projet Supabase du site (`gcsqoluyfgkpwhtbpnzj`) n’est pas accessible depuis le compte connecté ; acceptation de « Réseaux sociaux » et « Reels » dans `project_type` non vérifiée en production.
-- **P2** : estimateur ponctuel existant sans mention HT/TTC ; cartes de formules sur une colonne entre 600 et 900 px ; éléments d’interface Meta visibles autour des captures ; pas de lien vers la page depuis les autres pages service.
+1. Régime TVA → `TAX_REGIME`.
+2. Prix des options (seuils ci-dessus) et audit de départ.
+3. Formulations « tarif de référence », renouvellement après 3 mois, résiliation, durée d’engagement (CGV).
+4. Images : droits d’usage ; recadrage, floutage ou remplacement de l’image 2.
+5. Contrainte `project_type` en production.
+6. Contenus supposés : bilans, point stratégique, contenu d’un Reel, exclusions, réseaux.

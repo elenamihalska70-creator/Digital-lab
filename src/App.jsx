@@ -28,15 +28,17 @@ import {
   SOCIAL_MEDIA_MAX_PLATFORMS,
   SOCIAL_MEDIA_PLANS,
 } from "./utils/estimator";
+import { getTaxMention } from "./config/taxMention";
 
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
 const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
-// Single tax mention for every social media price (page, meta description,
-// request summary). Unconfirmed: the owner must choose HT, TTC or
-// "TVA non applicable, art. 293 B du CGI" before publishing.
-const socialMediaTaxLabel = "HT";
+// Tax mention for every social media price (page, meta description, request
+// summary). Configured only in config/taxMention.js; while the VAT regime is
+// unconfirmed, prices carry no mention and `npm run check:release` fails.
+const socialMediaTax = getTaxMention();
+const withTaxMention = (price) => (socialMediaTax.short ? `${price} ${socialMediaTax.short}` : price);
 const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl;
@@ -1107,7 +1109,7 @@ const servicePages = [
     customPage: "social-media",
     title: "Gestion des réseaux sociaux pour TPE, indépendants et associations",
     metaTitle: "Gestion des réseaux sociaux pour TPE et indépendants : abonnement mensuel | Digital Lab",
-    metaDescription: `Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. Tarif de lancement dès ${SOCIAL_MEDIA_PLANS.presence.launchPrice} € ${socialMediaTaxLabel}/mois, Reels dès ${REELS_PACKS[0].price} € ${socialMediaTaxLabel}.`,
+    metaDescription: `Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. Tarif de lancement dès ${withTaxMention(`${SOCIAL_MEDIA_PLANS.presence.launchPrice} €`)}/mois, Reels dès ${withTaxMention(`${REELS_PACKS[0].price} €`)}.`,
   },
 ];
 
@@ -4914,11 +4916,11 @@ function ServicePage({ servicePage, onNavigate, onAuthOpen }) {
 }
 
 // LOT SM-01 — social media subscription page. Prices come from
-// utils/estimator.js; the tax mention is socialMediaTaxLabel (top of file).
+// utils/estimator.js; the tax mention comes from socialMediaTax (top of file).
 const socialMediaRequestAnchor = "demande-reseaux-sociaux";
 
 const formatEuros = (amount) => `${new Intl.NumberFormat("fr-FR").format(amount)}\u00a0€`;
-const formatTaxedPrice = (amount) => `${formatEuros(amount)} ${socialMediaTaxLabel}`;
+const formatTaxedPrice = (amount) => withTaxMention(formatEuros(amount));
 const formatMonthlyPrice = (amount) => `${formatTaxedPrice(amount)}/mois`;
 const pluralize = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`;
 
@@ -5389,6 +5391,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
               Tarif de lancement réservé aux {SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients de l’offre, appliqué
               pendant les {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le tarif de référence s’applique ensuite.
             </p>
+            {socialMediaTax.note && <p className="sm-tax-note">{socialMediaTax.note}</p>}
           </div>
 
           <div className="sm-pricing-grid">
@@ -5404,7 +5407,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
                 <p className="sm-plan-price">
                   <strong>{formatEuros(plan.launchPrice)}</strong>
                   <span>
-                    {socialMediaTaxLabel}/mois
+                    {socialMediaTax.short}/mois
                     <small>les {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois</small>
                   </span>
                 </p>

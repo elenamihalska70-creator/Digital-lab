@@ -11783,3 +11783,9 @@ html {
 .project-message-card p {
   white-space: pre-line;
 }
+
+.sm-section-heading p.sm-tax-note {
+  margin-top: 10px;
+  color: #cfc4f5;
+  font-size: 15px;
+}
