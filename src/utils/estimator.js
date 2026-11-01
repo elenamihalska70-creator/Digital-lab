@@ -155,7 +155,8 @@ export function getEstimatorResult(answers) {
 
 // Recurring social media subscriptions (LOT SM-01). Kept apart from
 // getEstimatorResult so monthly fees never mix with one-off project budgets.
-// Every amount below is provisional and must be validated by the owner.
+// Plan, add-on and Reels prices set by the owner (LOT SM-02); the setup audit
+// stays provisional.
 export const SOCIAL_MEDIA_LAUNCH_MONTHS = 3;
 export const SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT = 5;
 
@@ -167,9 +168,11 @@ export const SOCIAL_MEDIA_PLANS = {
   croissance: { name: "Croissance", launchPrice: 549, referencePrice: 690, posts: 12, platforms: 2, reels: 2 },
 };
 
+// Add-ons stay above the per-unit cost of the next plan, so assembling a lower
+// plan with options never undercuts a higher plan.
 export const SOCIAL_MEDIA_ADDONS = {
-  extraPost: 20,
-  extraPlatform: 40,
+  extraPost: 45,
+  extraPlatform: 60,
   setupAudit: 150,
 };
 

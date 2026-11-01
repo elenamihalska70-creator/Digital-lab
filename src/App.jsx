@@ -173,16 +173,16 @@ const services = [
     examples:
       "Gestion mensuelle Instagram, Facebook, LinkedIn ou Google Business Profile, création de visuels, rédaction de légendes, Reels et vidéos courtes, bilan mensuel.",
     images: [
-      "/projects/social/social-publication-1.webp",
-      "/projects/social/social-publication-2.webp",
-      "/projects/social/social-publication-3.webp",
+      "/projects/social/social-example-1.webp",
+      "/projects/social/social-example-2.webp",
+      "/projects/social/social-example-3.webp",
     ],
     gallery: {
       type: "carousel",
       images: [
-        "/projects/social/social-publication-1.webp",
-        "/projects/social/social-publication-2.webp",
-        "/projects/social/social-publication-3.webp",
+        "/projects/social/social-example-1.webp",
+        "/projects/social/social-example-2.webp",
+        "/projects/social/social-example-3.webp",
       ],
     },
     transformation: {
@@ -1159,16 +1159,12 @@ const optimizedImages = {
   },
 };
 
-// Social media post examples: full-size width differs per screenshot.
-[
-  [1, 1088],
-  [2, 1100],
-  [3, 1122],
-].forEach(([index, fullWidth]) => {
-  const base = `/projects/social/social-publication-${index}`;
+// Original illustrative social media examples (fictional brand), 1100 × 720.
+[1, 2, 3].forEach((index) => {
+  const base = `/projects/social/social-example-${index}`;
   optimizedImages[`${base}.webp`] = {
     src: `${base}.webp`,
-    srcSet: `${base}-640.webp 640w, ${base}-960.webp 960w, ${base}.webp ${fullWidth}w`,
+    srcSet: `${base}-640.webp 640w, ${base}-960.webp 960w, ${base}.webp 1100w`,
   };
 });
 
@@ -5006,27 +5002,29 @@ const socialMediaWorkflow = [
   },
 ];
 
+// Original illustrations made for this page with a fictional brand: they show
+// the workflow, never client results.
 const socialMediaExamples = [
   {
-    image: "/projects/social/social-publication-1.webp",
-    width: 1088,
-    height: 714,
-    alt: "Écran de création d’une publication Instagram en carrousel pour la marque Éclat Lifestyle : photo d’une lampe en bois et papier, légende sur la fabrication artisanale",
-    caption: "Carrousel produit avec légende rédigée, prêt pour validation.",
-  },
-  {
-    image: "/projects/social/social-publication-2.webp",
+    image: "/projects/social/social-example-1.webp",
     width: 1100,
-    height: 730,
-    alt: "Écran de création d’une publication pour Éclat Lifestyle : photo d’un coussin en lin et légende mettant en avant l’avis d’une cliente",
-    caption: "Publication autour d’un avis client, au ton de la marque.",
+    height: 720,
+    alt: "Exemple illustratif : carrousel « 3 idées pour bien préparer votre visite » pour une marque fictive, avec sa légende rédigée, ses hashtags et le statut « En attente de votre validation »",
+    caption: "Une publication préparée : visuels, légende et hashtags, en attente de votre validation.",
   },
   {
-    image: "/projects/social/social-publication-3.webp",
-    width: 1122,
-    height: 706,
-    alt: "Écran de préparation d’une publication sponsorisée pour Éclat Lifestyle : salon aux tons verts et ocre, ciblage, budget et format indiqués dans la légende",
-    caption: "Préparation d’une campagne : audience, format et budget définis avant lancement.",
+    image: "/projects/social/social-example-2.webp",
+    width: 1100,
+    height: 720,
+    alt: "Exemple illustratif : calendrier éditorial d’un mois pour la formule Visibilité, quatre semaines de publications réparties entre Instagram et Facebook",
+    caption: "Le calendrier du mois, validé avec vous avant toute création.",
+  },
+  {
+    image: "/projects/social/social-example-3.webp",
+    width: 1100,
+    height: 720,
+    alt: "Exemple illustratif : publication annonçant des portes ouvertes, avec un écran de validation proposant « Valider » ou « Demander une modification »",
+    caption: "Chaque contenu attend votre accord ; vous pouvez demander une modification.",
   },
 ];
 
@@ -5315,7 +5313,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
                 srcSet={getOptimizedImage(socialMediaExamples[0].image).srcSet}
                 width={socialMediaExamples[0].width}
               />
-              <figcaption>Exemple de publication préparée par Digital Lab, avant validation.</figcaption>
+              <figcaption>Exemple illustratif, marque fictive : une publication prête à être validée.</figcaption>
             </figure>
           </div>
         </div>
@@ -5446,7 +5444,10 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
           <div className="sm-section-heading">
             <span>Exemples</span>
             <h2 id="sm-examples-title">Des publications préparées avec soin</h2>
-            <p>Captures de publications préparées par Digital Lab avant validation. Aucune statistique n’est présentée ici.</p>
+            <p>
+              Exemples illustratifs créés pour cette page, avec une marque fictive. Ils montrent le déroulé du service, pas
+              des résultats clients.
+            </p>
           </div>
           <div className="sm-examples-grid">
             {socialMediaExamples.map((example) => {

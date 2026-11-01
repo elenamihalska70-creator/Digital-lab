@@ -139,6 +139,7 @@ test("Delivery-time logic is preserved except for fully excluded duplicate featu
 import {
   getReelsPrice,
   getSocialMediaEstimate,
+  SOCIAL_MEDIA_ADDONS,
   SOCIAL_MEDIA_PLANS,
 } from "./estimator.js";
 
@@ -197,17 +198,38 @@ test("Included posts, platforms and Reels are never charged twice", () => {
 
 test("Switching plan keeps the requested totals and recomputes only the surplus", () => {
   const options = { platforms: 3, reels: 2, extraPosts: 4 };
-  assert.deepEqual(getSocialMediaEstimate({ ...options, plan: "presence" }).addons, { posts: 80, platforms: 80, reels: 138 });
-  assert.deepEqual(getSocialMediaEstimate({ ...options, plan: "croissance" }).addons, { posts: 80, platforms: 40, reels: 0 });
+  assert.deepEqual(getSocialMediaEstimate({ ...options, plan: "presence" }).addons, { posts: 180, platforms: 120, reels: 138 });
+  assert.deepEqual(getSocialMediaEstimate({ ...options, plan: "croissance" }).addons, { posts: 180, platforms: 60, reels: 0 });
 });
 
 test("Add-ons are monthly and the setup audit is one-time only", () => {
+  assert.deepEqual(SOCIAL_MEDIA_ADDONS, { extraPost: 45, extraPlatform: 60, setupAudit: 150 });
   const estimate = getSocialMediaEstimate({ plan: "presence", extraPosts: 4, platforms: 3, reels: 4, setupAudit: true });
-  assert.deepEqual(estimate.addons, { posts: 80, platforms: 80, reels: 249 });
-  assert.equal(estimate.launchMonthly, 149 + 80 + 80 + 249);
-  assert.equal(estimate.referenceMonthly, 190 + 80 + 80 + 249);
+  assert.deepEqual(estimate.addons, { posts: 180, platforms: 120, reels: 249 });
+  assert.equal(estimate.launchMonthly, 149 + 180 + 120 + 249);
+  assert.equal(estimate.referenceMonthly, 190 + 180 + 120 + 249);
   assert.equal(estimate.oneTime, 150);
   assert.deepEqual(estimate.totals, { posts: 8, platforms: 3, reels: 4 });
+  // The one-time audit never changes the monthly amounts.
+  const withoutAudit = getSocialMediaEstimate({ plan: "presence", extraPosts: 4, platforms: 3, reels: 4 });
+  assert.equal(withoutAudit.launchMonthly, estimate.launchMonthly);
+  assert.equal(withoutAudit.oneTime, 0);
+});
+
+test("A lower plan plus add-ons never costs less than the higher plan", () => {
+  const plans = Object.entries(SOCIAL_MEDIA_PLANS);
+  for (const [lowKey, low] of plans) {
+    for (const [, high] of plans.filter(([, plan]) => plan.launchPrice > low.launchPrice)) {
+      const equivalent = getSocialMediaEstimate({
+        plan: lowKey,
+        extraPosts: high.posts - low.posts,
+        platforms: high.platforms,
+        reels: high.reels,
+      });
+      assert.ok(equivalent.launchMonthly >= high.launchPrice, `${low.name} → ${high.name} (lancement)`);
+      assert.ok(equivalent.referenceMonthly >= high.referencePrice, `${low.name} → ${high.name} (ensuite)`);
+    }
+  }
 });
 
 test("Invalid social media inputs fall back safely", () => {
