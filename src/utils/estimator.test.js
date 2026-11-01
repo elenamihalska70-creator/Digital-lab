@@ -173,15 +173,32 @@ test("Reels pricing uses the cheapest exact combination of units and packs", () 
   assert.equal(getReelsPrice(-2), 0);
 });
 
+test("Plan contents match the owner-approved offer table", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(SOCIAL_MEDIA_PLANS).map(([key, plan]) => [key, [plan.posts, plan.platforms, plan.reels]])),
+    { presence: [4, 1, 0], visibilite: [8, 2, 0], croissance: [12, 2, 2] },
+  );
+});
+
 test("Included posts, platforms and Reels are never charged twice", () => {
-  const croissance = getSocialMediaEstimate({ plan: "croissance", platforms: 3, reels: 2 });
+  const croissance = getSocialMediaEstimate({ plan: "croissance", platforms: 2, reels: 2 });
   assert.equal(croissance.launchMonthly, 549);
   assert.deepEqual(croissance.addons, { posts: 0, platforms: 0, reels: 0 });
   // Asking for fewer than included keeps the plan price, without a discount.
   assert.equal(getSocialMediaEstimate({ plan: "croissance", platforms: 1, reels: 0 }).launchMonthly, 549);
   // Only the Reels beyond the two included are charged: 4 extra = one pack.
   assert.equal(getSocialMediaEstimate({ plan: "croissance", reels: 6 }).addons.reels, 249);
-  assert.equal(getSocialMediaEstimate({ plan: "visibilite", reels: 1 }).addons.reels, 0);
+  assert.equal(getSocialMediaEstimate({ plan: "visibilite", reels: 1 }).addons.reels, 69);
+  // The configurator starts at zero: every plan then shows its bare price.
+  for (const [plan, { launchPrice }] of Object.entries(SOCIAL_MEDIA_PLANS)) {
+    assert.equal(getSocialMediaEstimate({ plan, platforms: 0, extraPosts: 0, reels: 0 }).launchMonthly, launchPrice);
+  }
+});
+
+test("Switching plan keeps the requested totals and recomputes only the surplus", () => {
+  const options = { platforms: 3, reels: 2, extraPosts: 4 };
+  assert.deepEqual(getSocialMediaEstimate({ ...options, plan: "presence" }).addons, { posts: 80, platforms: 80, reels: 138 });
+  assert.deepEqual(getSocialMediaEstimate({ ...options, plan: "croissance" }).addons, { posts: 80, platforms: 40, reels: 0 });
 });
 
 test("Add-ons are monthly and the setup audit is one-time only", () => {
@@ -190,7 +207,7 @@ test("Add-ons are monthly and the setup audit is one-time only", () => {
   assert.equal(estimate.launchMonthly, 149 + 80 + 80 + 249);
   assert.equal(estimate.referenceMonthly, 190 + 80 + 80 + 249);
   assert.equal(estimate.oneTime, 150);
-  assert.deepEqual(estimate.totals, { posts: 12, platforms: 3, reels: 4 });
+  assert.deepEqual(estimate.totals, { posts: 8, platforms: 3, reels: 4 });
 });
 
 test("Invalid social media inputs fall back safely", () => {
@@ -198,5 +215,5 @@ test("Invalid social media inputs fall back safely", () => {
   assert.equal(estimate.plan, "visibilite");
   assert.equal(estimate.totals.platforms, 4);
   assert.equal(estimate.added.posts, 0);
-  assert.equal(estimate.totals.reels, 1);
+  assert.equal(estimate.totals.reels, 0);
 });

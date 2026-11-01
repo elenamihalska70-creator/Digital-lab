@@ -11778,3 +11778,8 @@ html {
   flex: 1;
   align-content: space-evenly;
 }
+
+/* Keep line breaks of the initial request message (e.g. the selected offer summary). */
+.project-message-card p {
+  white-space: pre-line;
+}

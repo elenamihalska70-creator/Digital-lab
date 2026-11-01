@@ -162,9 +162,9 @@ export const SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT = 5;
 // Each plan lists what its monthly price already covers, so add-ons are only
 // charged beyond these quantities.
 export const SOCIAL_MEDIA_PLANS = {
-  presence: { name: "Présence", launchPrice: 149, referencePrice: 190, posts: 8, platforms: 1, reels: 0 },
-  visibilite: { name: "Visibilité", launchPrice: 299, referencePrice: 390, posts: 12, platforms: 2, reels: 1 },
-  croissance: { name: "Croissance", launchPrice: 549, referencePrice: 690, posts: 16, platforms: 3, reels: 2 },
+  presence: { name: "Présence", launchPrice: 149, referencePrice: 190, posts: 4, platforms: 1, reels: 0 },
+  visibilite: { name: "Visibilité", launchPrice: 299, referencePrice: 390, posts: 8, platforms: 2, reels: 0 },
+  croissance: { name: "Croissance", launchPrice: 549, referencePrice: 690, posts: 12, platforms: 2, reels: 2 },
 };
 
 export const SOCIAL_MEDIA_ADDONS = {

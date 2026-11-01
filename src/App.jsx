@@ -33,6 +33,10 @@ const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
 const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
+// Single tax mention for every social media price (page, meta description,
+// request summary). Unconfirmed: the owner must choose HT, TTC or
+// "TVA non applicable, art. 293 B du CGI" before publishing.
+const socialMediaTaxLabel = "HT";
 const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl;
@@ -1103,8 +1107,7 @@ const servicePages = [
     customPage: "social-media",
     title: "Gestion des réseaux sociaux pour TPE, indépendants et associations",
     metaTitle: "Gestion des réseaux sociaux pour TPE et indépendants : abonnement mensuel | Digital Lab",
-    metaDescription:
-      "Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. Tarif de lancement dès 149 €/mois, Reels dès 69 €.",
+    metaDescription: `Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. Tarif de lancement dès ${SOCIAL_MEDIA_PLANS.presence.launchPrice} € ${socialMediaTaxLabel}/mois, Reels dès ${REELS_PACKS[0].price} € ${socialMediaTaxLabel}.`,
   },
 ];
 
@@ -4911,13 +4914,12 @@ function ServicePage({ servicePage, onNavigate, onAuthOpen }) {
 }
 
 // LOT SM-01 — social media subscription page. Prices come from
-// utils/estimator.js; the tax label must be confirmed by the owner before
-// publishing (HT, TTC or "TVA non applicable, art. 293 B du CGI").
-const socialMediaTaxLabel = "HT";
+// utils/estimator.js; the tax mention is socialMediaTaxLabel (top of file).
 const socialMediaRequestAnchor = "demande-reseaux-sociaux";
 
 const formatEuros = (amount) => `${new Intl.NumberFormat("fr-FR").format(amount)}\u00a0€`;
-const formatMonthlyPrice = (amount) => `${formatEuros(amount)} ${socialMediaTaxLabel}/mois`;
+const formatTaxedPrice = (amount) => `${formatEuros(amount)} ${socialMediaTaxLabel}`;
+const formatMonthlyPrice = (amount) => `${formatTaxedPrice(amount)}/mois`;
 const pluralize = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`;
 
 const socialMediaPlanCopy = {
@@ -4926,12 +4928,12 @@ const socialMediaPlanCopy = {
     extras: ["Bilan mensuel synthétique"],
   },
   visibilite: {
-    audience: "Pour publier plus souvent sur deux réseaux et commencer la vidéo courte.",
+    audience: "Pour publier plus souvent et toucher votre public sur deux réseaux.",
     extras: ["Bilan mensuel avec recommandations"],
     recommended: true,
   },
   croissance: {
-    audience: "Pour une présence soutenue sur plusieurs réseaux, avec plus de vidéo.",
+    audience: "Pour une présence soutenue sur deux réseaux, avec des Reels chaque mois.",
     extras: ["Bilan mensuel et point stratégique de 30 minutes"],
   },
 };
@@ -5029,7 +5031,7 @@ const socialMediaExamples = [
 const reelsOffers = REELS_PACKS.map((pack) => ({
   ...pack,
   title: pack.quantity === 1 ? "1 Reel à l’unité" : `Pack ${pack.quantity} Reels`,
-  priceLabel: pack.quantity === 1 ? `${formatEuros(pack.price)} ${socialMediaTaxLabel}` : formatMonthlyPrice(pack.price),
+  priceLabel: pack.quantity === 1 ? `${formatTaxedPrice(pack.price)}` : formatMonthlyPrice(pack.price),
   note: pack.quantity === 1 ? "Idéal pour tester ou annoncer un événement." : `Soit ${pack.quantity} vidéos courtes livrées chaque mois.`,
 }));
 
@@ -5083,7 +5085,7 @@ const buildSocialMediaRequest = (estimate) => {
     `${estimate.totals.posts} publications/mois · ${pluralize(estimate.totals.platforms, "réseau", "réseaux")} · ${pluralize(estimate.totals.reels, "Reel", "Reels")}/mois`,
     `Tarif de lancement : ${formatMonthlyPrice(estimate.launchMonthly)} pendant ${estimate.launchMonths} mois (${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients), puis ${formatMonthlyPrice(estimate.referenceMonthly)}`,
     estimate.oneTime
-      ? `Audit de départ et mise en place : ${formatEuros(estimate.oneTime)} ${socialMediaTaxLabel}, une seule fois`
+      ? `Audit de départ et mise en place : ${formatTaxedPrice(estimate.oneTime)}, une seule fois`
       : "Sans audit de départ",
     "Estimation indicative, à confirmer par devis.",
   ];
@@ -5104,7 +5106,7 @@ const buildReelsRequest = (pack) =>
         message: "Bonjour, je souhaite commander des Reels. Mon activité et mon idée : ",
         summary: [
           `Offre Reels — ${pack.quantity === 1 ? "1 Reel à l’unité" : `pack ${pack.quantity} Reels par mois`}`,
-          `Prix : ${pack.quantity === 1 ? `${formatEuros(pack.price)} ${socialMediaTaxLabel}` : formatMonthlyPrice(pack.price)}`,
+          `Prix : ${pack.quantity === 1 ? `${formatTaxedPrice(pack.price)}` : formatMonthlyPrice(pack.price)}`,
           "Estimation indicative, à confirmer par devis.",
         ].join("\n"),
       }
@@ -5116,7 +5118,8 @@ const buildReelsRequest = (pack) =>
       };
 
 function SocialMediaConfigurator({ onRequest }) {
-  const [options, setOptions] = useState({ plan: "visibilite", platforms: 2, extraPosts: 0, reels: 1, setupAudit: false });
+  // Platforms and Reels start at zero: the estimate raises them to what the plan includes.
+  const [options, setOptions] = useState({ plan: "visibilite", platforms: 0, extraPosts: 0, reels: 0, setupAudit: false });
   const estimate = getSocialMediaEstimate(options);
   const included = estimate.included;
   const updateOption = (key, value) => setOptions((currentOptions) => ({ ...currentOptions, [key]: value }));
@@ -5141,11 +5144,11 @@ function SocialMediaConfigurator({ onRequest }) {
   );
   const reelValues = [0, 1, 2, 4, 8].filter((value) => value >= included.reels);
   const addonLines = [
-    estimate.added.posts > 0 && `${estimate.added.posts} publications supplémentaires : +${formatEuros(estimate.addons.posts)}`,
+    estimate.added.posts > 0 && `${estimate.added.posts} publications supplémentaires : +${formatTaxedPrice(estimate.addons.posts)}`,
     estimate.added.platforms > 0 &&
-      `${pluralize(estimate.added.platforms, "réseau supplémentaire", "réseaux supplémentaires")} : +${formatEuros(estimate.addons.platforms)}`,
+      `${pluralize(estimate.added.platforms, "réseau supplémentaire", "réseaux supplémentaires")} : +${formatTaxedPrice(estimate.addons.platforms)}`,
     estimate.added.reels > 0 &&
-      `${pluralize(estimate.added.reels, "Reel supplémentaire", "Reels supplémentaires")} : +${formatEuros(estimate.addons.reels)}`,
+      `${pluralize(estimate.added.reels, "Reel supplémentaire", "Reels supplémentaires")} : +${formatTaxedPrice(estimate.addons.reels)}`,
   ].filter(Boolean);
 
   return (
@@ -5164,13 +5167,13 @@ function SocialMediaConfigurator({ onRequest }) {
               (value) => (value === included.platforms ? `${value} (inclus)` : `${value}`),
               estimate.totals.platforms,
             )}
-            <p className="sm-config-hint">+{formatEuros(SOCIAL_MEDIA_ADDONS.extraPlatform)} par mois et par réseau au-delà de la formule.</p>
+            <p className="sm-config-hint">+{formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPlatform)} par mois et par réseau au-delà de la formule.</p>
           </div>
           <div className="estimator-question">
             <h3 id="sm-config-extraPosts">Publications supplémentaires par mois</h3>
             {choose("extraPosts", [0, 4, 8], (value) => (value ? `+${value}` : "Aucune"), estimate.added.posts)}
             <p className="sm-config-hint">
-              {included.posts} publications incluses, puis {formatEuros(SOCIAL_MEDIA_ADDONS.extraPost)} par publication.
+              {included.posts} publications incluses, puis {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost)} par publication.
             </p>
           </div>
           <div className="estimator-question">
@@ -5193,7 +5196,7 @@ function SocialMediaConfigurator({ onRequest }) {
                   onChange={(event) => updateOption("setupAudit", event.target.checked)}
                 />
                 <span>
-                  Audit de départ et mise en place des comptes — {formatEuros(SOCIAL_MEDIA_ADDONS.setupAudit)} {socialMediaTaxLabel},
+                  Audit de départ et mise en place des comptes — {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.setupAudit)},
                   une seule fois
                 </span>
               </label>
@@ -5201,10 +5204,10 @@ function SocialMediaConfigurator({ onRequest }) {
           </div>
         </div>
 
-        <aside className="estimator-result sm-config-result" aria-live="polite">
+        <aside className="estimator-result sm-config-result">
           <span>Estimation mensuelle</span>
           <h3>Formule {estimate.planName}</h3>
-          <div className="result-metrics">
+          <div className="result-metrics" aria-live="polite">
             <div>
               <small>Les {estimate.launchMonths} premiers mois</small>
               <strong>{formatMonthlyPrice(estimate.launchMonthly)}</strong>
@@ -5224,7 +5227,7 @@ function SocialMediaConfigurator({ onRequest }) {
             ))}
             <li>
               {estimate.oneTime
-                ? `Frais unique de mise en place : ${formatEuros(estimate.oneTime)} ${socialMediaTaxLabel}`
+                ? `Frais unique de mise en place : ${formatTaxedPrice(estimate.oneTime)}`
                 : "Aucun frais de mise en place"}
             </li>
           </ul>
@@ -5482,8 +5485,10 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
               </ul>
             </div>
 
-            <div className="sm-reel-storyboard" aria-label="Structure type d’un Reel">
-              <span className="sm-reel-label">Structure type d’un Reel</span>
+            <div className="sm-reel-storyboard" role="group" aria-labelledby="sm-reel-label">
+              <span className="sm-reel-label" id="sm-reel-label">
+                Structure type d’un Reel
+              </span>
               <ol>
                 <li>
                   <strong>0–3 s</strong> Accroche
@@ -5508,8 +5513,8 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
                 <p className="sm-plan-audience">{pack.note}</p>
                 {pack.quantity > 1 && (
                   <p className="sm-plan-reference">
-                    Soit environ {formatEuros(Math.round(pack.price / pack.quantity))} par Reel, contre{" "}
-                    {formatEuros(getReelsPrice(1))} à l’unité
+                    Soit environ {formatTaxedPrice(Math.round(pack.price / pack.quantity))} par Reel, contre{" "}
+                    {formatTaxedPrice(getReelsPrice(1))} à l’unité
                   </p>
                 )}
                 <button className="btn btn-secondary" type="button" onClick={() => requestOffer(buildReelsRequest(pack), "reels_card")}>
