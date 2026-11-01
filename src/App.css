@@ -11789,3 +11789,27 @@ html {
   color: #cfc4f5;
   font-size: 15px;
 }
+
+/* "En savoir plus" link on homepage service cards (style only, markup unchanged). */
+.solution-detail-copy .service-learn-more {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 20px;
+  color: #c7a8ff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 220ms ease;
+}
+
+.solution-detail-copy .service-learn-more:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.solution-detail-copy .service-learn-more:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid #c7a8ff;
+  outline-offset: 4px;
+}
