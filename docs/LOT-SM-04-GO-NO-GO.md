@@ -13,7 +13,7 @@ Revue technique, sans validation juridique. Aucun merge, push, déploiement ni �
 | B1 | Régime TVA non confirmé | `TAX_REGIME = null`, `npm run check:release` sort en 1 | Fournir le justificatif, renseigner `TAX_REGIME`, relancer `check:release` (sortie 0) |
 | B2 | Contrainte `contact_requests.project_type` inconnue | `CREATE TABLE` absent du dépôt et de son historique ; projet Supabase `gcsqoluyfgkpwhtbpnzj` absent du compte connecté ; schéma PostgREST : 401 « Invalid API key » avec la clé `anon` du `.env` local | Exécuter les requêtes en lecture seule ci-dessous ; confirmer que la clé `anon` du `.env` correspond à celle de Vercel |
 | B3 | Parcours réel de devis non vérifié | Testé uniquement avec base et e-mail simulés ; un échec d’e-mail n’est jamais signalé au visiteur (comportement existant) | Protocole de test réel ci-dessous, après approbation |
-| B4 | `main` n’est pas une base propre | 28 fichiers modifiés et 13 fichiers non suivis de l’autre LOT, non commités | Commiter l’autre LOT sur sa propre branche, puis suivre l’ordre de fusion ci-dessous |
+| B4 | `main` n’est pas une base propre | 28 entrées non commitées de l’autre LOT : 15 fichiers suivis (7 modifiés, 8 supprimés) et 13 fichiers non suivis | Commiter l’autre LOT sur sa propre branche, puis suivre l’ordre de fusion ci-dessous |
 
 Blocage commercial (avant le premier client signé, pas avant la mise en ligne de la page) : CGV non validées (section 5).
 
