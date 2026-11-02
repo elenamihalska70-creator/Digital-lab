@@ -87,21 +87,29 @@ const URGENCY_ADJUSTMENTS = {
 
 const EMPTY_ADJUSTMENT = { budget: 0, days: 0, complexity: 0 };
 
-const formatDelay = (days) => {
+// Structured delay range; the UI formats it per language.
+const getDelayRange = (days) => {
   const minimum = Math.max(2, Math.ceil(days * 0.85));
   const maximum = Math.max(minimum + 1, Math.ceil(days * 1.15));
 
   if (maximum <= 10) {
-    return `${minimum}–${maximum} jours ouvrés`;
+    return { min: minimum, max: maximum, unit: "days" };
   }
 
   const minimumWeeks = Math.max(1, Math.ceil(minimum / 5));
   const maximumWeeks = Math.max(minimumWeeks + 1, Math.ceil(maximum / 5));
 
-  return `${minimumWeeks}–${maximumWeeks} semaines`;
+  return { min: minimumWeeks, max: maximumWeeks, unit: "weeks" };
 };
 
-export function getEstimatorResult(answers) {
+const formatDelay = (days) => {
+  const range = getDelayRange(days);
+  return `${range.min}–${range.max} ${range.unit === "days" ? "jours ouvrés" : "semaines"}`;
+};
+
+// One-off project estimate as numbers. Urgency, the 50 € rounding and the
+// delay apply to one-off projects only, never to subscriptions.
+export function getProjectEstimate(answers) {
   const includedFeatures = PRIMARY_NEED_INCLUDED_FEATURES[answers.need] ?? [];
   const adjustments = [
     NEED_ADJUSTMENTS[answers.need],
@@ -138,6 +146,13 @@ export function getEstimatorResult(answers) {
     COMPLEXITY_MINIMUM_LEVELS[answers.complexity] ?? 0,
     NEED_MINIMUM_LEVELS[answers.need] ?? 0,
   )];
+
+  return { kind: "one-off", need: answers.need, budget, days, delay: getDelayRange(days), type };
+}
+
+// Legacy French text output, kept for existing callers and tests.
+export function getEstimatorResult(answers) {
+  const { budget, days, type } = getProjectEstimate(answers);
 
   const messages = {
     Simple: "Votre besoin semble ciblé. Une intervention courte peut probablement suffire pour avancer vite.",
@@ -248,5 +263,80 @@ export function getSocialMediaEstimate({
     referenceMonthly: selectedPlan.referencePrice + monthlyAddons,
     launchMonths: SOCIAL_MEDIA_LAUNCH_MONTHS,
     oneTime: setupAudit ? SOCIAL_MEDIA_ADDONS.setupAudit : 0,
+  };
+}
+
+// Networks the subscription can cover; their count drives extra-network fees.
+export const SOCIAL_MEDIA_NETWORKS = ["Instagram", "Facebook", "LinkedIn", "Google Business Profile"];
+
+// Standalone Reels offer (LOT SM-04): a single Reel is a one-off service, packs
+// are monthly, complex videos are quoted. Prices come from REELS_PACKS.
+const reelsPackPrice = (quantity) => REELS_PACKS.find((pack) => pack.quantity === quantity).price;
+
+export const REELS_OFFERS = {
+  single: { quantity: 1, price: reelsPackPrice(1), billing: "one-time" },
+  pack4: { quantity: 4, price: reelsPackPrice(4), billing: "monthly" },
+  pack8: { quantity: 8, price: reelsPackPrice(8), billing: "monthly" },
+  complex: { quantity: null, price: null, billing: "quote" },
+};
+
+// Single entry point for the unified estimator. Each block keeps its own rules:
+// one-off projects keep urgency, rounding and delays; subscriptions do not.
+// `contentService` is "none", "social" or "reels": with Social Media, extra
+// Reels are an option of the plan, so included Reels are never billed twice.
+export function getUnifiedEstimate({ project = null, contentService = "none", social = {}, reels = "pack4" } = {}) {
+  const projectEstimate = project ? getProjectEstimate(project) : null;
+  let socialEstimate = null;
+  let reelsOffer = null;
+  let recurring = null;
+  const oneTimeFees = [];
+
+  if (contentService === "social") {
+    const plan = SOCIAL_MEDIA_PLANS[social.plan] ? social.plan : "visibilite";
+    const networks = (social.networks ?? []).filter((network) => SOCIAL_MEDIA_NETWORKS.includes(network));
+    socialEstimate = getSocialMediaEstimate({
+      plan,
+      platforms: networks.length,
+      extraPosts: social.extraPosts,
+      reels: SOCIAL_MEDIA_PLANS[plan].reels + clampCount(social.extraReels),
+      setupAudit: Boolean(social.setupAudit),
+    });
+    socialEstimate = { ...socialEstimate, networks };
+    recurring = {
+      launchMonthly: socialEstimate.launchMonthly,
+      standardMonthly: socialEstimate.referenceMonthly,
+      launchMonths: socialEstimate.launchMonths,
+    };
+    if (socialEstimate.oneTime) {
+      oneTimeFees.push({ key: "setupAudit", amount: socialEstimate.oneTime });
+    }
+  }
+
+  if (contentService === "reels") {
+    const offerKey = REELS_OFFERS[reels] ? reels : "pack4";
+    reelsOffer = { key: offerKey, ...REELS_OFFERS[offerKey] };
+    if (reelsOffer.billing === "monthly") {
+      recurring = { launchMonthly: reelsOffer.price, standardMonthly: reelsOffer.price, launchMonths: 0 };
+    }
+    if (reelsOffer.billing === "one-time") {
+      oneTimeFees.push({ key: "singleReel", amount: reelsOffer.price });
+    }
+  }
+
+  // First month = subscription + set-up fees only. A one-off web project is
+  // billed according to its own quote and is never added here.
+  const setupFees = oneTimeFees.filter((fee) => fee.key === "setupAudit").reduce((sum, fee) => sum + fee.amount, 0);
+  const firstMonth = recurring
+    ? { subscription: recurring.launchMonthly, setupFees, total: recurring.launchMonthly + setupFees }
+    : null;
+
+  return {
+    project: projectEstimate,
+    social: socialEstimate,
+    reels: reelsOffer,
+    recurring,
+    oneTimeFees,
+    onQuote: reelsOffer?.billing === "quote",
+    firstMonth,
   };
 }

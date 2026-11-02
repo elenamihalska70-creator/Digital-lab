@@ -10,7 +10,7 @@ const tax = getTaxMention();
 if (!tax.confirmed) {
   blockers.push(
     `Mention fiscale non confirmée : définir TAX_REGIME dans src/config/taxMention.js (${Object.keys(TAX_MENTIONS).join(", ")}). ` +
-      "Les prix de l’offre Réseaux sociaux s’affichent actuellement sans mention HT/TTC.",
+      "Tous les prix du site (projets, abonnements, Reels) s’affichent actuellement sans mention HT/TTC.",
   );
 }
 

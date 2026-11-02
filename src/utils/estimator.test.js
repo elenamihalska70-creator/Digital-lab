@@ -239,3 +239,103 @@ test("Invalid social media inputs fall back safely", () => {
   assert.equal(estimate.added.posts, 0);
   assert.equal(estimate.totals.reels, 0);
 });
+
+// LOT SM-04 — unified estimator: one-off projects and subscriptions side by side.
+import { getProjectEstimate, getUnifiedEstimate, REELS_OFFERS, SOCIAL_MEDIA_NETWORKS } from "./estimator.js";
+
+const allNeeds = [website, "Réparer / améliorer un site existant", seo, automation, chatbot, mvp];
+
+test("Numeric project estimate matches the legacy text result on every combination", () => {
+  let compared = 0;
+  for (const need of allNeeds) {
+    for (const complexity of [simple, standard, advanced]) {
+      for (const features of [[], ["Chatbot"], ["SEO", "Chatbot"], ["Paiement", "Tableau de bord"]]) {
+        for (const urgency of ["Normal", "Rapide", "Urgent"]) {
+          for (const content of ["Textes et images prêts", partialContent, "Je pars de zéro"]) {
+            const answers = { ...base, need, complexity, features, urgency, content };
+            const numeric = getProjectEstimate(answers);
+            const legacy = getEstimatorResult(answers);
+            const unit = numeric.delay.unit === "days" ? "jours ouvrés" : "semaines";
+            assert.equal(legacy.budget, `à partir de ${numeric.budget}€`);
+            assert.equal(legacy.delay, `${numeric.delay.min}–${numeric.delay.max} ${unit}`);
+            assert.equal(legacy.type, numeric.type);
+            compared += 1;
+          }
+        }
+      }
+    }
+  }
+  assert.equal(compared, 648);
+});
+
+test("Unified: one-off project only keeps the current amounts and no subscription", () => {
+  const estimate = getUnifiedEstimate({ project: { ...base, need: chatbot, features: ["Chatbot"] } });
+  assert.equal(estimate.project.budget, 800);
+  assert.equal(estimate.recurring, null);
+  assert.equal(estimate.firstMonth, null);
+  assert.deepEqual(estimate.oneTimeFees, []);
+});
+
+test("Unified: Social Media only — monthly amounts without urgency, rounding or delay", () => {
+  const estimate = getUnifiedEstimate({
+    contentService: "social",
+    social: { plan: "presence", networks: ["Instagram", "Facebook", "LinkedIn"], extraPosts: 4, extraReels: 1, setupAudit: true },
+  });
+  // 149 + 4 × 45 + 2 extra networks × 60 + 1 Reel 69 = 518 ; standard 190 + 369 = 559.
+  assert.deepEqual(estimate.recurring, { launchMonthly: 518, standardMonthly: 559, launchMonths: 3 });
+  assert.deepEqual(estimate.oneTimeFees, [{ key: "setupAudit", amount: 150 }]);
+  assert.deepEqual(estimate.firstMonth, { subscription: 518, setupFees: 150, total: 668 });
+  assert.equal(estimate.project, null);
+  assert.equal("delay" in estimate.recurring, false);
+});
+
+test("Unified: included Reels and networks are never billed twice", () => {
+  const croissance = getUnifiedEstimate({ contentService: "social", social: { plan: "croissance", networks: ["Instagram", "LinkedIn"] } });
+  assert.equal(croissance.recurring.launchMonthly, 549);
+  assert.deepEqual(croissance.social.addons, { posts: 0, platforms: 0, reels: 0 });
+  assert.equal(croissance.social.totals.reels, 2);
+  // Fewer networks than included keep the plan price; unknown networks are ignored.
+  const fewer = getUnifiedEstimate({ contentService: "social", social: { plan: "visibilite", networks: ["Instagram", "MySpace"] } });
+  assert.equal(fewer.recurring.launchMonthly, 299);
+  assert.deepEqual(fewer.social.networks, ["Instagram"]);
+  // 4 extra Reels on top of the 2 included = one pack of 4.
+  assert.equal(getUnifiedEstimate({ contentService: "social", social: { plan: "croissance", extraReels: 4 } }).social.addons.reels, 249);
+});
+
+test("Unified: Reels only — single Reel is one-off, packs are monthly, complex is quoted", () => {
+  const single = getUnifiedEstimate({ contentService: "reels", reels: "single" });
+  assert.equal(single.recurring, null);
+  assert.equal(single.firstMonth, null);
+  assert.deepEqual(single.oneTimeFees, [{ key: "singleReel", amount: 69 }]);
+  for (const [key, price] of [["pack4", 249], ["pack8", 449]]) {
+    const pack = getUnifiedEstimate({ contentService: "reels", reels: key });
+    assert.deepEqual(pack.recurring, { launchMonthly: price, standardMonthly: price, launchMonths: 0 });
+    assert.deepEqual(pack.firstMonth, { subscription: price, setupFees: 0, total: price });
+  }
+  const complex = getUnifiedEstimate({ contentService: "reels", reels: "complex" });
+  assert.equal(complex.onQuote, true);
+  assert.equal(complex.recurring, null);
+  assert.deepEqual(complex.oneTimeFees, []);
+  assert.deepEqual(Object.fromEntries(Object.entries(REELS_OFFERS).map(([k, o]) => [k, o.billing])), { single: "one-time", pack4: "monthly", pack8: "monthly", complex: "quote" });
+});
+
+test("Unified: project + subscription keeps both apart; first month excludes the web project", () => {
+  const estimate = getUnifiedEstimate({
+    project: { ...base, complexity: standard, features: ["Chatbot"] },
+    contentService: "social",
+    social: { plan: "visibilite", networks: ["Instagram", "Facebook"], setupAudit: true },
+  });
+  assert.equal(estimate.project.budget, 1300);
+  assert.deepEqual(estimate.recurring, { launchMonthly: 299, standardMonthly: 390, launchMonths: 3 });
+  assert.deepEqual(estimate.firstMonth, { subscription: 299, setupFees: 150, total: 449 });
+  // Project + single Reel: two one-off amounts, still no first-month total.
+  const withReel = getUnifiedEstimate({ project: base, contentService: "reels", reels: "single" });
+  assert.equal(withReel.project.budget, 400);
+  assert.deepEqual(withReel.oneTimeFees, [{ key: "singleReel", amount: 69 }]);
+  assert.equal(withReel.firstMonth, null);
+});
+
+test("Unified: nothing selected returns an empty estimate", () => {
+  assert.deepEqual(getUnifiedEstimate(), { project: null, social: null, reels: null, recurring: null, oneTimeFees: [], onQuote: false, firstMonth: null });
+  assert.deepEqual(SOCIAL_MEDIA_NETWORKS, ["Instagram", "Facebook", "LinkedIn", "Google Business Profile"]);
+});
