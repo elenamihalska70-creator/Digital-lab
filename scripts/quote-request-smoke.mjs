@@ -6,7 +6,10 @@
 //
 //   node scripts/quote-request-smoke.mjs --url https://<preview>.vercel.app \
 //     --email <test address controlled by the owner> --confirm-real-write \
-//     [--bypass-token <Vercel protection bypass secret>] [--cases T1,T2]
+//     --cases T2 [--bypass-token <Vercel protection bypass secret>]
+//
+// A real run requires --cases; more than one real request also requires
+// --allow-multiple (first test = one request only).
 //
 // Production domains are always refused. Each request is marked
 // "TEST SM-04 — à supprimer" so it can be found and cleaned up afterwards.
@@ -25,6 +28,7 @@ const testEmail = option("email") ?? "";
 const realWrite = args.includes("--confirm-real-write");
 const bypassToken = option("bypass-token");
 const selectedCases = (option("cases") ?? "T1,T2,T3,T4,T5").split(",");
+const allowMultiple = args.includes("--allow-multiple");
 
 const PRODUCTION_HOSTS = ["digitallab.studio", "www.digitallab.studio"];
 const fail = (message) => {
@@ -41,6 +45,9 @@ try {
 if (PRODUCTION_HOSTS.includes(host)) fail("production domains are never tested by this script");
 if (realWrite && !host.endsWith(".vercel.app")) fail("a real run is only allowed on a *.vercel.app preview");
 if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(testEmail)) fail("--email must be the owner's test address");
+// A real run starts with one explicitly chosen request; the five scenarios need a second, explicit go.
+if (realWrite && !option("cases")) fail("a real run needs --cases (start with a single case, e.g. --cases T2)");
+if (realWrite && selectedCases.length > 1 && !allowMultiple) fail("more than one real request needs --allow-multiple");
 
 const MARK = "TEST SM-04 — à supprimer";
 const pick = (scope, key, label) => scope.locator(`[aria-labelledby$="-${key}"]`).getByRole("button", { name: label, exact: true });
@@ -96,10 +103,15 @@ for (const id of selectedCases) {
   const network = [];
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  page.on("response", (response) => {
+  page.on("response", async (response) => {
     const url = response.url();
     if ((url.includes("/rest/v1/contact_requests") && response.request().method() === "POST") || url.includes("/api/send-contact-email")) {
-      network.push({ url: url.replace(/\?.*$/, "").replace(/^https?:\/\/[^/]+/, ""), status: response.status() });
+      const call = { url: url.replace(/\?.*$/, "").replace(/^https?:\/\/[^/]+/, ""), status: response.status() };
+      // The email API returns Resend's message id (or its error): keep it to trace the email.
+      if (url.includes("/api/send-contact-email")) {
+        call.body = await response.text().then((text) => text.slice(0, 300)).catch(() => "");
+      }
+      network.push(call);
     }
   });
   if (!realWrite) {
@@ -133,18 +145,38 @@ for (const id of selectedCases) {
     await page.waitForSelector(".contact-form-status", { timeout: 20000 });
     await page.waitForTimeout(1500); // let the email API call finish
     result.submittedAt = submittedAt;
+    result.testName = `${MARK} (${id})`;
     result.status = (await page.locator(".contact-form-status").innerText()).trim();
+    result.visitorMessageOk = result.status.includes("bien été envoyée") || result.status.includes("has been sent");
+    result.screenshot = join(tmpdir(), `quote-smoke-${id}-${Date.now()}.png`);
+    await page.locator(".contact-form").screenshot({ path: result.screenshot });
     result.network = network;
     result.pageErrors = errors;
     const dbOk = network.some((call) => call.url.includes("contact_requests") && call.status === 201);
     const emailOk = network.some((call) => call.url.includes("send-contact-email") && call.status === 200);
     result.ok =
-      dbOk && emailOk && result.projectType === testCase.type && Object.values(result.summaryChecks).every(Boolean) && errors.length === 0;
+      dbOk &&
+      emailOk &&
+      result.visitorMessageOk &&
+      result.projectType === testCase.type &&
+      Object.values(result.summaryChecks).every(Boolean) &&
+      errors.length === 0;
   } catch (error) {
     result.error = error.message.split("\n")[0];
   }
   report.cases.push(result);
-  console.log(`${result.ok ? "PASS" : "FAIL"} ${id} — ${JSON.stringify({ type: result.projectType, network: result.network, summary: result.summaryChecks, error: result.error })}`);
+  console.log(
+    `${result.ok ? "PASS" : "FAIL"} ${id} — ${JSON.stringify({
+      testName: result.testName,
+      submittedAt: result.submittedAt,
+      type: result.projectType,
+      visitorMessage: result.status,
+      network: result.network,
+      summary: result.summaryChecks,
+      screenshot: result.screenshot,
+      error: result.error,
+    })}`,
+  );
   await context.close();
 }
 
