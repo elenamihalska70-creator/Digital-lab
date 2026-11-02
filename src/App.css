@@ -11675,28 +11675,6 @@ html {
   color: #ffffff;
 }
 
-.sm-art-florist {
-  background: linear-gradient(160deg, #ff8a5b 0%, #ff4d8d 55%, #7c4dff 120%);
-}
-
-.sm-art-coach {
-  background: linear-gradient(160deg, #0ea5a4 0%, #2563eb 100%);
-}
-
-.sm-art-studio {
-  background: linear-gradient(160deg, #1f1b2e 0%, #3b2f63 60%, #9b6dff 140%);
-}
-
-.sm-art-blob {
-  position: absolute;
-  top: -40px;
-  right: -50px;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-}
-
 .sm-post-tag {
   position: relative;
   align-self: flex-start;
@@ -12159,33 +12137,11 @@ html {
   transform: translateY(-24px);
 }
 
-.sm-reel-play {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  place-items: center;
-  font-size: 18px;
-  background: rgba(255, 255, 255, 0.24);
-  transform: translate(-50%, -50%);
-}
-
 .sm-reel-hook {
   position: relative;
   font-size: 17px;
   font-weight: 800;
   line-height: 1.15;
-}
-
-.sm-reel-progress {
-  position: relative;
-  height: 4px;
-  margin-top: 12px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #ffffff 40%, rgba(255, 255, 255, 0.3) 40%);
 }
 
 .sm-reels-offers {
@@ -12452,12 +12408,6 @@ html {
     font-size: 13px;
   }
 
-  .sm-reel-play {
-    width: 34px;
-    height: 34px;
-    font-size: 14px;
-  }
-
   .sm-calendar li {
     grid-template-columns: 1fr;
     gap: 2px;
@@ -12481,5 +12431,125 @@ html {
 
   .estimator-options.is-numeric button {
     justify-content: center;
+  }
+}
+
+/* ===== Visuals V3 — licensed photographs in the social media screens ===== */
+.sm-photo {
+  isolation: isolate;
+  background: #1a1024;
+}
+
+.sm-photo > img,
+.sm-reel-phone > img {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm-photo-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 4, 18, 0.35) 0%, rgba(10, 4, 18, 0) 32%, rgba(10, 4, 18, 0) 48%, rgba(10, 4, 18, 0.85) 100%);
+}
+
+.sm-sim-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: rgba(10, 4, 18, 0.72);
+}
+
+.sm-li-visual {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.sm-li-visual {
+  display: block;
+}
+
+.sm-li-visual .sm-post-art {
+  width: 100%;
+  height: 100%;
+}
+
+.sm-reel-phone {
+  isolation: isolate;
+  background: #1a1024;
+}
+
+.sm-reel-intent {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #160a2c;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  background: #6ee7b7;
+}
+
+.sm-reel-phone .sm-sim-badge {
+  top: 40px;
+  right: auto;
+  left: 12px;
+}
+
+.sm-reel-phone .sm-reel-hook {
+  font-size: 14px;
+  line-height: 1.2;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 600px) {
+  .sm-reel-intent,
+  .sm-sim-badge {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-reel-phone .sm-reel-hook {
+    font-size: 11px;
+  }
+
+  .sm-reel-phone .sm-sim-badge {
+    top: 34px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-reel-phone .sm-reel-intent {
+    top: 8px;
+    left: 8px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  .sm-reel-phone .sm-sim-badge {
+    left: 8px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-chip-validated {
+    top: 424px;
   }
 }

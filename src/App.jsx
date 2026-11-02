@@ -175,16 +175,16 @@ const services = [
     examples:
       "Gestion mensuelle Instagram, Facebook, LinkedIn ou Google Business Profile, création de visuels, rédaction de légendes, Reels et vidéos courtes, bilan mensuel.",
     images: [
-      "/projects/social/social-card-1.webp",
-      "/projects/social/social-card-2.webp",
-      "/projects/social/social-card-3.webp",
+      "/projects/social/v3/social-v3-card-1.webp",
+      "/projects/social/v3/social-v3-card-2.webp",
+      "/projects/social/v3/social-v3-card-3.webp",
     ],
     gallery: {
       type: "carousel",
       images: [
-        "/projects/social/social-card-1.webp",
-        "/projects/social/social-card-2.webp",
-        "/projects/social/social-card-3.webp",
+        "/projects/social/v3/social-v3-card-1.webp",
+        "/projects/social/v3/social-v3-card-2.webp",
+        "/projects/social/v3/social-v3-card-3.webp",
       ],
     },
     transformation: {
@@ -1161,9 +1161,9 @@ const optimizedImages = {
   },
 };
 
-// Social media card images rendered from the page compositions (fictional brands), 1100 × 720.
+// Homepage card images rendered from the Visuals V3 page compositions (fictional brands), 1100 × 720.
 [1, 2, 3].forEach((index) => {
-  const base = `/projects/social/social-card-${index}`;
+  const base = `/projects/social/v3/social-v3-card-${index}`;
   optimizedImages[`${base}.webp`] = {
     src: `${base}.webp`,
     srcSet: `${base}-640.webp 640w, ${base}-960.webp 960w, ${base}.webp 1100w`,
@@ -5282,31 +5282,75 @@ const socialMediaBenefits = [
   { title: "Un interlocuteur humain", text: "Une personne dédiée prépare, ajuste et vous explique chaque mois ce qui a été fait." },
 ];
 
+// Visuals V3: licensed Unsplash photographs (see docs/visuals/SOCIAL-MEDIA-V3-PROVENANCE.md),
+// cropped without identifiable faces. Text stays in HTML. The two before/after
+// images are simulations: one photo, "before" aged digitally.
+const socialMediaPhotos = {
+  cafe: {
+    src: "/projects/social/v3/post-cafe.webp",
+    srcSet: "/projects/social/v3/post-cafe-648.webp 648w, /projects/social/v3/post-cafe.webp 1080w",
+    alt: "Cappuccino avec dessin de mousse dans une tasse bleue sur une table en bois, croissant doré en arrière-plan",
+  },
+  coach: {
+    src: "/projects/social/v3/post-coach.webp",
+    srcSet: "/projects/social/v3/post-coach-648.webp 648w, /projects/social/v3/post-coach.webp 1080w",
+    alt: "Personne en squat sumo tenant une kettlebell à deux mains dans une salle d’entraînement",
+  },
+  atelier: {
+    src: "/projects/social/v3/post-atelier.webp",
+    srcSet: "/projects/social/v3/post-atelier-648.webp 648w, /projects/social/v3/post-atelier.webp 1080w",
+    alt: "Simulation d’avant / après d’une même pièce : à gauche terne et sale, à droite rénovée et lumineuse",
+    simulation: true,
+  },
+  reelCafe: {
+    src: "/projects/social/v3/reel-cafe.webp",
+    srcSet: "/projects/social/v3/reel-cafe-432.webp 432w, /projects/social/v3/reel-cafe.webp 720w",
+    alt: "Mains d’un barista versant du lait mousseux dans une tasse",
+  },
+  reelCoach: {
+    src: "/projects/social/v3/reel-coach.webp",
+    srcSet: "/projects/social/v3/reel-coach-432.webp 432w, /projects/social/v3/reel-coach.webp 720w",
+    alt: "Bras tendus soulevant une kettlebell au-dessus de la tête dans une salle de sport",
+  },
+  reelAtelier: {
+    src: "/projects/social/v3/reel-atelier.webp",
+    srcSet: "/projects/social/v3/reel-atelier-432.webp 432w, /projects/social/v3/reel-atelier.webp 720w",
+    alt: "Simulation de transformation : en haut la pièce avant travaux, en bas la même pièce rénovée",
+    simulation: true,
+  },
+};
+
 const socialMediaPersonas = [
   {
-    art: "florist",
+    photo: "cafe",
     tag: "Commerce de proximité",
-    headline: "Nouvel arrivage : les pivoines sont là",
+    headline: "Votre pause préférée commence ici.",
     title: "Pour un commerce",
     text: "Nouveautés, coulisses, événements en boutique",
     networks: ["Instagram", "Facebook", "Google Business"],
   },
   {
-    art: "coach",
+    photo: "coach",
     tag: "Indépendant",
-    headline: "3 erreurs qui freinent vos progrès à la reprise",
+    headline: "Votre progression commence par la bonne méthode.",
     title: "Pour un professionnel indépendant",
     text: "Conseils, expertise, prise de rendez-vous",
     networks: ["Instagram", "LinkedIn"],
   },
   {
-    art: "studio",
+    photo: "atelier",
     tag: "Petite entreprise",
-    headline: "Avant / après : un atelier transformé",
+    headline: "Un espace. Une nouvelle histoire.",
     title: "Pour une petite entreprise",
     text: "Réalisations, équipe, recrutement",
     networks: ["LinkedIn", "Facebook"],
   },
+];
+
+const socialMediaReelCovers = [
+  { photo: "reelCafe", intent: "Coulisses", hook: "30 secondes dans notre café" },
+  { photo: "reelCoach", intent: "Conseil", hook: "3 mouvements avant votre séance" },
+  { photo: "reelAtelier", intent: "Avant / après", hook: "Vous ne reconnaîtrez pas cet atelier." },
 ];
 
 const socialMediaIncluded = [
@@ -5374,12 +5418,26 @@ const socialMediaFaq = [
   },
 ];
 
-function SocialPostArt({ art, tag, headline }) {
+// Photographic post: licensed photo + HTML tag/headline; simulations are labelled.
+// `eager` is for the hero, visible on first paint (not lazy-loaded).
+function SocialPhoto({ photo, tag, headline, sizes, decorative = false, eager = false }) {
+  const image = socialMediaPhotos[photo];
+
   return (
-    <div className={`sm-post-art sm-art-${art}`}>
-      <span className="sm-art-blob" aria-hidden="true"></span>
-      <span className="sm-post-tag">{tag}</span>
-      <p className="sm-post-headline">{headline}</p>
+    <div className="sm-post-art sm-photo">
+      <img
+        alt={decorative ? "" : image.alt}
+        decoding="async"
+        fetchPriority={eager ? "high" : undefined}
+        loading={eager ? "eager" : "lazy"}
+        sizes={sizes}
+        src={image.src}
+        srcSet={image.srcSet}
+      />
+      <span className="sm-photo-shade" aria-hidden="true"></span>
+      {image.simulation && <span className="sm-sim-badge">Simulation</span>}
+      {tag && <span className="sm-post-tag">{tag}</span>}
+      {headline && <p className="sm-post-headline">{headline}</p>}
     </div>
   );
 }
@@ -5469,8 +5527,8 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
                         </span>
                       </div>
                       <p>Nouvelle réalisation : un atelier rénové.</p>
-                      <div className="sm-li-visual sm-art-studio">
-                        Avant /<br />après
+                      <div className="sm-li-visual">
+                        <SocialPhoto photo="atelier" sizes="240px" decorative eager />
                       </div>
                     </div>
                   </div>
@@ -5478,16 +5536,16 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
                 <div className="sm-phone sm-phone-main">
                   <div className="sm-screen">
                     <div className="sm-app-top">
-                      <span className="sm-avatar sm-avatar-florist">FQ</span>
+                      <span className="sm-avatar sm-avatar-florist">VC</span>
                       <span>
-                        <strong>votre.fleuriste</strong>
-                        <small>Carrousel · 4 visuels</small>
+                        <strong>votre.cafe</strong>
+                        <small>Sponsorisé</small>
                       </span>
                     </div>
-                    <SocialPostArt art="florist" tag="Fête des mères" headline="Composez votre bouquet en 3 étapes" />
+                    <SocialPhoto photo="cafe" tag="Café de quartier" headline="Votre pause préférée commence ici." sizes="250px" decorative eager />
                     <div className="sm-post-actions">♡ ◯ ➤</div>
                     <p className="sm-post-caption">
-                      <b>votre.fleuriste</b> Commandes ouvertes jusqu’à samedi.
+                      <b>votre.cafe</b> Pâtisseries maison.
                     </p>
                   </div>
                 </div>
@@ -5534,7 +5592,12 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
           <div className="sm-personas">
             {socialMediaPersonas.map((persona) => (
               <article className="sm-persona" key={persona.title}>
-                <SocialPostArt art={persona.art} tag={persona.tag} headline={persona.headline} />
+                <SocialPhoto
+                  photo={persona.photo}
+                  tag={persona.tag}
+                  headline={persona.headline}
+                  sizes="(max-width: 960px) 92vw, 380px"
+                />
                 <div className="sm-persona-meta">
                   <h3>{persona.title}</h3>
                   <p>{persona.text}</p>
@@ -5547,7 +5610,9 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
               </article>
             ))}
           </div>
-          <p className="sm-fiction-note">Exemples illustratifs créés pour cette page, marques fictives.</p>
+          <p className="sm-fiction-note">
+            Exemples illustratifs, marques fictives. Photographies Unsplash ; l’avant / après est une simulation.
+          </p>
 
           <div className="sm-included">
             <article>
@@ -5667,20 +5732,25 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
               </ul>
             </div>
             <figure className="sm-reels-visual">
-              <div className="sm-reel-phones" aria-hidden="true">
-                {[
-                  { art: "florist", hook: "Coulisses d’un bouquet" },
-                  { art: "coach", hook: "1 exercice en 20 s" },
-                  { art: "studio", hook: "Avant / après" },
-                ].map((reel) => (
-                  <div className={`sm-reel-phone sm-art-${reel.art}`} key={reel.hook}>
-                    <span className="sm-reel-play">▶</span>
-                    <span className="sm-reel-hook">{reel.hook}</span>
-                    <span className="sm-reel-progress"></span>
-                  </div>
-                ))}
+              {/* Covers only: no video exists, so no play button or progress bar. */}
+              <div className="sm-reel-phones">
+                {socialMediaReelCovers.map((reel) => {
+                  const image = socialMediaPhotos[reel.photo];
+
+                  return (
+                    <div className="sm-reel-phone" key={reel.hook}>
+                      <img alt={image.alt} decoding="async" loading="lazy" sizes="150px" src={image.src} srcSet={image.srcSet} />
+                      <span className="sm-photo-shade" aria-hidden="true"></span>
+                      <span className="sm-reel-intent">{reel.intent}</span>
+                      {image.simulation && <span className="sm-sim-badge">Simulation</span>}
+                      <span className="sm-reel-hook">{reel.hook}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <figcaption>Exemples illustratifs de Reels verticaux 9:16.</figcaption>
+              <figcaption>
+                Exemples illustratifs : couvertures de Reels verticaux 9:16 (aucune vidéo). Avant / après : simulation.
+              </figcaption>
             </figure>
           </div>
 

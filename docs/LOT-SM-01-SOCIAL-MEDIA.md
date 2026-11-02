@@ -77,3 +77,14 @@ Limites : pas d’appareil physique, ni Safari/Firefox ; pas de soumission réel
 3. CGV : relecture juridique de `docs/CGV-SOCIAL-MEDIA-PROJET.md` (le site emploie désormais « prix standard »).
 4. Audit de départ à 150 € (provisoire) ; contenus supposés (bilans, point stratégique, contenu d’un Reel, exclusions).
 5. Historique Git public contenant `publication2.png` : conservé (pas de réécriture).
+
+## Visuels V3 (validés par la propriétaire)
+
+Six photographies Unsplash (licence vérifiée photo par photo, provenance dans `docs/visuals/SOCIAL-MEDIA-V3-PROVENANCE.md`), recadrées sans visage identifiable, textes en HTML :
+
+- Hero : publication café (téléphone principal, chargement immédiat) et avant / après atelier (téléphone secondaire, badge « Simulation »).
+- « Des contenus à votre image » : café, coach (squat sumo), atelier (badge « Simulation »).
+- Offre Reels : couvertures barista, kettlebell, transformation (badge « Simulation ») — sans bouton Lecture ni barre de progression, légende « aucune vidéo ».
+- Carte de l’accueil : trois images régénérées à partir de ces compositions (`social-v3-card-*`).
+
+Fichiers : `public/projects/social/v3/` (21 WebP, 1,6 Mo au total, variantes 432/648/640/960 px). Anciennes images `social-card-*` supprimées ; aucune référence restante. Poids des visuels sur la page : 261 Ko (ordinateur), 891 Ko (mobile haute densité).
