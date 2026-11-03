@@ -12046,7 +12046,7 @@ html {
 .sm-plan-then {
   margin: 6px 0 0;
   color: var(--sm-text-3);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .sm-volumes {
@@ -12074,7 +12074,7 @@ html {
 
 .sm-volumes dt {
   color: var(--sm-text-3);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .sm-plan .sm-check-list {
@@ -12092,7 +12092,7 @@ html {
 .sm-footnote {
   margin: 18px 0 0;
   color: var(--sm-text-3);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
@@ -12281,11 +12281,14 @@ html {
   margin-bottom: 18px;
 }
 
+/* The whole card row is the click target: padding lives on the summary (LOT SM-06A). */
 .sm-faq-item {
-  padding: 22px 28px;
+  padding: 0;
 }
 
 .sm-faq-item summary {
+  padding: 22px 28px;
+  border-radius: 24px;
   color: #ffffff;
   font-size: 18px;
   font-weight: 600;
@@ -12293,7 +12296,8 @@ html {
 }
 
 .sm-faq-item p {
-  margin: 14px 0 0;
+  margin: 0;
+  padding: 0 28px 22px;
   color: var(--sm-text-2);
   font-size: 16px;
   line-height: 1.6;
@@ -12413,8 +12417,12 @@ html {
     gap: 2px;
   }
 
-  .sm-faq-item {
+  .sm-faq-item summary {
     padding: 18px 20px;
+  }
+
+  .sm-faq-item p {
+    padding: 0 20px 18px;
   }
 }
 
@@ -12671,5 +12679,32 @@ html {
     zoom: 0.82;
     max-width: 560px;
     margin-left: auto;
+  }
+}
+
+/* ===== LOT SM-06A — commercial UX polish ===== */
+.contact-form-privacy {
+  margin: 14px 0 0;
+  color: #bfb2ef;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.contact-form-privacy a,
+.contact-form-status a {
+  color: #d9c8ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Desktop and tablet landscape only: tighten the space above the hero copy so
+   the CTAs sit higher on first paint. Phones and the V3 visuals are untouched. */
+@media (min-width: 961px) {
+  .sm-hero {
+    padding-top: 108px;
+  }
+
+  .sm-hero .back-button {
+    margin-bottom: 24px;
   }
 }

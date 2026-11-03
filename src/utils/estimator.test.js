@@ -339,3 +339,72 @@ test("Unified: nothing selected returns an empty estimate", () => {
   assert.deepEqual(getUnifiedEstimate(), { project: null, social: null, reels: null, recurring: null, oneTimeFees: [], onQuote: false, firstMonth: null });
   assert.deepEqual(SOCIAL_MEDIA_NETWORKS, ["Instagram", "Facebook", "LinkedIn", "Google Business Profile"]);
 });
+
+// LOT SM-06A — launch offer switch. Both states are tested explicitly; the
+// default follows SOCIAL_MEDIA_LAUNCH_ACTIVE, which stays true for now.
+import { getPlanMonthlyPrice, SOCIAL_MEDIA_LAUNCH_ACTIVE } from "./estimator.js";
+
+test("Launch switch: the offer is active by default", () => {
+  assert.equal(SOCIAL_MEDIA_LAUNCH_ACTIVE, true);
+  for (const plan of Object.values(SOCIAL_MEDIA_PLANS)) {
+    assert.equal(getPlanMonthlyPrice(plan), plan.launchPrice);
+  }
+});
+
+test("Launch switch on: launch prices for 3 months, then standard prices (unchanged behaviour)", () => {
+  const social = { plan: "croissance", networks: ["Instagram", "Facebook", "LinkedIn"], extraPosts: 4, extraReels: 1, setupAudit: true };
+  const explicit = getUnifiedEstimate({ contentService: "social", social, launchActive: true });
+  assert.deepEqual(explicit, getUnifiedEstimate({ contentService: "social", social }));
+  // 549 + 4 × 45 + 1 network × 60 + 1 Reel 69 = 858 ; standard 690 + 309 = 999.
+  assert.deepEqual(explicit.recurring, { launchMonthly: 858, standardMonthly: 999, launchMonths: 3 });
+  assert.deepEqual(explicit.firstMonth, { subscription: 858, setupFees: 150, total: 1008 });
+  assert.equal(explicit.social.launchMonths, 3);
+});
+
+test("Launch switch off: standard prices everywhere, no launch period", () => {
+  for (const [key, plan] of Object.entries(SOCIAL_MEDIA_PLANS)) {
+    assert.equal(getPlanMonthlyPrice(plan, false), plan.referencePrice);
+    const estimate = getSocialMediaEstimate({ plan: key, launchActive: false });
+    assert.equal(estimate.launchMonthly, plan.referencePrice);
+    assert.equal(estimate.referenceMonthly, plan.referencePrice);
+    assert.equal(estimate.launchMonths, 0);
+  }
+
+  const social = { plan: "croissance", networks: ["Instagram", "Facebook", "LinkedIn"], extraPosts: 4, extraReels: 1, setupAudit: true };
+  const off = getUnifiedEstimate({ contentService: "social", social, launchActive: false });
+  assert.deepEqual(off.recurring, { launchMonthly: 999, standardMonthly: 999, launchMonths: 0 });
+  assert.deepEqual(off.firstMonth, { subscription: 999, setupFees: 150, total: 1149 });
+  // Add-ons and the setup audit keep their price whatever the offer state.
+  const on = getUnifiedEstimate({ contentService: "social", social, launchActive: true });
+  assert.deepEqual(off.social.addons, on.social.addons);
+  assert.deepEqual(off.oneTimeFees, on.oneTimeFees);
+});
+
+test("Launch switch off: reference prices and the Reels offer are not changed", () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(SOCIAL_MEDIA_PLANS).map(([key, plan]) => [key, [plan.launchPrice, plan.referencePrice]])),
+    { presence: [149, 190], visibilite: [299, 390], croissance: [549, 690] },
+  );
+  for (const reels of Object.keys(REELS_OFFERS)) {
+    assert.deepEqual(
+      getUnifiedEstimate({ contentService: "reels", reels, launchActive: false }),
+      getUnifiedEstimate({ contentService: "reels", reels, launchActive: true }),
+    );
+  }
+});
+
+test("Launch switch off: a lower plan plus add-ons still never costs less than the higher plan", () => {
+  const plans = Object.entries(SOCIAL_MEDIA_PLANS);
+  for (const [lowKey, low] of plans) {
+    for (const [, high] of plans.filter(([, plan]) => plan.referencePrice > low.referencePrice)) {
+      const equivalent = getSocialMediaEstimate({
+        plan: lowKey,
+        extraPosts: Math.max(0, high.posts - low.posts),
+        platforms: high.platforms,
+        reels: high.reels,
+        launchActive: false,
+      });
+      assert.ok(equivalent.launchMonthly >= high.referencePrice, `${low.name} → ${high.name}`);
+    }
+  }
+});

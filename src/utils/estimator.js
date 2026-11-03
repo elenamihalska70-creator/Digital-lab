@@ -175,6 +175,15 @@ export function getEstimatorResult(answers) {
 export const SOCIAL_MEDIA_LAUNCH_MONTHS = 3;
 export const SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT = 5;
 
+// Owner switch for the launch offer (LOT SM-06A, draft CGV art. 5.5). Set it to
+// false once the launch places are taken: every price then falls back to the
+// standard price and every launch mention disappears. Prices are never changed here.
+export const SOCIAL_MEDIA_LAUNCH_ACTIVE = true;
+
+// Monthly price of a plan as currently offered (launch price only while the offer runs).
+export const getPlanMonthlyPrice = (plan, launchActive = SOCIAL_MEDIA_LAUNCH_ACTIVE) =>
+  launchActive ? plan.launchPrice : plan.referencePrice;
+
 // Each plan lists what its monthly price already covers, so add-ons are only
 // charged beyond these quantities.
 export const SOCIAL_MEDIA_PLANS = {
@@ -225,6 +234,7 @@ export function getSocialMediaEstimate({
   platforms,
   reels,
   setupAudit = false,
+  launchActive = SOCIAL_MEDIA_LAUNCH_ACTIVE,
 } = {}) {
   const selectedPlan = SOCIAL_MEDIA_PLANS[plan] ?? SOCIAL_MEDIA_PLANS.visibilite;
   const totalPlatforms = Math.max(
@@ -259,9 +269,10 @@ export function getSocialMediaEstimate({
     },
     added: { posts: addedPosts, platforms: addedPlatforms, reels: addedReels },
     addons,
-    launchMonthly: selectedPlan.launchPrice + monthlyAddons,
+    // Without the launch offer, the "launch" amount is the standard price and lasts 0 months.
+    launchMonthly: getPlanMonthlyPrice(selectedPlan, launchActive) + monthlyAddons,
     referenceMonthly: selectedPlan.referencePrice + monthlyAddons,
-    launchMonths: SOCIAL_MEDIA_LAUNCH_MONTHS,
+    launchMonths: launchActive ? SOCIAL_MEDIA_LAUNCH_MONTHS : 0,
     oneTime: setupAudit ? SOCIAL_MEDIA_ADDONS.setupAudit : 0,
   };
 }
@@ -284,7 +295,13 @@ export const REELS_OFFERS = {
 // one-off projects keep urgency, rounding and delays; subscriptions do not.
 // `contentService` is "none", "social" or "reels": with Social Media, extra
 // Reels are an option of the plan, so included Reels are never billed twice.
-export function getUnifiedEstimate({ project = null, contentService = "none", social = {}, reels = "pack4" } = {}) {
+export function getUnifiedEstimate({
+  project = null,
+  contentService = "none",
+  social = {},
+  reels = "pack4",
+  launchActive = SOCIAL_MEDIA_LAUNCH_ACTIVE,
+} = {}) {
   const projectEstimate = project ? getProjectEstimate(project) : null;
   let socialEstimate = null;
   let reelsOffer = null;
@@ -300,6 +317,7 @@ export function getUnifiedEstimate({ project = null, contentService = "none", so
       extraPosts: social.extraPosts,
       reels: SOCIAL_MEDIA_PLANS[plan].reels + clampCount(social.extraReels),
       setupAudit: Boolean(social.setupAudit),
+      launchActive,
     });
     socialEstimate = { ...socialEstimate, networks };
     recurring = {

@@ -18,9 +18,11 @@ import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import {
+  getPlanMonthlyPrice,
   getUnifiedEstimate,
   REELS_OFFERS,
   SOCIAL_MEDIA_ADDONS,
+  SOCIAL_MEDIA_LAUNCH_ACTIVE,
   SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT,
   SOCIAL_MEDIA_LAUNCH_MONTHS,
   SOCIAL_MEDIA_NETWORKS,
@@ -1111,7 +1113,7 @@ const servicePages = [
     customPage: "social-media",
     title: "Gestion des réseaux sociaux pour TPE, indépendants et associations",
     metaTitle: "Gestion des réseaux sociaux pour TPE et indépendants : abonnement mensuel | Digital Lab",
-    metaDescription: `Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. Tarif de lancement dès ${withTaxMention(`${SOCIAL_MEDIA_PLANS.presence.launchPrice} €`)}/mois, Reels dès ${withTaxMention(`${REELS_OFFERS.single.price} €`)}.`,
+    metaDescription: `Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. ${SOCIAL_MEDIA_LAUNCH_ACTIVE ? "Tarif de lancement dès" : "Dès"} ${withTaxMention(`${getPlanMonthlyPrice(SOCIAL_MEDIA_PLANS.presence)} €`)}/mois, Reels dès ${withTaxMention(`${REELS_OFFERS.single.price} €`)}.`,
   },
 ];
 
@@ -2214,10 +2216,12 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
       `${pluralize(social.totals.posts, t("publication", "post"), t("publications", "posts"))}${t("/mois", "/month")} · ${pluralize(social.totals.platforms, t("réseau", "network"), t("réseaux", "networks"))} (${
         social.networks.length ? social.networks.join(", ") : t("à préciser", "to be defined")
       }) · ${formatReelsPerMonth(social.totals.reels, isEnglish)}`,
-      `${t("Tarif de lancement", "Launch price")} : ${formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)} ${t(
-        `pendant ${social.launchMonths} mois (${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients), puis`,
-        `for ${social.launchMonths} months (first ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} clients), then`,
-      )} ${formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}`,
+      social.launchMonths > 0
+        ? `${t("Tarif de lancement", "Launch price")} : ${formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)} ${t(
+            `pendant ${social.launchMonths} mois (${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients), puis`,
+            `for ${social.launchMonths} months (first ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} clients), then`,
+          )} ${formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}`
+        : `${t("Tarif", "Price")} : ${formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}`,
     );
   }
 
@@ -2488,7 +2492,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                       "plan",
                       Object.entries(SOCIAL_MEDIA_PLANS).map(([key, option]) => ({
                         value: key,
-                        label: `${option.name} · ${formatMonthlyPrice(option.launchPrice, isEnglish)}`,
+                        label: `${option.name} · ${formatMonthlyPrice(getPlanMonthlyPrice(option), isEnglish)}`,
                       })),
                       social.plan,
                       (value) => updateSocial("plan", value),
@@ -2528,7 +2532,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                         "is-numeric",
                       )}
                       <p className="estimator-hint">
-                        {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost, isEnglish)} {t("par publication", "per post")}
+                        {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost, isEnglish)} {t("par publication et par mois", "per post, per month")}
                       </p>
                     </div>
                     <div>
@@ -2616,14 +2620,23 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                       {t("Abonnement", "Subscription")} · {estimate.social.planName}
                     </h3>
                     <div className="result-metrics">
-                      <div>
-                        <small>{t(`Les ${estimate.recurring.launchMonths} premiers mois`, `First ${estimate.recurring.launchMonths} months`)}</small>
-                        <strong>{formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)}</strong>
-                      </div>
-                      <div>
-                        <small>{t("Ensuite (prix standard)", "Then (standard price)")}</small>
-                        <strong>{formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}</strong>
-                      </div>
+                      {estimate.recurring.launchMonths > 0 ? (
+                        <>
+                          <div>
+                            <small>{t(`Les ${estimate.recurring.launchMonths} premiers mois`, `First ${estimate.recurring.launchMonths} months`)}</small>
+                            <strong>{formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)}</strong>
+                          </div>
+                          <div>
+                            <small>{t("Ensuite (prix standard)", "Then (standard price)")}</small>
+                            <strong>{formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}</strong>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <small>{t("Chaque mois", "Each month")}</small>
+                          <strong>{formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}</strong>
+                        </div>
+                      )}
                     </div>
                     <ul className="estimate-lines">
                       <li>
@@ -2696,7 +2709,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                 )}
               </div>
 
-              {estimate.social && (
+              {estimate.social?.launchMonths > 0 && (
                 <p className="estimator-note">
                   {t(
                     `Tarif de lancement réservé aux ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients, pendant ${SOCIAL_MEDIA_LAUNCH_MONTHS} mois.`,
@@ -2850,7 +2863,11 @@ function isSupabaseAccessError(error) {
 
 // `prefill` ({ projectType, message, summary }) comes from an offer CTA. The
 // summary is appended on submit so the selected offer survives message edits.
-function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitted }) {
+// Field limits aligned with the server-side rules prepared in LOT SEC-EMAIL-01
+// (the message leaves room for the estimator summary appended on submit).
+const contactFieldLimits = { name: 120, email: 254, company: 160, message: 6000 };
+
+function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitted, onNavigate = null, showPrivacyNotice = false }) {
   const { session } = useAuth();
   const [form, setForm] = useState(initialContactForm);
   const [appliedPrefill, setAppliedPrefill] = useState(null);
@@ -2897,6 +2914,8 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
       projectType: form.projectType,
       message: `${form.message.trim()}${offerSummary}`,
     };
+    // A thrown network failure is handled like a returned error: never show
+    // internal details, never report a success.
     const { error } = await createContactRequest({
       userId: session?.user?.id,
       name: contactPayload.name,
@@ -2904,20 +2923,21 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
       company: contactPayload.company,
       projectType: contactPayload.projectType,
       message: contactPayload.message,
-    });
+    }).catch((requestError) => ({ error: requestError }));
 
     if (error) {
       const guestNeedsLogin = !session && isSupabaseAccessError(error);
 
+      // The contact address is appended as a link when the status is rendered.
       setSubmitStatus({
         type: "error",
         message: guestNeedsLogin
           ? isEnglish
-            ? "Sign in and try again, or email me directly."
-            : "Connectez-vous puis réessayez, ou envoyez-moi un email directement."
+            ? "Sign in and try again, or write to us directly at"
+            : "Connectez-vous puis réessayez, ou écrivez-nous directement à"
           : isEnglish
-            ? "Your request couldn't be sent right now. Please try again in a moment."
-            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants.",
+            ? "Your request couldn't be sent right now. Please try again in a moment or write to us at"
+            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants ou écrivez-nous à",
       });
 
       if (guestNeedsLogin) {
@@ -2977,6 +2997,8 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
             type="text"
             value={form.name}
             placeholder={isEnglish ? "Your name" : "Votre nom"}
+            maxLength={contactFieldLimits.name}
+            autoComplete="name"
             required
             onChange={updateField}
           />
@@ -2990,6 +3012,8 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
             type="email"
             value={form.email}
             placeholder={sessionEmail || (isEnglish ? "you@email.com" : "vous@email.com")}
+            maxLength={contactFieldLimits.email}
+            autoComplete="email"
             required={!sessionEmail}
             onChange={updateField}
           />
@@ -3003,6 +3027,8 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
             type="text"
             value={form.company}
             placeholder={isEnglish ? "Company, nonprofit, project..." : "Entreprise, association, projet..."}
+            maxLength={contactFieldLimits.company}
+            autoComplete="organization"
             onChange={updateField}
           />
         </label>
@@ -3029,6 +3055,7 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
                 ? "Describe your need in plain terms, even if it's still unclear."
                 : "Expliquez simplement votre besoin, même s’il est encore flou."
             }
+            maxLength={contactFieldLimits.message}
             required
             onChange={updateField}
           ></textarea>
@@ -3042,9 +3069,33 @@ function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitte
         {submitStatus.message && (
           <p className={`contact-form-status is-${submitStatus.type}`} role="status" tabIndex={-1} ref={statusRef}>
             {submitStatus.message}
+            {submitStatus.type === "error" && (
+              <>
+                {" "}
+                <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
+              </>
+            )}
           </p>
         )}
       </div>
+      {showPrivacyNotice && (
+        <p className="contact-form-privacy">
+          {isEnglish
+            ? "Your details are used only to process your request and reply to you. "
+            : "Vos informations sont utilisées uniquement pour traiter votre demande et vous répondre. "}
+          <a
+            href={privacyPolicyPath}
+            onClick={(event) => {
+              if (onNavigate) {
+                event.preventDefault();
+                onNavigate(privacyPolicyPath);
+              }
+            }}
+          >
+            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
+          </a>
+        </p>
+      )}
     </form>
   );
 }
@@ -5222,7 +5273,8 @@ function ServicePage({ servicePage, onNavigate, onAuthOpen }) {
             <h2>Des réseaux sociaux actifs, chaque mois</h2>
             <p>
               Un abonnement pour publier régulièrement : contenus créés pour vous, validés par vous, publiés aux bonnes dates.
-              Dès {formatMonthlyPrice(SOCIAL_MEDIA_PLANS.presence.launchPrice)} pendant l’offre de lancement.
+              Dès {formatMonthlyPrice(getPlanMonthlyPrice(SOCIAL_MEDIA_PLANS.presence))}
+              {SOCIAL_MEDIA_LAUNCH_ACTIVE ? " pendant l’offre de lancement." : "."}
             </p>
             <p>
               <a href={socialMediaServicePath} onClick={handleNavigateTo(socialMediaServicePath)}>
@@ -5400,6 +5452,8 @@ const socialMediaFaq = [
       "Vos propres photos et vidéos rendent les publications plus authentiques. À défaut, les visuels sont créés à partir de vos contenus existants et de ressources libres de droits.",
   },
   {
+    // Shown only while SOCIAL_MEDIA_LAUNCH_ACTIVE is true.
+    launchOffer: true,
     question: "Comment fonctionne le tarif de lancement ?",
     answer: `Il est réservé aux ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients de l’offre et s’applique pendant les ${SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le prix standard s’applique ensuite, comme indiqué sur chaque formule.`,
   },
@@ -5509,7 +5563,10 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
               </div>
               <ul className="sm-reassure">
                 <li>Rien n’est publié sans votre accord</li>
-                <li>Dès {formatMonthlyPrice(SOCIAL_MEDIA_PLANS.presence.launchPrice)} (offre de lancement)</li>
+                <li>
+                  Dès {formatMonthlyPrice(getPlanMonthlyPrice(SOCIAL_MEDIA_PLANS.presence))}
+                  {SOCIAL_MEDIA_LAUNCH_ACTIVE && " (offre de lancement)"}
+                </li>
                 <li>Un interlocuteur dédié</li>
               </ul>
             </div>
@@ -5660,10 +5717,12 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
             <h2 id="sm-pricing-title">Un abonnement clair, adapté à votre rythme.</h2>
             <p>Choisissez une formule, ajoutez des options si besoin, et obtenez votre estimation en une minute.</p>
           </div>
-          <p className="sm-launch-band">
-            <strong>Offre de lancement</strong> Réservée aux {SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients, pendant vos{" "}
-            {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le prix standard s’applique ensuite.
-          </p>
+          {SOCIAL_MEDIA_LAUNCH_ACTIVE && (
+            <p className="sm-launch-band">
+              <strong>Offre de lancement</strong> Réservée aux {SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients, pendant vos{" "}
+              {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le prix standard s’applique ensuite.
+            </p>
+          )}
           <div className="sm-plans">
             {Object.entries(SOCIAL_MEDIA_PLANS).map(([planKey, plan]) => {
               const copy = socialMediaPlanCopy[planKey];
@@ -5674,10 +5733,12 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
                   <h3 id={`sm-plan-${planKey}`}>{plan.name}</h3>
                   <p className="sm-plan-for">{copy.audience}</p>
                   <p className="sm-plan-price">
-                    <strong>{formatTaxedPrice(plan.launchPrice)}</strong>
+                    <strong>{formatTaxedPrice(getPlanMonthlyPrice(plan))}</strong>
                     <span>/mois</span>
                   </p>
-                  <p className="sm-plan-then">puis {formatMonthlyPrice(plan.referencePrice)} (prix standard)</p>
+                  {SOCIAL_MEDIA_LAUNCH_ACTIVE && (
+                    <p className="sm-plan-then">puis {formatMonthlyPrice(plan.referencePrice)} (prix standard)</p>
+                  )}
                   <dl className="sm-volumes">
                     <div>
                       <dt>publications</dt>
@@ -5709,7 +5770,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
             })}
           </div>
           <p className="sm-footnote">
-            Options : publication supplémentaire {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost)}, réseau supplémentaire{" "}
+            Options : publication supplémentaire {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost)} par publication et par mois, réseau supplémentaire{" "}
             {formatMonthlyPrice(SOCIAL_MEDIA_ADDONS.extraPlatform)}, audit de départ {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.setupAudit)} (facultatif, une seule fois).
             Budget publicitaire non inclus.{priceTax.note ? ` ${priceTax.note}` : ""}
           </p>
@@ -5851,7 +5912,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
             <span className="sm-eyebrow">FAQ</span>
             <h2 id="sm-faq-title">Questions fréquentes</h2>
           </div>
-          {socialMediaFaq.map((item) => (
+          {socialMediaFaq.filter((item) => SOCIAL_MEDIA_LAUNCH_ACTIVE || !item.launchOffer).map((item) => (
             <details className="sm-faq-item" key={item.question}>
               <summary>{item.question}</summary>
               <p>{item.answer}</p>
@@ -5869,7 +5930,13 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
             <h2 id="sm-request-title">Parlons de vos réseaux sociaux.</h2>
             <p>Vos choix du simulateur sont repris automatiquement. Réponse sous 24–48h avec une proposition adaptée.</p>
           </div>
-          <ContactForm onAuthOpen={onAuthOpen} prefill={requestPrefill} onSubmitted={handleSubmitted} />
+          <ContactForm
+            onAuthOpen={onAuthOpen}
+            prefill={requestPrefill}
+            onSubmitted={handleSubmitted}
+            onNavigate={onNavigate}
+            showPrivacyNotice
+          />
           <p className="sm-related-links">
             Vous préférez commencer par votre site ?{" "}
             <a href={auditLandingPath} onClick={handleNavigateTo(auditLandingPath)}>
