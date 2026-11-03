@@ -12662,3 +12662,14 @@ html {
     height: 230px;
   }
 }
+
+/* LOT SM-05a: between tablet landscape and small desktop the visual column is
+   too narrow for two full-size phones (2nd phone ~54% hidden at 1024 px).
+   Scale the whole stage proportionally so the pair keeps its desktop overlap. */
+@media (min-width: 961px) and (max-width: 1279px) {
+  .sm-stage {
+    zoom: 0.82;
+    max-width: 560px;
+    margin-left: auto;
+  }
+}
