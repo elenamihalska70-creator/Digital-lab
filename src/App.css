@@ -12500,7 +12500,7 @@ html {
   font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
-  background: #6ee7b7;
+  background: var(--sm-mint);
 }
 
 .sm-reel-phone .sm-sim-badge {
@@ -12551,5 +12551,114 @@ html {
 @media (max-width: 600px) {
   .sm-chip-validated {
     top: 424px;
+  }
+}
+
+/* ===== LOT SM-05 — Visual polish (layout and contrast only; copy in App.jsx) ===== */
+
+/* Hero: tighter, better-balanced pair of phones; the second screen's photo fills its card. */
+@media (min-width: 601px) {
+  .sm-phone-main {
+    top: 8px;
+    left: 12px;
+  }
+
+  .sm-phone-back {
+    top: 40px;
+    right: 0;
+    transform: rotate(3deg);
+  }
+
+  .sm-phone-main .sm-post-art {
+    height: 300px;
+  }
+
+  .sm-li-visual {
+    height: 340px;
+  }
+
+  .sm-chip-scheduled {
+    top: 0;
+    right: 28px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  .sm-stage {
+    max-width: 560px;
+  }
+}
+
+/* Post cards: same visual ratio, tag pinned top-left, headline pinned bottom, stronger shade. */
+.sm-persona .sm-post-art {
+  height: auto;
+  aspect-ratio: 5 / 4;
+}
+
+.sm-persona .sm-post-tag {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  margin: 0;
+}
+
+.sm-persona .sm-photo-shade {
+  background: linear-gradient(180deg, rgba(10, 4, 18, 0.3) 0%, rgba(10, 4, 18, 0) 26%, rgba(10, 4, 18, 0.1) 46%, rgba(10, 4, 18, 0.9) 100%);
+}
+
+.sm-persona .sm-post-headline {
+  font-size: 27px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+.sm-post-tag {
+  color: #ffffff;
+  background: rgba(10, 4, 18, 0.58);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Coach photo: frame the hands and kettlebell rather than the torso. */
+.sm-persona .sm-photo[data-photo="coach"] > img {
+  object-position: 50% 78%;
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  .sm-personas {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* Reels: covers about 18% larger, shrinking with their column so nothing overflows. */
+.sm-reel-phones {
+  gap: 14px;
+}
+
+.sm-reel-phone {
+  width: auto;
+  min-width: 0;
+  flex: 0 1 178px;
+}
+
+.sm-reel-phone .sm-reel-hook {
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .sm-reel-phones {
+    gap: 10px;
+  }
+
+  .sm-reel-phone {
+    flex-basis: 112px;
+  }
+
+  .sm-reel-phone .sm-reel-hook {
+    font-size: 12px;
+  }
+
+  .sm-phone-main .sm-post-art {
+    height: 230px;
   }
 }

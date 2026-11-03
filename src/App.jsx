@@ -5348,7 +5348,7 @@ const socialMediaPersonas = [
 ];
 
 const socialMediaReelCovers = [
-  { photo: "reelCafe", intent: "Coulisses", hook: "30 secondes dans notre café" },
+  { photo: "reelCafe", intent: "Coulisses", hook: "Dans les coulisses de votre café" },
   { photo: "reelCoach", intent: "Conseil", hook: "3 mouvements avant votre séance" },
   { photo: "reelAtelier", intent: "Avant / après", hook: "Vous ne reconnaîtrez pas cet atelier." },
 ];
@@ -5424,7 +5424,7 @@ function SocialPhoto({ photo, tag, headline, sizes, decorative = false, eager = 
   const image = socialMediaPhotos[photo];
 
   return (
-    <div className="sm-post-art sm-photo">
+    <div className="sm-post-art sm-photo" data-photo={photo}>
       <img
         alt={decorative ? "" : image.alt}
         decoding="async"
@@ -5722,8 +5722,11 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
             <div>
               <div className="sm-section-heading">
                 <span className="sm-eyebrow">Offre Reels</span>
-                <h2 id="sm-reels-title">Des vidéos courtes, avec ou sans abonnement.</h2>
-                <p>Des Reels prêts à publier sur Instagram, Facebook ou TikTok, à l’unité ou en pack mensuel.</p>
+                <h2 id="sm-reels-title">Des Reels qui donnent envie de regarder jusqu’au bout.</h2>
+                <p>
+                  Des vidéos courtes prêtes à publier sur Instagram, Facebook ou TikTok, à l’unité ou en abonnement mensuel, avec ou
+                  sans gestion de vos réseaux sociaux.
+                </p>
               </div>
               <ul className="sm-check-list">
                 {socialMediaReelsIncluded.map((item) => (
@@ -5739,7 +5742,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
 
                   return (
                     <div className="sm-reel-phone" key={reel.hook}>
-                      <img alt={image.alt} decoding="async" loading="lazy" sizes="150px" src={image.src} srcSet={image.srcSet} />
+                      <img alt={image.alt} decoding="async" loading="lazy" sizes="(max-width: 600px) 112px, 178px" src={image.src} srcSet={image.srcSet} />
                       <span className="sm-photo-shade" aria-hidden="true"></span>
                       <span className="sm-reel-intent">{reel.intent}</span>
                       {image.simulation && <span className="sm-sim-badge">Simulation</span>}
