@@ -1,89 +1,62 @@
-const CONTACT_EMAIL = process.env.CONTACT_TO_EMAIL || "contact@digitallab.studio";
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "Digital Lab <onboarding@resend.dev>";
+/* global process */
+// LOT NOTIFY-01A — this route is NO LONGER an e-mail relay.
+//
+// Before: the browser posted the visitor's fields here and the route e-mailed them (anyone could
+// send any content to contact@ through it). Now the request body is never read: the route only
+// wakes up the notification worker, which sends the notifications of requests ALREADY SAVED in
+// Supabase (outbox notify_01a.outbox, filled by a database trigger) to the two fixed recipients.
+//
+// The path is kept because the unchanged frontend (src/App.jsx, ContactForm) calls it right after
+// saving a request: that call triggers an immediate notification. If it never comes, the daily
+// cron (api/cron/notify-reconcile.js) catches up. The frontend ignores the response.
+import { LIMITS, readNotifyConfig } from "./_lib/notify/config.js";
+import { createMemoryRateLimiter, getClientIp, isAllowedOrigin, reply } from "./_lib/notify/http.js";
+import { createSupabaseRpc } from "./_lib/notify/supabase.js";
+import { processOutbox } from "./_lib/notify/worker.js";
 
-const escapeHtml = (value) =>
-  String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+export const createNotifyKickHandler = ({
+  env = process.env,
+  limiter = createMemoryRateLimiter(),
+  makeRpc = createSupabaseRpc,
+  send,
+  now = () => Date.now(),
+} = {}) =>
+  async function handler(request, response) {
+    if (request.method !== "POST") {
+      return reply(response, 405, { ok: false, error: "method_not_allowed" }, { Allow: "POST" });
+    }
+    if (Number(request.headers?.["content-length"] || 0) > LIMITS.kickBodyBytes) {
+      return reply(response, 413, { ok: false, error: "payload_too_large" });
+    }
+    if (!isAllowedOrigin(request.headers?.origin, env)) {
+      return reply(response, 403, { ok: false, error: "forbidden_origin" });
+    }
+    const { limit, windowSeconds } = LIMITS.kickPerIp;
+    const windowIndex = Math.floor(now() / (windowSeconds * 1000));
+    if (limiter.hit(`kick:${getClientIp(request.headers)}:${windowIndex}`, windowSeconds) > limit) {
+      return reply(response, 429, { ok: false, error: "rate_limited" }, { "Retry-After": String(windowSeconds) });
+    }
 
-const buildEmailHtml = ({ name, email, company, projectType, message }) => `
-<!doctype html>
-<html lang="fr">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Nouvelle demande Digital Lab</title>
-  </head>
-  <body style="margin:0;background:#f6f3ff;font-family:Arial,Helvetica,sans-serif;color:#171024;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 14px;background:#f6f3ff;">
-      <tr>
-        <td align="center">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border:1px solid #e7defc;border-radius:20px;overflow:hidden;">
-            <tr>
-              <td style="padding:30px;">
-                <p style="margin:0 0 10px;font-size:14px;line-height:1.5;color:#6b5d85;">Nouvelle demande depuis digitallab.studio</p>
-                <h1 style="margin:0 0 20px;font-size:28px;line-height:1.15;color:#171024;">${escapeHtml(projectType || "Projet Digital Lab")}</h1>
-                <p style="margin:0 0 8px;font-size:15px;line-height:1.6;"><strong>Nom :</strong> ${escapeHtml(name)}</p>
-                <p style="margin:0 0 8px;font-size:15px;line-height:1.6;"><strong>E-mail :</strong> ${escapeHtml(email)}</p>
-                <p style="margin:0 0 18px;font-size:15px;line-height:1.6;"><strong>Structure :</strong> ${escapeHtml(company || "Non renseignée")}</p>
-                <div style="padding:18px;border-radius:16px;background:#f7f4ff;border:1px solid #e7defc;color:#322342;font-size:15px;line-height:1.65;">
-                  ${escapeHtml(message).replaceAll("\n", "<br />")}
-                </div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+    const settings = readNotifyConfig(env);
+    if (!settings.ok) {
+      console.error("[notify-01a] not configured:", settings.problems.join(", "));
+      return reply(response, 503, { ok: false, error: "unavailable" });
+    }
 
-export default async function handler(request, response) {
-  if (request.method !== "POST") {
-    response.setHeader("Allow", "POST");
-    return response.status(405).json({ error: "Method not allowed" });
-  }
+    try {
+      const rpc = makeRpc(settings.config);
+      const summary = await processOutbox({
+        rpc, config: settings.config, limit: LIMITS.kickBatch, budgetMs: LIMITS.kickBudgetMs, now,
+        ...(send ? { send } : {}),
+      });
+      if (summary.claimed) console.info("[notify-01a] kick", JSON.stringify(summary));
+    } catch (error) {
+      // Never surfaced to the visitor: the request is saved; the cron retries.
+      console.error("[notify-01a] kick failed:", error.code ?? error.name ?? "error");
+    }
 
-  const resendApiKey = process.env.RESEND_API_KEY;
+    // Same answer whatever happened: no oracle on the queue state.
+    return reply(response, 202, { ok: true });
+  };
 
-  if (!resendApiKey) {
-    return response.status(500).json({ error: "RESEND_API_KEY is not configured." });
-  }
-
-  const { name, email, company, projectType, message } = request.body || {};
-
-  if (!name || !email || !message) {
-    return response.status(400).json({
-      error: "Missing required fields: name, email, message.",
-    });
-  }
-
-  const resendResponse = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: FROM_EMAIL,
-      to: [CONTACT_EMAIL],
-      reply_to: email,
-      subject: `Nouvelle demande Digital Lab - ${projectType || "Contact"}`,
-      html: buildEmailHtml({ name, email, company, projectType, message }),
-    }),
-  });
-
-  const data = await resendResponse.json().catch(() => ({}));
-
-  if (!resendResponse.ok) {
-    return response.status(resendResponse.status).json({
-      error: data?.message || "Resend email failed.",
-      details: data,
-    });
-  }
-
-  return response.status(200).json({ success: true, data });
-}
+export default createNotifyKickHandler();
