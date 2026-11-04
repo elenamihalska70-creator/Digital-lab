@@ -15,7 +15,7 @@ if (!repo) {
   process.exit(2);
 }
 const model = loadModel(repo);
-const { sha, FIXTURES, fixture, SEC_RB, MSG_RB, N00, N01, N02, N90, N91, N99, A, B, RA, RB, RN, fresh, prod, api, run, q, formInsert, claim, mark, outbox, lastRequestId, untouched, runReadOnlyChecks } = model;
+const { sha, FIXTURES, fixture, SEC_RB, MSG_RB, N00, N01, N02, N90, N91, N99, N80, statements, A, B, RA, RB, RN, fresh, prod, api, run, q, formInsert, claim, mark, outbox, lastRequestId, untouched, runReadOnlyChecks } = model;
 
 const results = [];
 let group = "";
@@ -240,6 +240,45 @@ group = "[caps]";
   check("claim never hands out more than 10 rows per call", tooMany.ok && tooMany.rows.length === 10, `${tooMany.rows?.length} ${tooMany.error ?? ""}`);
   const negative = await claim(db, -5);
   check("negative limit hands out nothing", negative.ok && negative.rows.length === 0, negative.error);
+}
+
+// ─────────────────────────────────────────────────────────────── daily dead check (SEC-EMAIL-02)
+group = "[daily dead check]";
+{
+  const db = await prod();
+  await run(db, N01);
+  await run(db, N02);
+  await formInsert(db, "anon", null, { name: "Personne Secrète", email: "secret.person@example.fr", company: "Société Privée", message: "Message confidentiel" });
+  const r = (await claim(db)).rows[0];
+  await mark(db, r.outbox_id, 1, "dead", null, "http_422:validation_error");
+  await formInsert(db, "anon", null, { name: "Autre", email: "autre@example.fr" });
+  await db.exec(`update notify_01a.outbox set created_at = now() - interval '9 hours' where status = 'pending'`);
+  const before = JSON.stringify(await q(db, `select * from notify_01a.outbox order by id`));
+  const parts = statements(N80).filter((s) => !/^(begin|rollback)\b/i.test(s));
+  const outputs = [];
+  let error = null;
+  for (const statement of parts) {
+    try {
+      await db.exec("begin transaction read only");
+      outputs.push((await db.query(statement)).rows);
+      await db.exec("rollback");
+    } catch (e) {
+      error = e.message;
+      try { await db.exec("rollback"); } catch { /* none */ }
+    }
+  }
+  check("80-daily-dead-check runs entirely read-only (3 queries)", error === null && outputs.length === 3, error ?? String(outputs.length));
+  check("changes nothing", JSON.stringify(await q(db, `select * from notify_01a.outbox order by id`)) === before);
+  const dead = outputs[1] ?? [];
+  check("lists the dead notification with its error and reference", dead.length === 1 && dead[0].last_error === "http_422:validation_error" && dead[0].reference === "DL-2026-0001" && dead[0].same_key_requeue_possible === true);
+  check("counts the notification waiting for more than 8 h", outputs[2]?.[0]?.waiting_over_8h === 1, JSON.stringify(outputs[2]));
+  const allowed = new Set(["status", "kind", "notifications", "oldest", "last_change", "outbox_id", "reference", "request_id", "attempts", "last_error", "first_attempt_at", "updated_at", "same_key_requeue_possible", "waiting_over_8h"]);
+  const columns = outputs.flatMap((rows) => rows.flatMap((row) => Object.keys(row)));
+  check("only technical columns (no name / email / company / message)", columns.length > 0 && columns.every((c) => allowed.has(c)), [...new Set(columns)].join(","));
+  const dump = JSON.stringify(outputs);
+  check("no personal value in the output", !["Personne Secrète", "secret.person@example.fr", "Société Privée", "Message confidentiel", "autre@example.fr"].some((s) => dump.includes(s)));
+  const anonRun = await api(db, "anon", null, parts[1]);
+  check("not readable by the API roles", !anonRun.ok && /permission denied/.test(anonRun.error), anonRun.error);
 }
 
 // ─────────────────────────────────────────────────────────────── pause, resume, rollback

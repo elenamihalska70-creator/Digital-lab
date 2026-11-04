@@ -28,6 +28,7 @@ export const loadModel = (repo) => {
   const N91 = read("docs/sql/notify-01a/91-resume.sql");
   const N99 = read("docs/sql/notify-01a/99-rollback.sql");
   const N00 = read("docs/sql/notify-01a/00-readonly-checks.sql");
+  const N80 = read("docs/sql/notify-01a/80-daily-dead-check.sql");
   const QUOTES_SQL = read("supabase/quotes.sql");
   const MESSAGES_SQL = read("supabase/request_messages.sql");
   const DOCUMENTS_SQL = read("supabase/request_documents.sql");
@@ -219,5 +220,5 @@ export const loadModel = (repo) => {
     }
     return { ok: true, out };
   };
-  return { repo, read, sha, FIXTURES, fixture, SEC, SEC_RB, MSG, MSG_RB, N01, N02, N90, N91, N99, N00, A, B, ADMIN, RA, RB, RN, fresh, prod, api, run, q, formInsert, claim, mark, outbox, lastRequestId, untouched, statements, runReadOnlyChecks, close: async () => { if (current) await current.close(); current = null; } };
+  return { repo, read, sha, FIXTURES, fixture, SEC, SEC_RB, MSG, MSG_RB, N01, N02, N90, N91, N99, N00, N80, A, B, ADMIN, RA, RB, RN, fresh, prod, api, run, q, formInsert, claim, mark, outbox, lastRequestId, untouched, statements, runReadOnlyChecks, close: async () => { if (current) await current.close(); current = null; } };
 };

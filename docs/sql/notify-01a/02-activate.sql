@@ -1,11 +1,11 @@
 -- LOT NOTIFY-01A — 02-activate.sql
--- FIRST activation (or re-activation after a return to the old relay).
--- Run ONLY at step 4 of the cutover (docs/LOT-NOTIFY-01A.md), immediately before `vercel promote`.
+-- FIRST activation only.
+-- Run ONLY at step 5 of the activation (docs/LOT-NOTIFY-01A.md §9), immediately before `vercel promote`.
 --
 -- cutover_at = now(): requests saved from this instant are notified by NOTIFY-01A. Requests saved
 -- before were handled by the old relay and are never sent again.
--- To resume after a simple pause (old relay NOT restored), use 91-resume.sql instead: it keeps
--- cutover_at, so requests saved during the pause are caught up.
+-- To resume after a pause or after rollback R2-A / R2-B (docs/LOT-NOTIFY-01A.md §10), use
+-- 91-resume.sql instead: it keeps cutover_at, so requests saved meanwhile are caught up.
 
 begin;
 set local lock_timeout = '5s';

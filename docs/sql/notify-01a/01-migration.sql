@@ -363,8 +363,8 @@ begin
   return 'requeued';
 end $$;
 
--- Cancels everything not yet sent (used before an Instant Rollback to the old relay, so that a
--- later re-activation does not send notifications the old relay already sent).
+-- Cancels everything not yet sent. Used in rollback R2-B (docs/LOT-NOTIFY-01A.md §10.2), AFTER the
+-- Instant Rollback behind the Firewall rules, so that nothing queued meanwhile is sent later.
 create function notify_01a.cancel_pending()
 returns integer
 language plpgsql set search_path = '' as $$

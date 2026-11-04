@@ -1,8 +1,10 @@
 -- LOT NOTIFY-01A — 91-resume.sql
--- Resume after 90-pause.sql, the NOTIFY-01A deployment still being live (old relay NOT restored).
+-- Resume after 90-pause.sql, once a safe NOTIFY-01A deployment is live again (docs/LOT-NOTIFY-01A.md §10).
 -- Keeps cutover_at: the next worker call (visitor form or daily cron) re-enqueues and sends the
--- requests saved during the pause. Do NOT use after an Instant Rollback to the old relay: those
--- requests were already notified by it; use cancel_pending() + 02-activate.sql instead.
+-- requests saved during the pause (no outbox row yet). Also used after rollback R2-A / R2-B, when no
+-- e-mail notification went out meanwhile: rows cancelled by cancel_pending() stay cancelled (their
+-- requests are checked in /admin, docs/LOT-NOTIFY-01A.md §10.4).
+-- Never resume while a deployment older than LOT SEC-EMAIL-02 is served (§10.1).
 
 begin;
 do $$

@@ -161,9 +161,11 @@ Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'
 | `api/cron/notify-reconcile.js` | Nouveau |
 | `api/_lib/notify/config.js`, `render.js`, `resend.js`, `supabase.js`, `worker.js`, `http.js` | Nouveaux (non exposés : `_lib`) |
 | `api/_lib/notify/notify.test.js` | Nouveau : tests unitaires |
+| `api/send-quote-email.js` | **Neutralisé en 410** (LOT SEC-EMAIL-02, `docs/LOT-SEC-EMAIL-02.md`) |
+| `api/_lib/security/public-routes.test.js` | Nouveau (SEC-EMAIL-02) : 410 sans lecture de la requête, garde-fou sur les routes exposées |
 | `vercel.json` | 4 crons, `maxDuration` |
 | `package.json` | Script `test:notify` (aucune dépendance ajoutée) |
-| `docs/sql/notify-01a/00-readonly-checks.sql`, `01-migration.sql`, `02-activate.sql`, `90-pause.sql`, `91-resume.sql`, `99-rollback.sql` | Nouveaux, **non appliqués** |
+| `docs/sql/notify-01a/00-readonly-checks.sql`, `01-migration.sql`, `02-activate.sql`, `90-pause.sql`, `91-resume.sql`, `99-rollback.sql`, `80-daily-dead-check.sql` (lecture seule, SEC-EMAIL-02) | Nouveaux, **non appliqués** |
 | `docs/sql/tests/notify-01a.model.mjs`, `notify-01a.pglite.mjs`, `notify-01a.e2e.mjs` | Nouveaux : tests SQL et de bout en bout |
 | `docs/sql/tests/fixtures/db-sec-01.*.sql`, `db-msg-01.*.sql` | Copies exactes (SHA-256 vérifiés) des migrations et retours arrière appliqués, prises sur `fix/db-msg-01`, **pour les tests uniquement** |
 | `docs/LOT-NOTIFY-01A.md` | Ce rapport |
@@ -199,7 +201,9 @@ Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'
 4. **Déploiement préparé, sans le domaine :** `vercel deploy --prod --skip-domain`, puis sur l'URL obtenue :
    - `POST /api/send-contact-email` (avec un `Origin` égal à l'URL du déploiement) → **202**, rien n'est envoyé ;
    - `GET /api/cron/notify-reconcile` sans secret → **401** ;
-   - avec `Authorization: Bearer <CRON_SECRET>` → **200**, `"enabled": false`. Cela prouve que la clé de service et les RPC fonctionnent.
+   - avec `Authorization: Bearer <CRON_SECRET>` → **200**, `"enabled": false`. Cela prouve que la clé de service et les RPC fonctionnent. En cas d'erreur `PGRST202`, exécuter `notify pgrst, 'reload schema';` ;
+   - `POST /api/send-quote-email` avec un corps `{"clientEmail": "test@example.org"}` → **410** (LOT SEC-EMAIL-02), et aucune ligne dans les journaux Resend ;
+   - enregistrer l'URL et le commit de ce déploiement : c'est la **première version sûre**. Seules cette version et les suivantes peuvent servir de cible à un Instant Rollback (§10.1).
 5. **Activation :** exécuter `02-activate.sql`, ce qui fixe `cutover_at = now()`.
 6. **Immédiatement après :** `vercel promote <url du déploiement préparé>`. L'ancien relais disparaît à cet instant.
    - Seules les demandes arrivées entre les étapes 5 et 6 (quelques secondes) reçoivent deux e-mails : un de l'ancien relais, un de NOTIFY-01A.
@@ -211,18 +215,72 @@ Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'
    - le dossier spam ;
    - la ligne dans les journaux Resend (une seule) ;
    - `v_diagnostic` (`sent`).
-9. **Surveillance pendant 48 h :**
+9. **Surveillance :**
+   - pendant 14 jours, le contrôle quotidien du §10.4 ;
    - journaux Vercel (`requestPath:/api/cron/notify-reconcile`, `[notify-01a]`) ;
-   - `v_diagnostic` : 0 ligne en `dead`, et `oldest_waiting_minutes` qui reste faible.
+   - `oldest_waiting_minutes` qui reste faible dans le résultat du cron.
 
-## 10. Rollback
+## 10. Rollback (révisé par LOT SEC-EMAIL-02)
 
-| Niveau | Action | Effet |
-|---|---|---|
-| R1 Pause (secondes) | `90-pause.sql` | Plus aucun envoi. Les demandes restent enregistrées. Reprise par `91-resume.sql`, qui rattrape tout depuis `cutover_at` |
-| R2 Retour à l'ancien relais | `90-pause.sql`, puis `select notify_01a.cancel_pending();`, puis **Instant Rollback** Vercel vers le déploiement précédent | Ancien comportement, anciens crons (aucun). Une réactivation ultérieure passe par `02-activate.sql` (nouveau `cutover_at`) |
-| R3 Retrait de la base | Après R1 ou R2 : `99-rollback.sql` | Supprime le trigger, les 3 fonctions et le schéma. Refuse s'il reste des notifications non envoyées (sauf option explicite `notify_01a.force_rollback`). Ne modifie aucune ligne de `contact_requests` (vérifié) |
-| Secrets | Supprimer `CRON_SECRET` et `SUPABASE_SERVICE_ROLE_KEY` de Vercel en cas d'abandon ; régénérer la clé de service en cas de doute | — |
+### 10.1 Règle : revenir à une ancienne version du site n'est pas sûr
+
+**Tous les déploiements Vercel antérieurs à cette branche contiennent les deux anciens relais publics :**
+- `/api/send-contact-email` : n'importe qui envoie n'importe quel contenu vers contact@, sans limitation ;
+- `/api/send-quote-email` : n'importe qui envoie un e-mail « devis prêt » à **n'importe quelle adresse**, avec un lien construit à partir de l'en-tête `Host`.
+
+Par conséquent :
+- **un Instant Rollback vers l'un de ces déploiements rouvre ces deux failles. Il est interdit**, sauf protection Firewall explicite, vérifiée avant et après (R2-B) ;
+- **cible autorisée pour un Instant Rollback :** uniquement un déploiement construit à partir d'un commit qui contient LOT SEC-EMAIL-02 (`send-quote-email` en 410) et NOTIFY-01A (`send-contact-email` sans relais). Le premier d'entre eux est la « première version sûre » relevée à l'étape 4 du §9 ;
+- **ne jamais revenir sur `api/send-quote-email.js`** dans un commit ultérieur sans un lot de sécurité dédié (conditions en tête du fichier).
+
+### 10.2 Niveaux
+
+| Niveau | Quand | Action | Effet | Rouvre une faille ? |
+|---|---|---|---|---|
+| **R1 Pause (par défaut)** | Tout incident de notification : doublons, erreurs, volume anormal | `90-pause.sql` | Plus aucun envoi. Les demandes restent enregistrées et visibles dans `/admin`. Reprise avec `91-resume.sql`, qui rattrape tout depuis `cutover_at` | **Non** |
+| **R2-A Version corrigée (recommandé)** | Le code NOTIFY-01A lui-même pose problème | (1) `90-pause.sql`. (2) Déployer la **version de repli** du §10.3 (préparée, puis promue), ou faire un Instant Rollback vers une **version sûre** (§10.1). (3) Vérifier les réponses 410 et 202. (4) Corriger, puis redéployer | Plus de notification e-mail le temps de la correction. Demandes enregistrées, contrôle de `/admin` (§10.4) | **Non** |
+| **R2-B Firewall, puis ancien déploiement** | En dernier recours, si aucune version sûre ne se déploie | Voir l'ordre strict ci-dessous | Aucune notification e-mail (l'ancien relais est bloqué). Demandes enregistrées. Contrôle quotidien de `/admin` | **Non, tant que les deux règles restent actives** |
+| **R3 Retrait de la base** | Abandon du lot, après R1 ou R2 | `99-rollback.sql` | Supprime le trigger, les 3 fonctions et le schéma. Refuse s'il reste des notifications non envoyées (sauf `notify_01a.force_rollback` explicite). Aucune ligne de `contact_requests` modifiée, et l'état DB-SEC-01 + DB-MSG-01 est restauré exactement (testé) | **Non** |
+| Secrets | Abandon ou doute | Supprimer `CRON_SECRET` et `SUPABASE_SERVICE_ROLE_KEY` de Vercel ; régénérer la clé de service en cas de doute | — | — |
+
+**R2-B, ordre strict** (chaque étape est vérifiée avant de passer à la suivante) :
+1. **Vercel Firewall, deux règles personnalisées** sur le projet `digital-lab` :
+   - `Request Path` *equals* `/api/send-contact-email` → **Deny** ;
+   - `Request Path` *equals* `/api/send-quote-email` → **Deny** ;
+   - publier les règles.
+   - Vérifier ensuite que le nombre de règles autorisé par le plan et leur maintien après un Instant Rollback (règles au niveau du projet) correspondent à ce qu'indique le tableau de bord.
+2. **Vérifier** sur `https://www.digitallab.studio` : `curl -i -X POST .../api/send-contact-email` et `curl -i -X POST .../api/send-quote-email` → **403** (bloqué par le Firewall) tous les deux.
+3. Instant Rollback vers le déploiement choisi.
+4. **Vérifier à nouveau** les deux appels → **403**. Si l'un répond autre chose, revenir immédiatement à une version sûre.
+5. `90-pause.sql`, puis `select notify_01a.cancel_pending();`. L'ancien déploiement n'a ni route de réveil ni cron, donc rien n'est traité entre les étapes 3 et 5 : aucun doublon. Les notifications de cette période ne partent pas : elles sont couvertes par le contrôle de `/admin`.
+6. **Ne jamais retirer ces règles** tant qu'un déploiement antérieur à SEC-EMAIL-02 est servi. Pour les retirer : d'abord promouvoir une version sûre, puis vérifier les réponses 410 et 202, puis supprimer les règles.
+
+### 10.3 Version de repli « notifications coupées » (à préparer seulement en cas de besoin)
+
+Elle part du dernier commit sûr de la branche publiée. Rien n'est créé à l'avance.
+
+```sh
+git switch -c fallback/notify-off <commit sûr>
+# api/send-contact-email.js : même gestionnaire 410 que api/send-quote-email.js (aucune lecture de la requête)
+# vercel.json : retirer la section "crons" (le cron en pause ne ferait rien, mais on retire du code en cause)
+npm run test:notify      # le garde-fou api/_lib/security/public-routes.test.js doit rester vert
+vercel deploy --prod --skip-domain   # puis vérifications 410, puis vercel promote
+```
+
+Effet : aucun relais, aucune notification e-mail. Les demandes sont toujours enregistrées : le frontend ignore la réponse de cette route.
+
+### 10.4 Contrôle quotidien temporaire des notifications `dead` (sans données personnelles)
+
+- **Durée :** chaque jour pendant les 14 jours qui suivent l'activation. Ensuite, une fois par semaine, jusqu'à ce qu'une alerte automatique existe (NOTIFY-01B).
+- **Requête :** `docs/sql/notify-01a/80-daily-dead-check.sql`, dans l'éditeur SQL. Elle s'exécute en transaction en lecture seule et ne renvoie que des colonnes techniques : statut, nombres, `outbox_id`, `request_id`, référence `DL-AAAA-NNNN`, tentatives, code d'erreur, dates. **Jamais de nom, d'e-mail, de structure ni de message** (testé).
+- **Résultat attendu :** la requête 2 ne renvoie aucune ligne, et la requête 3 renvoie 0.
+- **Si une ligne est en `dead` :**
+  1. chercher dans les journaux Resend l'en-tête `X-DigitalLab-Notification: notify-01a/<request_id>` ;
+  2. si l'e-mail n'a pas été délivré : `notify_01a.requeue('<request_id>')`, avec la même clé tant que `same_key_requeue_possible` vaut `true`. Sinon, `requeue('<request_id>', true)`, uniquement après la vérification dans Resend ;
+  3. la demande reste consultable dans `/admin` dans tous les cas.
+- **Également :** dans les journaux Vercel, le champ `after.dead` de la ligne `[notify-01a] cron`.
+- **Journal d'exploitation :** noter la date et les nombres uniquement, sans données personnelles.
+- Si R2-A ou R2-B est en cours (plus de notification e-mail), consulter également chaque jour les nouvelles demandes dans `/admin`.
 
 **Ordre avec les autres lots :** testé dans les deux sens. Les retours arrière de DB-MSG-01 puis de DB-SEC-01 restent acceptés avec NOTIFY-01A en place, et celui de NOTIFY-01A restaure exactement l'état DB-SEC-01 + DB-MSG-01.
 
@@ -230,11 +288,11 @@ Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'
 
 | Suite | Commande | Résultat |
 |---|---|---|
-| SQL, PGlite 0.2.17 (réplique Production après DB-SEC-01 + DB-MSG-01) | Copier `docs/sql/tests/notify-01a.{model,pglite}.mjs` dans un dossier temporaire, puis `npm i @electric-sql/pglite@0.2.17 && node --expose-gc notify-01a.pglite.mjs <repo>` | **103/103** |
-| Unitaires Node (`node:test`, sans réseau) | `npm run test:notify` | **50/50** |
+| SQL, PGlite 0.2.17 (réplique Production après DB-SEC-01 + DB-MSG-01) | Copier `docs/sql/tests/notify-01a.{model,pglite}.mjs` dans un dossier temporaire, puis `npm i @electric-sql/pglite@0.2.17 && node --expose-gc notify-01a.pglite.mjs <repo>` | **110/110** |
+| Unitaires Node (`node:test`, sans réseau), dont SEC-EMAIL-02 | `npm run test:notify` | **63/63** |
 | Bout en bout local (vraies routes servies en HTTP, worker, RPC en `service_role` sur PGlite, `fetch` réel vers un faux Resend qui reproduit l'idempotence documentée) | Copier `notify-01a.{model,e2e}.mjs`, puis `node --expose-gc notify-01a.e2e.mjs <repo>` | **35/35** |
 | Build | `npm run build` | OK, 13 routes pré-rendues |
-| ESLint | `npx eslint .` | 22 problèmes, contre 25 avant ce lot. Aucun dans les nouveaux fichiers |
+| ESLint | `npx eslint .` | 16 problèmes, contre 25 avant ce lot, tous dans `src/` (non modifié). Aucun dans `api/` ni dans les nouveaux fichiers |
 | Frontend | `git diff c80ce8e -- src` | Vide |
 
 **Couverture principale :**
@@ -281,7 +339,7 @@ Ces points sont couverts par les étapes 4, 7 et 8 de l'activation.
 
 ## 12. Risques restants
 
-1. **Critique, hors périmètre : `api/send-quote-email.js` sur `origin/main` est toujours l'ancien relais ouvert.** Il envoie vers n'importe quel `clientEmail`, avec un lien construit à partir de l'en-tête `Host`. SEC-EMAIL-01 l'avait neutralisé en 410, mais sur une branche non fusionnée. Ce lot ne l'a pas modifié (consigne : ne neutraliser que `send-contact-email`). Recommandation : une règle Vercel Firewall *Deny* immédiate, ou une neutralisation en 410 dans un lot dédié.
+1. **`api/send-quote-email.js` : corrigé dans cette branche par LOT SEC-EMAIL-02 (410), mais toujours ouvert en Production** jusqu'au déploiement. Tout déploiement antérieur le contient (§10.1). En attendant, une règle Firewall *Deny* reste possible, sur autorisation. La source de l'Edge Function `supabase/functions/send-quote-email/index.ts` sur `main` est toujours l'ancien code (la version en Production répond 410) : **ne pas la redéployer depuis `main`** (voir `docs/LOT-SEC-EMAIL-02.md`).
 2. Plan Vercel non confirmé (Hobby : délais et conditions d'utilisation commerciale) ; 4 crons quotidiens acceptés ou non, à vérifier au déploiement.
 3. La clé `service_role` est désormais présente dans Vercel. Elle donne un accès complet à l'API Supabase, au-delà des trois fonctions.
 4. L'insertion anonyme reste ouverte (DB-SEC-01) : le volume d'e-mails est borné, pas celui des demandes enregistrées.
@@ -289,3 +347,4 @@ Ces points sont couverts par les étapes 4, 7 et 8 de l'activation.
 6. Doublons Gmail dus au transfert Zimbra ; pas de DMARC.
 7. Domaine et quota Resend à confirmer.
 8. Le visiteur voit toujours « bien envoyée », même si la notification est retardée : choix assumé de ne pas modifier le frontend. La demande, elle, est bien enregistrée.
+9. Les notifications en `dead` n'alertent personne automatiquement : contrôle quotidien manuel pendant 14 jours (§10.4), puis alerte dans NOTIFY-01B.
