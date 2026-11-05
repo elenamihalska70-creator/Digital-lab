@@ -29,8 +29,13 @@ Chaque nouvelle demande enregistrée dans `public.contact_requests` déclenche *
 | Rattrapage planifié par Vercel Cron | `pg_cron` / `pg_net` (NOTIFY-01B, si autorisé) |
 | — | Turnstile / insertion côté serveur |
 
+**Frontend : une seule modification (LOT NOTIFY-01C)**, dans `src/App.jsx` (ContactForm).
+- L'appel de réveil devient `fetch("/api/send-contact-email", { method: "POST", keepalive: true })`, **sans corps** : il ne transmet plus aucune donnée personnelle, puisque le worker lit la demande enregistrée en base.
+- Avant, il envoyait le formulaire entier en JSON, sans limite de longueur (ni le formulaire ni la base n'en ont). Un message de plus de 20 ko faisait refuser l'appel (413), ce qui retardait la notification jusqu'au cron.
+- `keepalive` laisse l'appel aboutir même si la page est fermée juste après.
+- La sauvegarde de la demande, les champs, les messages affichés et les règles du formulaire sont inchangés.
+
 **Inchangé :**
-- le frontend (`src/` : aucune ligne modifiée) ;
 - les politiques RLS ;
 - les colonnes, droits et données de `contact_requests` ;
 - DB-SEC-01 et DB-MSG-01 ;
@@ -41,12 +46,12 @@ Aucune dépendance à n8n.
 ## 2. Architecture retenue (B′)
 
 ```
-Navigateur (inchangé)
-  1. INSERT contact_requests (clé anon, droits DB-SEC-01)
+Navigateur (ContactForm)
+  1. INSERT contact_requests (clé anon, droits DB-SEC-01), attendu avant l'étape 2
         │ trigger AFTER INSERT notify_01a_enqueue (n'empêche jamais l'insertion)
         ▼
      notify_01a.outbox  (pending)
-  2. POST /api/send-contact-email (appel existant du ContactForm)
+  2. POST /api/send-contact-email, sans corps, keepalive (NOTIFY-01C)
         │ le corps n'est JAMAIS lu : la route réveille le worker
         ▼
      worker Vercel ── RPC service_role ──▶ notify_01a_claim / _mark / _reconcile
@@ -136,9 +141,17 @@ Source : <https://vercel.com/docs/cron-jobs/usage-and-pricing> et `/manage-cron-
 
 **Important :** une tentative n'a lieu que lorsqu'un appel arrive (le formulaire d'un visiteur, un cron, ou un `curl` manuel avec le secret). En Hobby, après un échec, la relance effective arrive donc **au prochain cron, c'est-à-dire en moins de 7 h environ**, ou plus tôt si un autre visiteur soumet le formulaire.
 
+**Nouvel essai dans le même appel (NOTIFY-01C) :**
+- **Cas couverts :** une erreur Resend temporaire (délai dépassé, réseau, 5xx, 429 de débit, ou `409 concurrent_idempotent_requests`).
+- **Mécanisme :** le worker refait **un seul** essai, 1 s plus tard, avec **la même clé d'idempotence et le même contenu**. Resend ne peut donc pas envoyer deux fois : il renvoie la réponse d'origine, ou un 409 si la première requête est encore en cours.
+- **Pas de nouvel essai** pour 401, 403 ou un quota quotidien ou mensuel dépassé.
+- **Limite de temps :** l'essai n'a lieu que s'il se termine à coup sûr dans le budget de temps (20 s pour le réveil, 45 s pour le cron). Le pire cas reste donc celui d'avant : environ 28 s, sous le `maxDuration` de 30 s (60 s pour le cron).
+- **Comptage :** un essai supplémentaire dans le même appel ne compte pas comme une tentative du calendrier ci-dessus.
+
 **Délai de notification :**
 - cas normal : immédiat, quelques secondes après la soumission ;
-- appel du navigateur perdu, ou Resend en panne : jusqu'à environ 7 h ;
+- erreur Resend passagère (moins d'une seconde) : environ 1 s de plus, dans le même appel ;
+- appel du navigateur jamais parti, ou Resend en panne plus longtemps : jusqu'à environ 7 h (prochain cron) ;
 - avec un seul cron quotidien (repli) : jusqu'à environ 25 h, avec un risque de `window_expired` si le premier échec a eu lieu peu après le passage du cron.
 
 ## 6. Protections
@@ -359,11 +372,11 @@ Effet : aucun relais, aucune notification e-mail. Les demandes sont toujours enr
 | Suite | Commande | Résultat |
 |---|---|---|
 | SQL, PGlite 0.2.17 (réplique Production après DB-SEC-01 + DB-MSG-01) | Copier `docs/sql/tests/notify-01a.{model,pglite}.mjs` dans un dossier temporaire, puis `npm i @electric-sql/pglite@0.2.17 && node --expose-gc notify-01a.pglite.mjs <repo>` | **110/110** |
-| Unitaires Node (`node:test`, sans réseau), dont SEC-EMAIL-02 | `npm run test:notify` | **66/66** (dont le refus en Preview) |
-| Bout en bout local (vraies routes servies en HTTP, worker, RPC en `service_role` sur PGlite, `fetch` réel vers un faux Resend qui reproduit l'idempotence documentée) | Copier `notify-01a.{model,e2e}.mjs`, puis `node --expose-gc notify-01a.e2e.mjs <repo>` | **35/35** |
+| Unitaires Node (`node:test`, sans réseau), dont SEC-EMAIL-02 | `npm run test:notify` | **84/84** (dont le refus en Preview, le nouvel essai et l'appel du frontend) |
+| Bout en bout local (vraies routes servies en HTTP, worker, RPC en `service_role` sur PGlite, `fetch` réel vers un faux Resend qui reproduit l'idempotence documentée) | Copier `notify-01a.{model,e2e}.mjs`, puis `node --expose-gc notify-01a.e2e.mjs <repo>` | **39/39** |
 | Build | `npm run build` | OK, 13 routes pré-rendues |
-| ESLint | `npx eslint .` | 16 problèmes, contre 25 avant ce lot, tous dans `src/` (non modifié). Aucun dans `api/` ni dans les nouveaux fichiers |
-| Frontend | `git diff origin/main -- src supabase index.html` | Vide |
+| ESLint | `npx eslint .` | 16 problèmes, contre 25 avant ce lot, tous dans `src/` et déjà présents. Aucun dans `api/` ni dans les nouveaux fichiers |
+| Frontend | `git diff origin/main -- src supabase index.html` | Uniquement l'appel de réveil de `src/App.jsx` (NOTIFY-01C), vérifié par un test : une seule occurrence, sans corps, `keepalive`, après la sauvegarde |
 | Relais des devis | `git diff 3fa2efb -- api/send-quote-email.js` | Vide : identique à la Production |
 
 **Couverture principale :**
@@ -417,5 +430,5 @@ Ces points sont couverts par les étapes 6, 9 et 10 de l'activation (§9.2).
 5. Les limites par IP sont propres à chaque instance (pas de Redis). Le plafond global reste exact, puisqu'il est calculé en base.
 6. Doublons Gmail dus au transfert Zimbra ; pas de DMARC.
 7. Domaine et quota Resend à confirmer.
-8. Le visiteur voit toujours « bien envoyée », même si la notification est retardée : choix assumé de ne pas modifier le frontend. La demande, elle, est bien enregistrée.
+8. Le visiteur voit toujours « bien envoyée », même si la notification est retardée : choix assumé de ne pas modifier les messages du formulaire. La demande, elle, est bien enregistrée.
 9. Les notifications en `dead` n'alertent personne automatiquement : contrôle quotidien manuel pendant 14 jours (§10.4), puis alerte dans NOTIFY-01B.

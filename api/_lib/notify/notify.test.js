@@ -1,7 +1,8 @@
 // LOT NOTIFY-01A — unit tests (node:test, no network). Run: npm run test:notify
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { NOTIFY_RECIPIENTS, parseSender, readNotifyConfig } from "./config.js";
+import { LIMITS, NOTIFY_RECIPIENTS, parseSender, readNotifyConfig } from "./config.js";
 import { buildPayload, formatParisDate, payloadSha256 } from "./render.js";
 import { sendViaResend } from "./resend.js";
 import { processOutbox } from "./worker.js";
@@ -222,6 +223,68 @@ describe("worker", () => {
     assert.equal(calls, 1);
     assert.equal(summary.skipped, 1);
   }));
+  describe("one inline retry after a temporary Resend error", () => {
+    const run = async (outcomes, { budgetMs = 20_000, t = { now: 0 } } = {}) => {
+      const rpc = fakeRpc();
+      const sent = [];
+      const slept = [];
+      const summary = await processOutbox({
+        rpc, config: CONFIG, limit: 3, budgetMs, now: () => t.now,
+        sleep: async (ms) => { slept.push(ms); t.now += ms; },
+        send: async (args) => { sent.push(args); return outcomes[sent.length - 1]; },
+      });
+      return { rpc, sent, slept, summary };
+    };
+    for (const error of ["timeout", "network", "idempotency_concurrent", "http_500", "http_503:application_error", "http_429", "http_429:rate_limit_exceeded"]) {
+      it(`${error} then success → sent in the same call, same key, identical payload`, quiet(async () => {
+        const { rpc, sent, slept, summary } = await run([{ result: "retry", error }, { result: "sent", id: "re_2" }]);
+        assert.equal(sent.length, 2);
+        assert.deepEqual(slept, [1_000]);
+        assert.equal(sent[0].idempotencyKey, REQUEST_ROW.idempotency_key);
+        assert.equal(sent[1].idempotencyKey, sent[0].idempotencyKey);
+        assert.equal(JSON.stringify(sent[1].payload), JSON.stringify(sent[0].payload));
+        assert.equal(rpc.calls.mark.length, 1);
+        assert.equal(rpc.calls.mark[0].outcome.result, "sent");
+        assert.equal(summary.sent, 1);
+      }));
+    }
+    it("fails twice → one mark 'retry' with the second error (left to the backoff and the cron)", quiet(async () => {
+      const { rpc, sent } = await run([{ result: "retry", error: "http_503" }, { result: "retry", error: "timeout" }]);
+      assert.equal(sent.length, 2);
+      assert.equal(rpc.calls.mark.length, 1);
+      assert.deepEqual(rpc.calls.mark[0].outcome, { result: "retry", error: "timeout" });
+    }));
+    for (const error of ["http_401:missing_api_key", "http_403:invalid_from_address", "http_429:daily_quota_exceeded", "http_429:monthly_quota_exceeded"]) {
+      it(`${error} → no inline retry (cannot be fixed within a second)`, quiet(async () => {
+        const { sent, slept } = await run([{ result: "retry", error }]);
+        assert.equal(sent.length, 1);
+        assert.deepEqual(slept, []);
+      }));
+    }
+    it("dead or sent → no inline retry", quiet(async () => {
+      assert.equal((await run([{ result: "dead", error: "http_422" }])).sent.length, 1);
+      assert.equal((await run([{ result: "sent", id: "re_1" }])).sent.length, 1);
+    }));
+    it("retry only if it surely ends within the time budget (stays under the Vercel maxDuration)", quiet(async () => {
+      const attempts = async (firstAttemptMs) => {
+        let now = 0;
+        const calls = [];
+        await processOutbox({
+          rpc: fakeRpc(), config: CONFIG, limit: 3, budgetMs: 20_000, now: () => now, sleep: async (ms) => { now += ms; },
+          send: async (args) => { calls.push(args); now += calls.length === 1 ? firstAttemptMs : 0; return { result: "retry", error: "timeout" }; },
+        });
+        return calls.length;
+      };
+      assert.equal(await attempts(11_000), 2); // 11 s + 1 s + 8 s = 20 s ≤ 20 s: allowed
+      assert.equal(await attempts(11_001), 1); // > 20 s: refused, left to the backoff and the cron
+    }));
+    it("worst case of a visitor call stays below maxDuration 30 s", () => {
+      // A row may start up to kickBudgetMs; its first attempt lasts at most resendTimeoutMs; the
+      // retry is only allowed if it ends within kickBudgetMs. Margin for claim / mark: ≥ 1.5 s.
+      assert.ok(LIMITS.kickBudgetMs + LIMITS.resendTimeoutMs <= 30_000 - 1_500);
+      assert.ok(LIMITS.cronBudgetMs + LIMITS.resendTimeoutMs <= 60_000 - 5_000);
+    });
+  });
   it("logs contain no visitor data", quiet(async (lines) => {
     await processOutbox({ rpc: fakeRpc(), config: CONFIG, limit: 3, budgetMs: 1_000, send: async () => ({ result: "retry", error: "http_503" }) });
     const all = lines.join("\n");
@@ -249,6 +312,20 @@ describe("supabase rpc adapter", () => {
     const fetchImpl = async () => new Response(JSON.stringify({ code: "42501", message: "permission denied for function" }), { status: 403, headers: { "Content-Type": "application/json" } });
     const rpc = createSupabaseRpc({ supabaseUrl: CONFIG.supabaseUrl, serviceKey: CONFIG.serviceKey, fetchImpl });
     await assert.rejects(rpc.claim(3), (error) => error.code === "42501" && !error.message.includes(CONFIG.serviceKey));
+  });
+});
+
+describe("frontend call (src/App.jsx, ContactForm)", () => {
+  const app = readFileSync(new URL("../../../src/App.jsx", import.meta.url), "utf8");
+  const calls = app.match(/fetch\("\/api\/send-contact-email"[^)]*\)/g) ?? [];
+  it("exactly one call, a bodiless keepalive POST: no personal data leaves the page", () => {
+    assert.equal(calls.length, 1, calls.join("\n"));
+    assert.match(calls[0], /method: "POST"/);
+    assert.match(calls[0], /keepalive: true/);
+    assert.doesNotMatch(calls[0], /body|headers|contactPayload/);
+  });
+  it("the call comes after the saved request (insert awaited first)", () => {
+    assert.ok(app.indexOf("await createContactRequest(") < app.indexOf('fetch("/api/send-contact-email"'));
   });
 });
 
@@ -313,6 +390,13 @@ describe("kick endpoint (former relay)", () => {
     assert.equal(res.statusCode, 503);
     assert.ok(lines.join(" ").includes("SUPABASE_URL"));
     assert.ok(!lines.join(" ").includes("re_test_not_real"));
+  }));
+  it("the new frontend call (no body, no Content-Type) → 202 and sends the saved request", quiet(async () => {
+    const rpc = fakeRpc();
+    const res = fakeResponse();
+    await handler(rpc)({ method: "POST", headers: { origin: "https://www.digitallab.studio", "content-length": "0", "x-vercel-forwarded-for": "203.0.113.9" } }, res);
+    assert.equal(res.statusCode, 202);
+    assert.equal(rpc.calls.mark[0].outcome.result, "sent");
   }));
   it("Preview deployment with Production secrets → 503, no RPC, nothing sent", quiet(async () => {
     let made = 0;

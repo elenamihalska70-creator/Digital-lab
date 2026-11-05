@@ -18,6 +18,7 @@ export const LIMITS = Object.freeze({
   kickBudgetMs: 20_000,
   cronBudgetMs: 45_000,
   resendTimeoutMs: 8_000,
+  inlineRetryDelayMs: 1_000, // one extra attempt in the same call after a temporary Resend error
   // E-mail content
   messageChars: 8_000,
   subjectChars: 180,

@@ -1,7 +1,7 @@
 // LOT NOTIFY-01A — local end-to-end run. Never connects to Supabase, Vercel or Resend.
 //
 //   visitor insert (role anon, DB-SEC-01 grants)  →  trigger  →  outbox
-//   the frontend's exact call: POST /api/send-contact-email (real route code, real HTTP server)
+//   the frontend's exact call: bodiless POST /api/send-contact-email (real route code, real HTTP server)
 //   →  worker  →  RPC as service_role  →  real fetch to a FAKE Resend (127.0.0.1)
 //   GET /api/cron/notify-reconcile with the cron secret (real route code)
 //
@@ -131,19 +131,27 @@ const app = createServer(async (req, res) => {
 await new Promise((resolve) => app.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${app.address().port}`;
 
-// The frontend's exact call (src/App.jsx, ContactForm), unchanged.
+// The frontend's exact call (src/App.jsx, ContactForm, LOT NOTIFY-01C): a bodiless keepalive POST.
+// The browser adds Origin; X-Forwarded-For stands in for the visitor's IP behind Vercel.
 let ipCounter = 0;
-const frontendCall = (contactPayload, ip = `198.51.100.${(ipCounter += 1) % 250}`) => fetch(`${base}/api/send-contact-email`, {
+const nextIp = () => `198.51.100.${(ipCounter += 1) % 250}`;
+const frontendCall = (ip = nextIp()) => fetch(`${base}/api/send-contact-email`, {
+  method: "POST",
+  keepalive: true,
+  headers: { Origin: "http://localhost:5173", "X-Forwarded-For": ip },
+});
+// Any other POST: an attacker, or a page still running the previous bundle (JSON body of the form).
+const rawCall = (body, ip = nextIp()) => fetch(`${base}/api/send-contact-email`, {
   method: "POST",
   headers: { "Content-Type": "application/json", Origin: "http://localhost:5173", "X-Forwarded-For": ip },
-  body: JSON.stringify(contactPayload),
+  body: JSON.stringify(body),
 });
 const cronCall = (secret = env.CRON_SECRET) => fetch(`${base}/api/cron/notify-reconcile`, { headers: secret ? { Authorization: `Bearer ${secret}` } : {} });
 const submit = async (name, ip) => {
   const fields = { name, email: `${name.toLowerCase().replace(/\W/g, "")}@example.fr`, company: "Atelier", projectType: "Site web", message: `Bonjour, ici ${name}.` };
   const saved = await formInsert(db, "anon", null, { name: fields.name, email: fields.email, company: fields.company, project_type: fields.projectType, message: fields.message });
   if (!saved.ok) throw new Error(saved.error);
-  const response = await frontendCall(fields, ip);
+  const response = await frontendCall(ip);
   return { response, id: (await q(db, `select id from public.contact_requests where name = $1`, [name]))[0].id };
 };
 const row = async (requestId) => (await q(db, `select * from notify_01a.outbox where request_id = $1`, [requestId]))[0];
@@ -165,15 +173,18 @@ try {
     check("content from the saved request", d.payload.text.includes("Bonjour, ici Alice Martin.") && d.payload.subject.startsWith("Nouvelle demande DL-2026-0001"));
     const r = await row(id);
     check("outbox: sent, resend id stored, payload hash stored", r.status === "sent" && r.resend_id === "re_fake_1" && /^[0-9a-f]{64}$/.test(r.payload_sha256));
+    const before = resend.requests;
+    const legacy = await rawCall({ name: "Alice Martin", email: "alicemartin@example.fr", message: "Bonjour, ici Alice Martin." });
+    check("a page still running the previous bundle (JSON body) → 202, body ignored, nothing resent", legacy.status === 202 && resend.requests === before);
   }
 
-  group = "[E2 Resend down]";
+  group = "[E2 Resend down twice]";
   {
-    resend.failNext = 1;
+    resend.failNext = 2;
     const { id } = await submit("Bruno Petit");
     let r = await row(id);
-    check("503 → failed, retry scheduled, nothing delivered", r.status === "failed" && r.last_error === "http_503:application_error" && resend.deliveries.length === 1, `${r.status} ${r.last_error}`);
-    await frontendCall({});
+    check("503, inline retry 503 → failed, retry scheduled, nothing delivered", r.status === "failed" && r.attempts === 1 && r.last_error === "http_503:application_error" && resend.deliveries.length === 1 && resend.failNext === 0, `${r.status} ${r.attempts} ${r.last_error}`);
+    await frontendCall();
     check("an early call does not retry before the backoff", resend.deliveries.length === 1);
     await due(id);
     const c = await cronCall();
@@ -182,21 +193,42 @@ try {
     check("daily cron catches up: sent once", c.status === 200 && r.status === "sent" && resend.deliveries.length === 2 && body.processed.sent === 1, JSON.stringify(body));
   }
 
-  group = "[E3 timeout after delivery]";
+  group = "[E2b Resend blip]";
   {
-    resend.hangMs = 600;
+    resend.failNext = 1;
+    const started = Date.now();
+    const { response, id } = await submit("Bérénice Blip");
+    const r = await row(id);
+    check("503 once → sent by the inline retry, in the same visitor call", response.status === 202 && r.status === "sent" && r.attempts === 1 && resend.deliveries.length === 3, `${r.status} ${r.attempts} ${resend.deliveries.length}`);
+    check("…with the same key, after about one second", resend.deliveries[2].key === `notify-01a/${id}` && Date.now() - started >= 1_000);
+  }
+
+  group = "[E3 timeout, retry while Resend still processes]";
+  {
+    resend.hangMs = 1_500;
     timeoutMs = 200;
     const { id } = await submit("Chloé Durand");
     let r = await row(id);
-    check("timeout → failed (outcome unknown)", r.status === "failed" && r.last_error === "timeout", `${r.status} ${r.last_error}`);
-    check("…though Resend did deliver it", resend.deliveries.length === 3);
-    await sleep(700);
+    check("timeout, inline retry → 409 concurrent → failed (outcome unknown)", r.status === "failed" && r.last_error === "idempotency_concurrent", `${r.status} ${r.last_error}`);
+    check("…Resend delivered it once", resend.deliveries.length === 4);
+    await sleep(1_600);
     resend.hangMs = 0;
     timeoutMs = 2_000;
     await due(id);
     await cronCall();
     r = await row(id);
-    check("retry with the same key + same payload → Resend answers the original response, NO second e-mail", r.status === "sent" && resend.deliveries.length === 3 && r.resend_id === "re_fake_3", `${r.status} ${resend.deliveries.length} ${r.resend_id}`);
+    check("retry with the same key + same payload → Resend answers the original response, NO second e-mail", r.status === "sent" && resend.deliveries.length === 4 && r.resend_id === "re_fake_4", `${r.status} ${resend.deliveries.length} ${r.resend_id}`);
+  }
+
+  group = "[E3b timeout after delivery, inline retry]";
+  {
+    resend.hangMs = 600;
+    timeoutMs = 200;
+    const { id } = await submit("Clément Lent");
+    resend.hangMs = 0;
+    timeoutMs = 2_000;
+    const r = await row(id);
+    check("timeout, then the inline retry gets the original response → sent, NO second e-mail", r.status === "sent" && resend.deliveries.length === 5 && r.resend_id === "re_fake_5", `${r.status} ${resend.deliveries.length} ${r.resend_id}`);
   }
 
   group = "[E4 concurrency]";
@@ -204,7 +236,7 @@ try {
     resend.hangMs = 150;
     const saved = await formInsert(db, "anon", null, { name: "Damien Roux", email: "damien@example.fr" });
     const id = (await q(db, `select id from public.contact_requests where name = 'Damien Roux'`))[0].id;
-    await Promise.all([frontendCall({}, "203.0.113.1"), frontendCall({}, "203.0.113.2"), cronCall(), frontendCall({}, "203.0.113.3")]);
+    await Promise.all([frontendCall("203.0.113.1"), frontendCall("203.0.113.2"), cronCall(), frontendCall("203.0.113.3")]);
     resend.hangMs = 0;
     check("4 simultaneous calls → one e-mail", saved.ok && resend.deliveries.filter((d) => d.key === `notify-01a/${id}`).length === 1);
     check("…marked sent", (await row(id)).status === "sent");
@@ -213,7 +245,7 @@ try {
   group = "[E5 no relay]";
   {
     const before = resend.requests;
-    const res = await frontendCall({ to: "attacker@evil.example", email: "attacker@evil.example", subject: "WIN", message: "spam spam", html: "<a href=x>x</a>" });
+    const res = await rawCall({ to: "attacker@evil.example", email: "attacker@evil.example", subject: "WIN", message: "spam spam", html: "<a href=x>x</a>" });
     check("posting arbitrary content sends nothing (queue empty)", res.status === 202 && resend.requests === before);
     const bad = await fetch(`${base}/api/send-contact-email`, { method: "POST", headers: { Origin: "https://evil.example", "Content-Type": "application/json" }, body: "{}" });
     check("foreign origin refused", bad.status === 403);
@@ -235,7 +267,8 @@ try {
 
   group = "[E7 caps]";
   {
-    await db.exec(`update notify_01a.settings set hourly_cap = 7`); // 5 already sent in the last hour
+    const sentHour = (await q(db, `select count(*)::int n from notify_01a.outbox where sent_at > now() - interval '1 hour'`))[0].n;
+    await db.exec(`update notify_01a.settings set hourly_cap = ${sentHour + 2}`); // room for 2 more requests (the alert is outside the cap)
     const before = resend.deliveries.length;
     const ids = [];
     for (const name of ["F1", "F2", "F3", "F4"]) ids.push((await submit(`Cap ${name}`)).id);
@@ -253,7 +286,7 @@ try {
 
   group = "[E8 payload changed]";
   {
-    resend.failNext = 1;
+    resend.failNext = 2; // first attempt and inline retry both fail
     const { id } = await submit("Gaston Morel");
     await due(id);
     const changed = createNotifyCronHandler({ env: { ...env, RESEND_FROM_EMAIL: "Autre nom <contact@digitallab.studio>" }, makeRpc: () => rpc, send });
@@ -270,7 +303,7 @@ try {
     const { response, id } = await submit("Hugo Faure");
     check("paused: request saved, answer 202, nothing sent", response.status === 202 && resend.deliveries.length === before && !(await row(id)));
     await run(db, N91);
-    await frontendCall({});
+    await frontendCall();
     check("resumed: the request saved during the pause is sent", (await row(id))?.status === "sent" && resend.deliveries.length === before + 1);
   }
 
@@ -290,13 +323,13 @@ try {
     await run(db, N01);
     const before = resend.deliveries.length;
     await formInsert(db, "anon", null, { name: "Avant bascule" });
-    await frontendCall({});
+    await frontendCall();
     check("migration applied but not activated: nothing sent (old relay window)", resend.deliveries.length === before);
     await run(db, N02);
     await (await cronCall()).json();
     check("activation does not resend requests saved before cutover_at", resend.deliveries.length === before);
     await formInsert(db, "anon", null, { name: "Après bascule" });
-    await frontendCall({});
+    await frontendCall();
     check("first request after cutover is sent", resend.deliveries.length === before + 1);
   }
 } finally {

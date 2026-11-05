@@ -1,9 +1,17 @@
 // LOT NOTIFY-01A — processes due outbox rows: claim → build → send (idempotent) → mark.
 // Logs carry only ids, counters and short error codes: never names, e-mails, messages or secrets.
+import { LIMITS } from "./config.js";
 import { buildPayload, payloadSha256 } from "./render.js";
 import { sendViaResend } from "./resend.js";
 
 const log = (level, event, fields = {}) => console[level](`[notify-01a] ${event}`, JSON.stringify(fields));
+
+// Temporary Resend errors worth one more attempt a second later. Not 401 / 403 (configuration) nor
+// a 429 quota (daily / monthly): retrying within a second cannot fix them.
+const TRANSIENT = /^(timeout|network|idempotency_concurrent|http_5\d\d(:\w+)?|http_429(:rate_limit_exceeded)?)$/;
+export const isTransient = (outcome) => outcome?.result === "retry" && TRANSIENT.test(outcome.error ?? "");
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const processOutbox = async ({
   rpc,
@@ -12,6 +20,9 @@ export const processOutbox = async ({
   budgetMs,
   send = (args) => sendViaResend(args),
   now = () => Date.now(),
+  sleep = wait,
+  retryDelayMs = LIMITS.inlineRetryDelayMs,
+  attemptMs = LIMITS.resendTimeoutMs,
 }) => {
   const started = now();
   const summary = { claimed: 0, sent: 0, retry: 0, dead: 0, stale: 0, skipped: 0, mark_errors: 0 };
@@ -36,6 +47,14 @@ export const processOutbox = async ({
       outcome = { result: "dead", error: "payload_changed" };
     } else {
       outcome = await send({ payload, idempotencyKey: row.idempotency_key, config });
+      // One extra attempt in the same call: same key and same payload, so Resend can never send twice
+      // (original response, or 409 while the first request is still processed). Only when it is
+      // sure to end within the time budget, which keeps the call under the Vercel maxDuration.
+      if (isTransient(outcome) && now() - started + retryDelayMs + attemptMs <= budgetMs) {
+        log("warn", "inline retry", { outbox_id: row.outbox_id, error: outcome.error });
+        await sleep(retryDelayMs);
+        outcome = await send({ payload, idempotencyKey: row.idempotency_key, config });
+      }
     }
 
     try {
