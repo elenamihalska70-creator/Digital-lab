@@ -50,6 +50,10 @@ export const parseSender = (value) => {
  * { ok: true, config } or { ok: false, problems: [names of missing / invalid variables] }.
  */
 export const readNotifyConfig = (env = process.env) => {
+  // Preview deployments (any branch) must never use the Production database or send e-mails, even
+  // if a secret happens to be exposed to the Preview environment by mistake: refused outright.
+  if (env.VERCEL_ENV === "preview") return { ok: false, problems: ["VERCEL_ENV=preview"] };
+
   const problems = [];
 
   const supabaseUrl = String(env.SUPABASE_URL || env.VITE_SUPABASE_URL || "").trim().replace(/\/$/, "");

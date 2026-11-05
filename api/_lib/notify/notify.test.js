@@ -77,6 +77,9 @@ describe("config", () => {
     assert.equal(result.ok, false);
     assert.deepEqual(result.problems, ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "RESEND_API_KEY", "RESEND_FROM_EMAIL"]);
   });
+  it("refuses to run on a Preview deployment, even with every secret present", () => {
+    assert.deepEqual(readNotifyConfig({ ...ENV, VERCEL_ENV: "preview" }), { ok: false, problems: ["VERCEL_ENV=preview"] });
+  });
   it("refuses the public anon key as service key", () => {
     const result = readNotifyConfig({ ...ENV, SUPABASE_SERVICE_ROLE_KEY: ENV.VITE_SUPABASE_ANON_KEY });
     assert.deepEqual(result.problems, ["SUPABASE_SERVICE_ROLE_KEY"]);
@@ -311,6 +314,16 @@ describe("kick endpoint (former relay)", () => {
     assert.ok(lines.join(" ").includes("SUPABASE_URL"));
     assert.ok(!lines.join(" ").includes("re_test_not_real"));
   }));
+  it("Preview deployment with Production secrets → 503, no RPC, nothing sent", quiet(async () => {
+    let made = 0;
+    let sent = 0;
+    const h = createNotifyKickHandler({ env: { ...ENV, VERCEL_ENV: "preview" }, makeRpc: () => { made += 1; return fakeRpc(); }, send: async () => { sent += 1; return { result: "sent", id: "x" }; } });
+    const res = fakeResponse();
+    await h(request(), res);
+    assert.equal(res.statusCode, 503);
+    assert.equal(made, 0);
+    assert.equal(sent, 0);
+  }));
   it("processes at most 3 notifications per call", quiet(async () => {
     const rpc = fakeRpc(Array.from({ length: 8 }, (_, i) => ({ ...REQUEST_ROW, outbox_id: i + 1 })));
     await handler(rpc)(request(), fakeResponse());
@@ -336,6 +349,16 @@ describe("cron endpoint", () => {
       await handler(fakeRpc(), { ...ENV, CRON_SECRET: secret })(request("Bearer "), res);
       assert.equal(res.statusCode, 503);
     }
+  }));
+  it("Preview deployment, even with the right secret → 503, no RPC, nothing sent", quiet(async () => {
+    let made = 0;
+    let sent = 0;
+    const h = createNotifyCronHandler({ env: { ...ENV, VERCEL_ENV: "preview" }, makeRpc: () => { made += 1; return fakeRpc(); }, send: async () => { sent += 1; return { result: "sent", id: "x" }; } });
+    const res = fakeResponse();
+    await h(request(), res);
+    assert.equal(res.statusCode, 503);
+    assert.equal(made, 0);
+    assert.equal(sent, 0);
   }));
   it("POST → 405", quiet(async () => {
     const res = fakeResponse();
