@@ -1,6 +1,11 @@
 # LOT SEC-EMAIL-02 — Neutralisation de `api/send-quote-email.js`
 
-**Statut : corrigé et testé en local, sur `feat/notify-01`. Rien n'est déployé.** Aucune modification en Production, aucune règle Firewall réelle, aucun secret ni envoi réel.
+**Statut : en Production depuis le 2026-11-05**, commit `3fa2efb` sur `main` (contenu identique à `origin/release/sec-email-02-aios` `9454fa5`). `feat/notify-01` a intégré ce commit (fusion `7b9c0e9`), et son `api/send-quote-email.js` est **exactement** celui de `3fa2efb`.
+
+- Le premier correctif de cette branche (`4a206aa`) avait le même comportement. Il a été remplacé par la version publiée lors de la fusion.
+- La branche locale `release/sec-email-02-phase1` (`db97407`) est **dépassée**. Elle ne doit pas être fusionnée.
+
+**Règle Firewall active**, relevée en `GET` le 2026-11-05 (configuration non lisible par l'API) : `/api/send-quote-email`, sa barre oblique finale, `?x=1` **et** `/api/send-quote-email.js` répondent 403 en périphérie. **Elle reste en place** tant qu'un déploiement antérieur à `3fa2efb` peut être promu.
 
 ## 1. Faille (confirmée par la revue indépendante)
 
@@ -29,7 +34,7 @@ Les conditions d'une éventuelle réactivation, dans un lot dédié, sont écrit
 
 | Test | Résultat |
 |---|---|
-| `npm run test:notify` (unitaires NOTIFY-01A et SEC-EMAIL-02) | **63/63** |
+| `npm run test:notify` (unitaires NOTIFY-01A et SEC-EMAIL-02) | **66/66** (au HEAD après fusion de `3fa2efb`) |
 | Pour 7 méthodes HTTP : réponse 410 ; **aucune propriété de la requête lue** (Proxy espion) ; **`fetch` jamais appelé** ; **aucune variable d'environnement lue** ; aucune donnée de l'attaquant dans la réponse | OK |
 | Corps impossible à analyser : réponse 410 | OK |
 | Source : pas de `fetch`, `resend`, `process`, `Deno`, `import`, ni lecture de la requête | OK |
@@ -46,11 +51,12 @@ Les conditions d'une éventuelle réactivation, dans un lot dédié, sont écrit
 La correction de la documentation de NOTIFY-01A se trouve dans `docs/LOT-NOTIFY-01A.md` §10 :
 - un retour à un déploiement antérieur à ce lot **rouvre les deux relais**. Il n'est autorisé que derrière deux règles Firewall *Deny* vérifiées avant et après (R2-B) ;
 - la voie normale est la pause (R1), ou une version corrigée (R2-A, version de repli « notifications coupées » décrite au §10.3) ;
-- la première version sûre est relevée au déploiement (§9, étape 4) ;
+- la première version sûre est relevée au déploiement (§9.2, étape 6) ;
+- toutes les vérifications HTTP se font en `GET`, sans envoi (§9.0) ;
 - contrôle quotidien des notifications `dead` sans données personnelles : `docs/sql/notify-01a/80-daily-dead-check.sql` (§10.4).
 
 ## 5. Points restants (hors périmètre)
 
-1. **La Production reste vulnérable jusqu'au déploiement de ce correctif.** En attendant, une règle Vercel Firewall *Deny* sur `/api/send-quote-email` peut être posée, sur autorisation. Elle n'a aucun effet sur le site, puisque rien n'appelle cette route.
+1. ~~La Production reste vulnérable jusqu'au déploiement de ce correctif.~~ **Fermé** : `3fa2efb` est en Production, et la règle Firewall couvre le préfixe. Les anciens déploiements (`dpl_8PYye…`, `dpl_3e1LHu…`) contiennent toujours l'ancien relais : pas d'Instant Rollback vers eux sans la règle (`docs/LOT-NOTIFY-01A.md` §10).
 2. `supabase/functions/send-quote-email/index.ts` sur `main` contient encore l'ancien code de l'Edge Function. La version déployée en Production répond 410 (vérifié par Digital Lab), mais **un `supabase functions deploy send-quote-email` lancé depuis `main` la réactiverait.** À traiter dans un lot dédié (même neutralisation 410), et à ne pas redéployer d'ici là.
 3. L'historique Git contient l'ancien code : c'est voulu, pour la traçabilité.

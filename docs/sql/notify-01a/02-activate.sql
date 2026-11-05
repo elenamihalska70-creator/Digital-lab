@@ -1,6 +1,7 @@
 -- LOT NOTIFY-01A — 02-activate.sql
 -- FIRST activation only.
--- Run ONLY at step 5 of the activation (docs/LOT-NOTIFY-01A.md §9), immediately before `vercel promote`.
+-- Run ONLY at step 7.1 of the activation (docs/LOT-NOTIFY-01A.md §9.2), immediately before promoting
+-- the verified deployment (step 7.2). Never after it: requests saved in between would never be notified.
 --
 -- cutover_at = now(): requests saved from this instant are notified by NOTIFY-01A. Requests saved
 -- before were handled by the old relay and are never sent again.

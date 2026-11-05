@@ -1,9 +1,19 @@
 # LOT NOTIFY-01A — Notification fiable des nouvelles demandes clients
 
-**Statut : implémenté et testé en local. Rien n'est appliqué ni déployé.**
+**Statut : implémenté et testé en local. Rien de NOTIFY-01A n'est appliqué ni déployé.**
 Aucune écriture dans Supabase Production, aucun déploiement (Preview ou Production), aucun secret réel, aucun e-mail réel envoyé.
 
-Branche `feat/notify-01`, à partir de `origin/main` `c80ce8e` (OG-01), intégré par fast-forward.
+Branche `feat/notify-01`, à partir de `c80ce8e` (OG-01), puis **fusion de `origin/main` `3fa2efb`** (SEC-EMAIL-02, en Production depuis le 2026-11-05) au commit `7b9c0e9`. Le conflit sur `api/send-quote-email.js` a été résolu en gardant **exactement** la version de Production `3fa2efb`.
+
+**État de la Production au 2026-11-05 (relevé en GET uniquement) :**
+
+| Élément | État |
+|---|---|
+| `main` déployé | `3fa2efb` : `send-quote-email` répond 410, mais `send-contact-email` est **encore l'ancien relais** |
+| Règle(s) Firewall actives (configuration non lisible par l'API : 403 ; relevé par le comportement) | `/api/send-quote-email`, `/api/send-quote-email/`, `?x=1` **et** `/api/send-quote-email.js` → **403 en périphérie** (`X-Vercel-Id` sans région de fonction). La variante `.js`, ouverte le 2026-11-04, est fermée : la règle couvre désormais le préfixe |
+| `/api/send-contact-email` et `/api/send-contact-email.js` | 405 servi par la fonction (ancien code) : **aucune règle ne les bloque** |
+| `/api/cron/notify-reconcile` | 200, page du site (route pas encore déployée) : aucune règle ne la bloque |
+| Protection des déploiements | `ssoProtection: all_except_custom_domains` : toute URL `*.vercel.app` (Preview **et** URL propre d'un déploiement de Production) demande une connexion Vercel. Seuls `www.digitallab.studio` et `digitallab.studio` sont publics |
 
 ## 1. Objectif et périmètre
 
@@ -144,6 +154,7 @@ Source : <https://vercel.com/docs/cron-jobs/usage-and-pricing> et `/manage-cron-
 | Afflux (l'insertion anonyme reste ouverte) | 20 par heure et 80 sur 24 h, plus une seule alerte de volume par jour. Les demandes en attente partent plus tard |
 | Fuite dans les journaux | Uniquement des identifiants, des compteurs et des codes courts. Jamais de nom, d'e-mail, de message ni de secret (testé) |
 | Mauvaise configuration | Expéditeur obligatoirement en `@digitallab.studio` (l'adresse de test `resend.dev` ne livre qu'au propriétaire du compte) ; clé `anon` refusée comme clé de service ; redirection vers un faux Resend ignorée sur Vercel |
+| Secret de Production exposé à un déploiement Preview | Le worker **refuse de tourner** quand `VERCEL_ENV=preview` : réveil et cron répondent 503 sans appeler Supabase ni Resend, même si toutes les variables sont présentes (testé). En plus, les variables sensibles doivent cibler **Production uniquement** (§9, P4) |
 
 ## 7. Doublons Zimbra → Gmail
 
@@ -151,7 +162,7 @@ Un seul envoi Resend avec les deux adresses en `To` produit un seul `Message-ID`
 
 En-tête de secours pour un filtre Gmail : `X-DigitalLab-Notification: notify-01a/<id>`.
 
-Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'y a toujours pas de DMARC, ce qui est à traiter dans un autre lot.
+Le **test T-Z** (§9.2, étape 10) permet de constater le comportement réel. Il n'y a toujours pas de DMARC, ce qui est à traiter dans un autre lot.
 
 ## 8. Fichiers
 
@@ -161,7 +172,7 @@ Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'
 | `api/cron/notify-reconcile.js` | Nouveau |
 | `api/_lib/notify/config.js`, `render.js`, `resend.js`, `supabase.js`, `worker.js`, `http.js` | Nouveaux (non exposés : `_lib`) |
 | `api/_lib/notify/notify.test.js` | Nouveau : tests unitaires |
-| `api/send-quote-email.js` | **Neutralisé en 410** (LOT SEC-EMAIL-02, `docs/LOT-SEC-EMAIL-02.md`) |
+| `api/send-quote-email.js` | **Identique à la Production `3fa2efb`** (410, LOT SEC-EMAIL-02, `docs/LOT-SEC-EMAIL-02.md`) : aucune différence avec `main` |
 | `api/_lib/security/public-routes.test.js` | Nouveau (SEC-EMAIL-02) : 410 sans lecture de la requête, garde-fou sur les routes exposées |
 | `vercel.json` | 4 crons, `maxDuration` |
 | `package.json` | Script `test:notify` (aucune dépendance ajoutée) |
@@ -179,58 +190,112 @@ Le **test T-Z** (§9, étape 8) permet de constater le comportement réel. Il n'
 
 ## 9. Procédure d'activation (À NE PAS EXÉCUTER sans autorisation, étape par étape)
 
-**Prérequis :**
-- revue de ce lot et fusion dans `main` (lot séparé) ;
-- domaine `digitallab.studio` vérifié dans Resend ;
-- quota Resend compatible (le plan gratuit permet 100 e-mails par jour) ;
-- plan Vercel confirmé.
+### 9.0 Règles de cette procédure
+
+- **Vérifications HTTP en `GET` uniquement.** Aucun `POST` de test vers une route e-mail, ni sur le domaine ni sur une URL de déploiement : si une protection manquait, un `POST` vers l'ancien `send-contact-email` enverrait un vrai e-mail. Les réponses `GET` suffisent à distinguer chaque version :
+
+  | Route (`GET`) | Ancien code (`3fa2efb` et avant) | NOTIFY-01A |
+  |---|---|---|
+  | `/api/send-contact-email` | 405 `{"error":"Method not allowed"}` | 405 `{"ok":false,"error":"method_not_allowed"}` |
+  | `/api/cron/notify-reconcile` | 200, page du site (route absente) | 401 `{"ok":false,"error":"unauthorized"}` sans secret ; 503 si `CRON_SECRET` manque |
+  | `/api/send-quote-email` (et `.js`) | 403 (Firewall) | 403 (Firewall) ; 410 si la règle n'existait plus |
+
+- **Lire `X-Vercel-Id` :** `cdg1::…` seul = réponse de la périphérie (Firewall, page statique) ; `cdg1::iad1::…` = la fonction a été exécutée.
+- **URL protégées :** toute URL `*.vercel.app`, y compris l'URL propre d'un déploiement de Production, est derrière la protection Vercel (connexion). Un `curl` anonyme y reçoit la page ou la redirection de connexion Vercel, **pas la réponse de la fonction** : ce n'est pas un résultat de test. On vérifie ces URL **dans un navigateur connecté au compte Vercel**. Ne pas créer de jeton de contournement (*Protection Bypass for Automation*) pour cela : ce serait un nouveau secret.
+- **Les règles Firewall actuelles restent en place** pendant toute la procédure et après (§10.1).
+- **Pas d'interruption des notifications :**
+  - l'ancien relais reste servi jusqu'à la promotion du nouveau déploiement ;
+  - NOTIFY-01A est activé **juste avant** cette promotion.
+  - L'ordre inverse perdrait des notifications. Tant que `enabled = false`, le trigger ne met rien en file, et `cutover_at` exclut tout ce qui précède l'activation : une demande arrivée entre la promotion et l'activation ne serait **jamais** notifiée (elle resterait visible dans `/admin`).
+  - Le prix de l'ordre retenu : les demandes des quelques secondes entre l'activation et la promotion reçoivent deux e-mails, un de l'ancien relais et un de NOTIFY-01A. Aucune n'est perdue.
+
+### 9.1 Prérequis (aucun n'est une action de ce lot)
+
+| N° | Prérequis | Vérification |
+|---|---|---|
+| P1 | Domaine `digitallab.studio` vérifié dans Resend | Tableau de bord Resend |
+| P2 | Quota Resend compatible (le plan gratuit permet 100 e-mails par jour) | Tableau de bord Resend |
+| P3 | Plan Vercel confirmé (conditions Hobby, §5) | Tableau de bord Vercel |
+| P4 | **Variables d'environnement, par leur nom, cible « Production » uniquement** pour `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` et `RESEND_API_KEY`. **Aucune** de ces trois variables ne doit cibler « Preview » ou « Development » | Settings → Environment Variables : colonne des environnements. Non vérifiable ici (API Vercel : 403, CLI absente). Le code refuse de toute façon de tourner en Preview (§6) |
+| P5 | Firewall : la règle sur `/api/send-quote-email` (préfixe) est active ; **aucune** règle ne vise `/api/send-contact-email` ni `/api/cron/` ; aucune règle de défi ou anti-robots ne bloque l'agent `vercel-cron/1.0` | Tableau de bord Firewall, puis le relevé `GET` de l'en-tête de ce rapport |
+| P6 | Revue de la branche à son HEAD final, fusion dans `main` autorisée | Digital Lab AI OS |
+
+Variables (Production uniquement) :
+
+| Variable | Valeur attendue |
+|---|---|
+| `SUPABASE_URL` | URL du projet ; sinon `VITE_SUPABASE_URL` est utilisée |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé de service, *Sensitive*. **Jamais** sous un nom `VITE_…`, que Vite inclurait dans le code du navigateur |
+| `RESEND_API_KEY` | Existante |
+| `RESEND_FROM_EMAIL` | Par exemple `Digital Lab <notifications@digitallab.studio>`, sur le domaine vérifié |
+| `CRON_SECRET` | Chaîne aléatoire d'au moins 32 caractères, *Sensitive* |
+
+Ne pas modifier `RESEND_FROM_EMAIL` tant que des notifications sont en cours d'envoi (voir §4, `payload_changed`).
+
+### 9.2 Étapes
 
 1. **Lecture seule :** exécuter `00-readonly-checks.sql` dans l'éditeur SQL et conserver le résultat.
-2. **Migration (en `postgres`) :** exécuter `01-migration.sql`. L'effet est nul, puisque `enabled = false`. Relancer ensuite `00` : les sections 1 à 4 doivent être identiques, la section 11 vide, et `settings` doit indiquer `enabled = false`.
-3. **Variables Vercel (Production), par leur nom :**
-
-   | Variable | Valeur attendue |
-   |---|---|
-   | `SUPABASE_URL` | URL du projet ; sinon `VITE_SUPABASE_URL` est utilisée |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Clé de service, à marquer *Sensitive* |
-   | `RESEND_API_KEY` | Existante |
-   | `RESEND_FROM_EMAIL` | Par exemple `Digital Lab <notifications@digitallab.studio>`, sur le domaine vérifié |
-   | `CRON_SECRET` | Chaîne aléatoire d'au moins 32 caractères, *Sensitive* |
-
-   Ne pas modifier `RESEND_FROM_EMAIL` tant que des notifications sont en cours d'envoi (voir §4, `payload_changed`).
-4. **Déploiement préparé, sans le domaine :** `vercel deploy --prod --skip-domain`, puis sur l'URL obtenue :
-   - `POST /api/send-contact-email` (avec un `Origin` égal à l'URL du déploiement) → **202**, rien n'est envoyé ;
-   - `GET /api/cron/notify-reconcile` sans secret → **401** ;
-   - avec `Authorization: Bearer <CRON_SECRET>` → **200**, `"enabled": false`. Cela prouve que la clé de service et les RPC fonctionnent. En cas d'erreur `PGRST202`, exécuter `notify pgrst, 'reload schema';` ;
-   - `POST /api/send-quote-email` avec un corps `{"clientEmail": "test@example.org"}` → **410** (LOT SEC-EMAIL-02), et aucune ligne dans les journaux Resend ;
-   - enregistrer l'URL et le commit de ce déploiement : c'est la **première version sûre**. Seules cette version et les suivantes peuvent servir de cible à un Instant Rollback (§10.1).
-5. **Activation :** exécuter `02-activate.sql`, ce qui fixe `cutover_at = now()`.
-6. **Immédiatement après :** `vercel promote <url du déploiement préparé>`. L'ancien relais disparaît à cet instant.
-   - Seules les demandes arrivées entre les étapes 5 et 6 (quelques secondes) reçoivent deux e-mails : un de l'ancien relais, un de NOTIFY-01A.
-   - Aucune demande n'est perdue.
-7. Appeler le cron manuellement avec le secret, puis lire `select * from notify_01a.v_diagnostic;`.
-8. **Test T-Z :** soumettre une demande réelle par le formulaire, puis vérifier :
-   - la réception dans les deux boîtes ;
-   - le nombre de copies dans Gmail (transfert Zimbra) ;
-   - le dossier spam ;
-   - la ligne dans les journaux Resend (une seule) ;
-   - `v_diagnostic` (`sent`).
-9. **Surveillance :**
-   - pendant 14 jours, le contrôle quotidien du §10.4 ;
-   - journaux Vercel (`requestPath:/api/cron/notify-reconcile`, `[notify-01a]`) ;
-   - `oldest_waiting_minutes` qui reste faible dans le résultat du cron.
+2. **Migration (en `postgres`) :** exécuter `01-migration.sql`.
+   - Effet nul : `enabled = false`, donc rien n'est mis en file ni envoyé.
+   - Relancer `00` : sections 1 à 4 identiques, section 11 vide, `settings` à `enabled = false`.
+3. **Variables :** les poser selon P4, ce qui ne déclenche aucun redéploiement.
+4. **Mise en attente des déploiements de Production :** Settings → Environments → Production → désactiver l'attribution automatique des domaines de Production (*Auto-assign Custom Production Domains*).
+   - Une fusion dans `main` construit alors un déploiement de Production **sans le servir** sur `www.digitallab.studio`.
+   - Libellé exact à confirmer dans le tableau de bord.
+   - Alternative équivalente, sans changer ce réglage : `vercel deploy --prod --skip-domain` depuis le commit revu.
+5. **Fusion dans `main`** du HEAD revu, qui lance un déploiement de Production mis en attente.
+   - Le site public continue de servir `3fa2efb`.
+   - L'ancien relais continue de notifier : **pas d'interruption**.
+6. **Vérifications du déploiement en attente** (son URL `*.vercel.app`, dans un navigateur connecté à Vercel, `GET` uniquement) :
+   - `/api/send-contact-email` → 405 `{"ok":false,"error":"method_not_allowed"}` : c'est le nouveau code ;
+   - `/api/cron/notify-reconcile` → 401 : `CRON_SECRET` est présent ;
+   - `/api/send-quote-email` → 403 (Firewall) ou 410 ;
+   - **preuve de la clé de service et des RPC**, toujours en `GET`, sans envoi possible puisque `enabled = false` : dans la console du navigateur, sur une page de ce déploiement, exécuter
+     `fetch("/api/cron/notify-reconcile", { headers: { Authorization: "Bearer " + prompt("CRON_SECRET") } }).then(r => r.json()).then(console.log)`.
+     Le résultat attendu est `200` avec `"enabled": false` et des compteurs à 0. Ne pas copier le secret ailleurs, ni en capture d'écran.
+     - `503` avec `missing` : variable absente.
+     - `500` `cron_failed`, ou `PGRST202` dans les journaux : exécuter `notify pgrst, 'reload schema';` puis recommencer.
+   - **En cas d'échec :** ne rien activer et ne pas promouvoir. Le public n'est pas touché. Corriger sur une branche avant toute nouvelle fusion.
+   - Relever l'identifiant et le commit de ce déploiement : c'est la **première version sûre** (§10.1).
+7. **Bascule, sans interruption :**
+   1. `02-activate.sql`, qui fixe `cutover_at = now()` ;
+   2. **immédiatement après :** Deployments → déploiement vérifié à l'étape 6 → *Promote* (ou `vercel promote <url>`).
+   - L'ancien relais disparaît à cet instant.
+   - Les demandes arrivées entre 7.1 et 7.2 reçoivent deux e-mails ; aucune n'est perdue.
+8. **Réactiver l'attribution automatique des domaines** (réglage de l'étape 4). Les fusions suivantes dans `main` seront de nouveau publiées automatiquement.
+9. **Vérifications publiques** (`https://www.digitallab.studio`, `GET` uniquement) :
+   - `/api/send-contact-email` → 405 au format NOTIFY-01A, avec `iad1` ;
+   - `/api/cron/notify-reconcile` → 401 ;
+   - `/api/send-quote-email` et `.js` → 403 ;
+   - onglet *Cron Jobs* : 4 entrées sur `/api/cron/notify-reconcile`. Le bouton *Run* déclenche un passage authentifié par Vercel ;
+   - `select * from notify_01a.v_diagnostic;`.
+10. **Test T-Z** (le seul envoi réel, fait par Digital Lab) : soumettre une demande réelle par le formulaire, puis vérifier :
+    - la réception dans les deux boîtes ;
+    - le nombre de copies dans Gmail (transfert Zimbra) ;
+    - le dossier spam ;
+    - une seule ligne dans les journaux Resend ;
+    - `v_diagnostic` (`sent`).
+11. **Surveillance :**
+    - pendant 14 jours, le contrôle quotidien du §10.4 ;
+    - journaux Vercel (`requestPath:/api/cron/notify-reconcile`, `[notify-01a]`) ;
+    - `oldest_waiting_minutes` qui reste faible dans le résultat du cron.
 
 ## 10. Rollback (révisé par LOT SEC-EMAIL-02)
 
 ### 10.1 Règle : revenir à une ancienne version du site n'est pas sûr
 
-**Tous les déploiements Vercel antérieurs à cette branche contiennent les deux anciens relais publics :**
-- `/api/send-contact-email` : n'importe qui envoie n'importe quel contenu vers contact@, sans limitation ;
-- `/api/send-quote-email` : n'importe qui envoie un e-mail « devis prêt » à **n'importe quelle adresse**, avec un lien construit à partir de l'en-tête `Host`.
+**Ce que contient chaque déploiement antérieur à NOTIFY-01A :**
+
+| Déploiements | `/api/send-quote-email` | `/api/send-contact-email` |
+|---|---|---|
+| Construits avant `3fa2efb`, dont `dpl_8PYye…` (`c80ce8e`) et `dpl_3e1LHu…` (`5b710a1`) | **Ancien relais** : n'importe qui envoie un e-mail « devis prêt » à **n'importe quelle adresse**, avec un lien construit à partir de `Host` | **Ancien relais** : n'importe qui envoie n'importe quel contenu vers contact@, sans limitation |
+| `3fa2efb` (Production au 2026-11-05) | 410 | **Ancien relais** |
+| NOTIFY-01A (à partir de la « première version sûre », §9.2 étape 6) | 410 | Route de réveil, sans relais |
 
 Par conséquent :
-- **un Instant Rollback vers l'un de ces déploiements rouvre ces deux failles. Il est interdit**, sauf protection Firewall explicite, vérifiée avant et après (R2-B) ;
-- **cible autorisée pour un Instant Rollback :** uniquement un déploiement construit à partir d'un commit qui contient LOT SEC-EMAIL-02 (`send-quote-email` en 410) et NOTIFY-01A (`send-contact-email` sans relais). Le premier d'entre eux est la « première version sûre » relevée à l'étape 4 du §9 ;
+- **un Instant Rollback vers un déploiement antérieur à NOTIFY-01A rouvre au moins le relais de contact**, et ceux d'avant `3fa2efb` rouvrent aussi le relais des devis. Il est interdit, sauf protection Firewall explicite, vérifiée avant et après (R2-B) ;
+- la règle Firewall actuelle couvre déjà `/api/send-quote-email` et sa variante `.js`. **Aucune règle ne couvre aujourd'hui `/api/send-contact-email`** : R2-B demande de la créer ;
+- **cible autorisée pour un Instant Rollback :** uniquement un déploiement construit à partir d'un commit qui contient SEC-EMAIL-02 (`3fa2efb`) **et** NOTIFY-01A. Le premier d'entre eux est la « première version sûre » relevée à l'étape 6 du §9.2 ;
 - **ne jamais revenir sur `api/send-quote-email.js`** dans un commit ultérieur sans un lot de sécurité dédié (conditions en tête du fichier).
 
 ### 10.2 Niveaux
@@ -238,22 +303,26 @@ Par conséquent :
 | Niveau | Quand | Action | Effet | Rouvre une faille ? |
 |---|---|---|---|---|
 | **R1 Pause (par défaut)** | Tout incident de notification : doublons, erreurs, volume anormal | `90-pause.sql` | Plus aucun envoi. Les demandes restent enregistrées et visibles dans `/admin`. Reprise avec `91-resume.sql`, qui rattrape tout depuis `cutover_at` | **Non** |
-| **R2-A Version corrigée (recommandé)** | Le code NOTIFY-01A lui-même pose problème | (1) `90-pause.sql`. (2) Déployer la **version de repli** du §10.3 (préparée, puis promue), ou faire un Instant Rollback vers une **version sûre** (§10.1). (3) Vérifier les réponses 410 et 202. (4) Corriger, puis redéployer | Plus de notification e-mail le temps de la correction. Demandes enregistrées, contrôle de `/admin` (§10.4) | **Non** |
+| **R2-A Version corrigée (recommandé)** | Le code NOTIFY-01A lui-même pose problème | (1) `90-pause.sql`. (2) Déployer la **version de repli** du §10.3 (préparée, puis promue), ou faire un Instant Rollback vers une **version sûre** (§10.1). (3) Vérifier en `GET` : `send-contact-email` répond 405 au format NOTIFY-01A (ou 410 pour la version de repli), `send-quote-email` 403. (4) Corriger, puis redéployer | Plus de notification e-mail le temps de la correction. Demandes enregistrées, contrôle de `/admin` (§10.4) | **Non** |
 | **R2-B Firewall, puis ancien déploiement** | En dernier recours, si aucune version sûre ne se déploie | Voir l'ordre strict ci-dessous | Aucune notification e-mail (l'ancien relais est bloqué). Demandes enregistrées. Contrôle quotidien de `/admin` | **Non, tant que les deux règles restent actives** |
 | **R3 Retrait de la base** | Abandon du lot, après R1 ou R2 | `99-rollback.sql` | Supprime le trigger, les 3 fonctions et le schéma. Refuse s'il reste des notifications non envoyées (sauf `notify_01a.force_rollback` explicite). Aucune ligne de `contact_requests` modifiée, et l'état DB-SEC-01 + DB-MSG-01 est restauré exactement (testé) | **Non** |
 | Secrets | Abandon ou doute | Supprimer `CRON_SECRET` et `SUPABASE_SERVICE_ROLE_KEY` de Vercel ; régénérer la clé de service en cas de doute | — | — |
 
 **R2-B, ordre strict** (chaque étape est vérifiée avant de passer à la suivante) :
-1. **Vercel Firewall, deux règles personnalisées** sur le projet `digital-lab` :
-   - `Request Path` *equals* `/api/send-contact-email` → **Deny** ;
-   - `Request Path` *equals* `/api/send-quote-email` → **Deny** ;
-   - publier les règles.
-   - Vérifier ensuite que le nombre de règles autorisé par le plan et leur maintien après un Instant Rollback (règles au niveau du projet) correspondent à ce qu'indique le tableau de bord.
-2. **Vérifier** sur `https://www.digitallab.studio` : `curl -i -X POST .../api/send-contact-email` et `curl -i -X POST .../api/send-quote-email` → **403** (bloqué par le Firewall) tous les deux.
+1. **Vercel Firewall, règles personnalisées *Deny*** sur le projet `digital-lab`, toujours sur le **préfixe** : *equals* laisse passer la variante `/api/send-quote-email.js`, observée le 2026-11-04.
+   - `Request Path` *starts with* `/api/send-quote-email` → **Deny** : **déjà active**, à conserver ;
+   - `Request Path` *starts with* `/api/send-contact-email` → **Deny** : **à créer**. Elle coupe aussi la route de réveil de NOTIFY-01A, ce qui est voulu ici ;
+   - publier les règles ;
+   - vérifier que le nombre de règles autorisé par le plan et leur maintien après un Instant Rollback (règles au niveau du projet) correspondent à ce qu'indique le tableau de bord.
+2. **Vérifier en `GET` uniquement** sur `https://www.digitallab.studio` : `/api/send-contact-email`, `/api/send-contact-email.js`, `/api/send-quote-email` et `/api/send-quote-email.js` → **403**, sans `iad1` dans `X-Vercel-Id`. Une réponse 405 signifie que la règle ne s'applique pas : s'arrêter là. Ne jamais tester par un `POST`.
 3. Instant Rollback vers le déploiement choisi.
-4. **Vérifier à nouveau** les deux appels → **403**. Si l'un répond autre chose, revenir immédiatement à une version sûre.
-5. `90-pause.sql`, puis `select notify_01a.cancel_pending();`. L'ancien déploiement n'a ni route de réveil ni cron, donc rien n'est traité entre les étapes 3 et 5 : aucun doublon. Les notifications de cette période ne partent pas : elles sont couvertes par le contrôle de `/admin`.
-6. **Ne jamais retirer ces règles** tant qu'un déploiement antérieur à SEC-EMAIL-02 est servi. Pour les retirer : d'abord promouvoir une version sûre, puis vérifier les réponses 410 et 202, puis supprimer les règles.
+4. **Vérifier à nouveau** les quatre `GET` → **403**. Si l'un répond autre chose, revenir immédiatement à une version sûre.
+5. `90-pause.sql`, puis `select notify_01a.cancel_pending();`.
+   - L'ancien déploiement n'a ni route de réveil ni cron : rien n'est traité entre les étapes 3 et 5, donc aucun doublon.
+   - Les notifications de cette période ne partent pas : elles sont couvertes par le contrôle de `/admin`.
+6. **Ne jamais retirer ces règles** tant qu'un déploiement antérieur à NOTIFY-01A est servi ou peut être promu.
+   - La règle `send-quote-email` reste en place **dans tous les cas**.
+   - Pour retirer la règle `send-contact-email` : d'abord promouvoir une version sûre, puis vérifier en `GET` qu'elle répond 405 au format NOTIFY-01A **une fois la règle levée**, puis `91-resume.sql`.
 
 ### 10.3 Version de repli « notifications coupées » (à préparer seulement en cas de besoin)
 
@@ -264,7 +333,8 @@ git switch -c fallback/notify-off <commit sûr>
 # api/send-contact-email.js : même gestionnaire 410 que api/send-quote-email.js (aucune lecture de la requête)
 # vercel.json : retirer la section "crons" (le cron en pause ne ferait rien, mais on retire du code en cause)
 npm run test:notify      # le garde-fou api/_lib/security/public-routes.test.js doit rester vert
-vercel deploy --prod --skip-domain   # puis vérifications 410, puis vercel promote
+vercel deploy --prod --skip-domain   # puis vérifications GET dans un navigateur connecté à Vercel
+                                     # (send-contact-email → 410, send-quote-email → 403), puis vercel promote
 ```
 
 Effet : aucun relais, aucune notification e-mail. Les demandes sont toujours enregistrées : le frontend ignore la réponse de cette route.
@@ -289,11 +359,12 @@ Effet : aucun relais, aucune notification e-mail. Les demandes sont toujours enr
 | Suite | Commande | Résultat |
 |---|---|---|
 | SQL, PGlite 0.2.17 (réplique Production après DB-SEC-01 + DB-MSG-01) | Copier `docs/sql/tests/notify-01a.{model,pglite}.mjs` dans un dossier temporaire, puis `npm i @electric-sql/pglite@0.2.17 && node --expose-gc notify-01a.pglite.mjs <repo>` | **110/110** |
-| Unitaires Node (`node:test`, sans réseau), dont SEC-EMAIL-02 | `npm run test:notify` | **63/63** |
+| Unitaires Node (`node:test`, sans réseau), dont SEC-EMAIL-02 | `npm run test:notify` | **66/66** (dont le refus en Preview) |
 | Bout en bout local (vraies routes servies en HTTP, worker, RPC en `service_role` sur PGlite, `fetch` réel vers un faux Resend qui reproduit l'idempotence documentée) | Copier `notify-01a.{model,e2e}.mjs`, puis `node --expose-gc notify-01a.e2e.mjs <repo>` | **35/35** |
 | Build | `npm run build` | OK, 13 routes pré-rendues |
 | ESLint | `npx eslint .` | 16 problèmes, contre 25 avant ce lot, tous dans `src/` (non modifié). Aucun dans `api/` ni dans les nouveaux fichiers |
-| Frontend | `git diff c80ce8e -- src` | Vide |
+| Frontend | `git diff origin/main -- src supabase index.html` | Vide |
+| Relais des devis | `git diff 3fa2efb -- api/send-quote-email.js` | Vide : identique à la Production |
 
 **Couverture principale :**
 - **SQL :**
@@ -335,11 +406,11 @@ Effet : aucun relais, aucune notification e-mail. Les demandes sont toujours enr
 - le vrai Resend ;
 - le comportement de Gmail.
 
-Ces points sont couverts par les étapes 4, 7 et 8 de l'activation.
+Ces points sont couverts par les étapes 6, 9 et 10 de l'activation (§9.2).
 
 ## 12. Risques restants
 
-1. **`api/send-quote-email.js` : corrigé dans cette branche par LOT SEC-EMAIL-02 (410), mais toujours ouvert en Production** jusqu'au déploiement. Tout déploiement antérieur le contient (§10.1). En attendant, une règle Firewall *Deny* reste possible, sur autorisation. La source de l'Edge Function `supabase/functions/send-quote-email/index.ts` sur `main` est toujours l'ancien code (la version en Production répond 410) : **ne pas la redéployer depuis `main`** (voir `docs/LOT-SEC-EMAIL-02.md`).
+1. **`api/send-quote-email.js` : fermé en Production** depuis `3fa2efb` (410), en plus de la règle Firewall sur son préfixe. Les déploiements antérieurs à `3fa2efb` le contiennent encore (§10.1) : la règle doit rester. **`api/send-contact-email.js` reste l'ancien relais en Production** jusqu'à la bascule du §9.2. La source de l'Edge Function `supabase/functions/send-quote-email/index.ts` sur `main` est toujours l'ancien code (la version en Production répond 410) : **ne pas la redéployer depuis `main`** (voir `docs/LOT-SEC-EMAIL-02.md`).
 2. Plan Vercel non confirmé (Hobby : délais et conditions d'utilisation commerciale) ; 4 crons quotidiens acceptés ou non, à vérifier au déploiement.
 3. La clé `service_role` est désormais présente dans Vercel. Elle donne un accès complet à l'API Supabase, au-delà des trois fonctions.
 4. L'insertion anonyme reste ouverte (DB-SEC-01) : le volume d'e-mails est borné, pas celui des demandes enregistrées.
