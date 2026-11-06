@@ -2458,13 +2458,9 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
     }
 
     try {
-      await fetch("/api/send-contact-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(contactPayload),
-      });
+      // Wakes up the notification worker, which reads the saved request in Supabase: no body, no
+      // personal data. keepalive lets the call complete even if the page is closed right away.
+      await fetch("/api/send-contact-email", { method: "POST", keepalive: true });
     } catch (notificationError) {
       console.error("CONTACT EMAIL ERROR:", notificationError);
     }

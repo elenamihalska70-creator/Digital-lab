@@ -5,5 +5,31 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/notify-reconcile",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/notify-reconcile",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/notify-reconcile",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/notify-reconcile",
+      "schedule": "0 19 * * *"
+    }
+  ],
+  "functions": {
+    "api/cron/notify-reconcile.js": {
+      "maxDuration": 60
+    },
+    "api/send-contact-email.js": {
+      "maxDuration": 30
+    }
+  }
 }
