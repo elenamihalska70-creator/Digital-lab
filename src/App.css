@@ -5256,6 +5256,144 @@
   color: #ffd4e4;
 }
 
+/* LOT WEB-CONTACT-SIMPLE-01 — direct e-mail card (replaces the contact form). */
+.contact-email-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 24px;
+  border: 1px solid rgba(199, 168, 255, 0.18);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    rgba(7, 1, 15, 0.38);
+  box-shadow:
+    0 18px 54px rgba(111, 61, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.contact-email-label {
+  margin: 0;
+  color: #c7a8ff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contact-email-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.contact-email-address {
+  color: #ffffff;
+  font-size: clamp(20px, 3.2vw, 30px);
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid rgba(199, 168, 255, 0.36);
+  transition:
+    color 240ms ease,
+    border-color 240ms ease;
+}
+
+.contact-email-address:hover {
+  color: #e6dcff;
+  border-color: rgba(199, 168, 255, 0.8);
+}
+
+.contact-email-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid rgba(199, 168, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #efe9ff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 240ms ease,
+    border-color 240ms ease,
+    color 240ms ease;
+}
+
+.contact-email-copy:hover {
+  border-color: rgba(199, 168, 255, 0.6);
+  background: rgba(155, 109, 255, 0.16);
+}
+
+.contact-email-copy.is-copied {
+  border-color: rgba(156, 255, 196, 0.5);
+  color: #dcffe8;
+}
+
+.contact-email-hint {
+  margin: 0;
+  color: #dcd2ff;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.contact-email-copy-status {
+  min-height: 1.4em;
+  margin: 0;
+  color: #dcd2ff;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.contact-email-copy-status.is-copied {
+  color: #dcffe8;
+}
+
+.contact-email-copy-status.is-error {
+  color: #ffd4e4;
+}
+
+.contact-email-address:focus-visible,
+.contact-email-copy:focus-visible {
+  outline: 2px solid rgba(199, 168, 255, 0.78);
+  outline-offset: 4px;
+}
+
+@media (max-width: 900px) {
+  .contact-email-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .contact-email-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .contact-email-address {
+    align-self: flex-start;
+  }
+
+  .contact-email-copy {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-email-address,
+  .contact-email-copy {
+    transition: none;
+  }
+}
+
 .contact-actions {
   display: flex;
   align-items: center;

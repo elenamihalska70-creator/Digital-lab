@@ -9,7 +9,6 @@ import { useAuth } from "./context/useAuth";
 import { getUnreadMessageCounts } from "./services/requestMessages";
 import { getLatestQuotesForRequests } from "./services/quotes";
 import {
-  createContactRequest,
   getAllContactRequests,
   getContactRequestsForUser,
   updateContactRequestStatus,
@@ -603,24 +602,6 @@ const socialLinks = [
     title: "Page Facebook Digital Lab",
   },
 ];
-
-const contactProjectTypes = [
-  "Site web",
-  "Réparation / amélioration",
-  "SEO & visibilité",
-  "Automatisation",
-  "Chatbot / assistant IA",
-  "MVP / prototype",
-  "Autre",
-];
-
-const initialContactForm = {
-  name: "",
-  email: "",
-  company: "",
-  projectType: contactProjectTypes[0],
-  message: "",
-};
 
 const initialEstimatorAnswers = {
   profile: "Indépendant",
@@ -2385,184 +2366,142 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
   );
 }
 
-function isSupabaseAccessError(error) {
-  const message = error?.message?.toLowerCase() ?? "";
+// LOT WEB-CONTACT-SIMPLE-01 — direct e-mail contact (replaces the former ContactForm).
+// No network call, no data stored by the site: the visitor writes from their own mailbox.
+const contactMailContent = {
+  fr: {
+    primarySubject: "Demande de projet Digital Lab",
+    secondarySubject: "Discuter d’un projet Digital Lab",
+    body: [
+      "Bonjour,",
+      "",
+      "Mon activité / ma structure :",
+      "Mon besoin :",
+      "Délai souhaité :",
+      "",
+      "Merci,",
+    ].join("\n"),
+  },
+  en: {
+    primarySubject: "Digital Lab project inquiry",
+    secondarySubject: "Digital Lab project discussion",
+    body: [
+      "Hello,",
+      "",
+      "My business / organization:",
+      "What I need:",
+      "Preferred timeline:",
+      "",
+      "Thank you,",
+    ].join("\n"),
+  },
+};
 
-  return (
-    message.includes("row-level security") ||
-    message.includes("permission denied") ||
-    message.includes("policy") ||
-    message.includes("jwt")
-  );
+const buildContactMailto = ({ subject, body }) => {
+  const params = [`subject=${encodeURIComponent(subject)}`];
+
+  if (body) {
+    params.push(`body=${encodeURIComponent(body)}`);
+  }
+
+  return `mailto:${businessContact.email}?${params.join("&")}`;
+};
+
+const getContactMailLinks = (isEnglish = false) => {
+  const content = isEnglish ? contactMailContent.en : contactMailContent.fr;
+
+  return {
+    primary: buildContactMailto({ subject: content.primarySubject, body: content.body }),
+    secondary: buildContactMailto({ subject: content.secondarySubject }),
+  };
+};
+
+// Clipboard API first; legacy fallback for browsers / contexts without it (older Safari, http).
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Permission refused: fall through to the legacy path.
+    }
+  }
+
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.top = "-1000px";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.select();
+
+  let copied;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+
+  document.body.removeChild(field);
+  return copied;
 }
 
-function ContactForm({ onAuthOpen, isEnglish = false }) {
-  const { session } = useAuth();
-  const [form, setForm] = useState(initialContactForm);
-  const [isSending, setIsSending] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
-  const statusRef = useRef(null);
-  const sessionEmail = session?.user?.email ?? "";
+function ContactEmailCard({ isEnglish = false }) {
+  const [copyState, setCopyState] = useState("idle");
+  const resetTimerRef = useRef(null);
+  const statusId = isEnglish ? "en-contact-email-copy-status" : "contact-email-copy-status";
+  const mailLinks = getContactMailLinks(isEnglish);
 
-  const updateField = (event) => {
-    const { name, value } = event.target;
+  useEffect(() => () => window.clearTimeout(resetTimerRef.current), []);
 
-    setForm((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+  const handleCopy = async () => {
+    const copied = await copyTextToClipboard(businessContact.email);
+
+    setCopyState(copied ? "copied" : "error");
+    window.clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = window.setTimeout(() => setCopyState("idle"), 4000);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsSending(true);
-    setSubmitStatus({ type: "", message: "" });
-
-    const email = form.email.trim() || sessionEmail;
-    const contactPayload = {
-      name: form.name.trim(),
-      email,
-      company: form.company.trim(),
-      projectType: form.projectType,
-      message: form.message.trim(),
-    };
-    const { error } = await createContactRequest({
-      userId: session?.user?.id,
-      name: contactPayload.name,
-      email,
-      company: contactPayload.company,
-      projectType: contactPayload.projectType,
-      message: contactPayload.message,
-    });
-
-    if (error) {
-      const guestNeedsLogin = !session && isSupabaseAccessError(error);
-
-      setSubmitStatus({
-        type: "error",
-        message: guestNeedsLogin
-          ? isEnglish
-            ? "Sign in and try again, or email me directly."
-            : "Connectez-vous puis réessayez, ou envoyez-moi un email directement."
-          : isEnglish
-            ? "Your request couldn't be sent right now. Please try again in a moment."
-            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants.",
-      });
-
-      if (guestNeedsLogin) {
-        onAuthOpen();
-      }
-
-      setIsSending(false);
-      return;
-    }
-
-    try {
-      await fetch("/api/send-contact-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(contactPayload),
-      });
-    } catch (notificationError) {
-      console.error("CONTACT EMAIL ERROR:", notificationError);
-    }
-
-    setSubmitStatus({
-      type: "success",
-      message: isEnglish
-        ? "Your request has been sent. I'll get back to you within 24–48h."
-        : "Votre demande a bien été envoyée. Je vous répondrai sous 24–48h.",
-    });
-    setForm({ ...initialContactForm, email: sessionEmail });
-    setIsSending(false);
-    window.setTimeout(() => {
-      statusRef.current?.focus();
-      statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 80);
-  };
+  const statusMessage = {
+    idle: "",
+    copied: isEnglish ? "Address copied to the clipboard." : "Adresse copiée dans le presse-papiers.",
+    error: isEnglish
+      ? `Copy unavailable: select the address ${businessContact.email} manually.`
+      : `Copie impossible : sélectionnez l’adresse ${businessContact.email} manuellement.`,
+  }[copyState];
 
   return (
-    <form className="contact-form reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }} onSubmit={handleSubmit}>
-      <div className="contact-form-grid">
-        <label className="contact-field" htmlFor="contact-name">
-          {isEnglish ? "Name" : "Nom"}
-          <input
-            id="contact-name"
-            name="name"
-            type="text"
-            value={form.name}
-            placeholder={isEnglish ? "Your name" : "Votre nom"}
-            required
-            onChange={updateField}
-          />
-        </label>
+    <div className="contact-email-card reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }}>
+      <p className="contact-email-label">{isEnglish ? "Write to me directly" : "Écrivez-moi directement"}</p>
 
-        <label className="contact-field" htmlFor="contact-email">
-          Email
-          <input
-            id="contact-email"
-            name="email"
-            type="email"
-            value={form.email}
-            placeholder={sessionEmail || (isEnglish ? "you@email.com" : "vous@email.com")}
-            required={!sessionEmail}
-            onChange={updateField}
-          />
-        </label>
-
-        <label className="contact-field" htmlFor="contact-company">
-          {isEnglish ? "Organization" : "Structure"}
-          <input
-            id="contact-company"
-            name="company"
-            type="text"
-            value={form.company}
-            placeholder={isEnglish ? "Company, nonprofit, project..." : "Entreprise, association, projet..."}
-            onChange={updateField}
-          />
-        </label>
-
-        <label className="contact-field" htmlFor="contact-project-type">
-          {isEnglish ? "Project type" : "Type de projet"}
-          <select id="contact-project-type" name="projectType" value={form.projectType} onChange={updateField}>
-            {contactProjectTypeOptions.map((projectType) => (
-              <option key={projectType.value} value={projectType.value}>
-                {isEnglish ? projectType.label : projectType.value}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="contact-field is-full" htmlFor="contact-message">
-          Message
-          <textarea
-            id="contact-message"
-            name="message"
-            value={form.message}
-            placeholder={
-              isEnglish
-                ? "Describe your need in plain terms, even if it's still unclear."
-                : "Expliquez simplement votre besoin, même s’il est encore flou."
-            }
-            required
-            onChange={updateField}
-          ></textarea>
-        </label>
-      </div>
-
-      <div className="contact-form-footer">
-        <button className="btn btn-primary contact-cta-primary" type="submit" disabled={isSending}>
-          {isSending ? (isEnglish ? "Sending..." : "Envoi en cours...") : isEnglish ? "Send my request" : "Envoyer ma demande"}
+      <div className="contact-email-row">
+        <a className="contact-email-address" href={mailLinks.primary}>
+          {businessContact.email}
+        </a>
+        <button
+          className={`contact-email-copy${copyState === "copied" ? " is-copied" : ""}`}
+          type="button"
+          onClick={handleCopy}
+          aria-describedby={statusId}
+        >
+          <span aria-hidden="true">{copyState === "copied" ? "✓" : "⧉"}</span>
+          {copyState === "copied"
+            ? isEnglish ? "Copied" : "Copiée"
+            : isEnglish ? "Copy address" : "Copier l’adresse"}
         </button>
-        {submitStatus.message && (
-          <p className={`contact-form-status is-${submitStatus.type}`} role="status" tabIndex={-1} ref={statusRef}>
-            {submitStatus.message}
-          </p>
-        )}
       </div>
-    </form>
+
+      <p className="contact-email-hint">
+        {isEnglish
+          ? "A few lines are enough: your business, your need and your timeline, even if the idea is still unclear."
+          : "Quelques lignes suffisent : votre activité, votre besoin et votre délai, même si l’idée est encore floue."}
+      </p>
+
+      <p className={`contact-email-copy-status is-${copyState}`} id={statusId} role="status" aria-live="polite">
+        {statusMessage}
+      </p>
+    </div>
   );
 }
 
@@ -3877,17 +3816,7 @@ function translateEstimatorResult(result, isEnglish) {
   };
 }
 
-const contactProjectTypeOptions = [
-  { value: "Site web", label: "Website" },
-  { value: "Réparation / amélioration", label: "Repair / improvement" },
-  { value: "SEO & visibilité", label: "SEO & visibility" },
-  { value: "Automatisation", label: "Automation" },
-  { value: "Chatbot / assistant IA", label: "AI chatbot / assistant" },
-  { value: "MVP / prototype", label: "MVP / prototype" },
-  { value: "Autre", label: "Other" },
-];
-
-function EnglishHomePage({ onNavigate, onAuthOpen }) {
+function EnglishHomePage({ onNavigate }) {
   const [selectedProject, setSelectedProject] = useState(null);
 
   const handleAuditClick = (event) => {
@@ -4399,13 +4328,13 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
             </div>
           </address>
 
-          <ContactForm onAuthOpen={onAuthOpen} isEnglish />
+          <ContactEmailCard isEnglish />
 
           <div className="contact-actions">
-            <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20inquiry`}>
+            <a className="btn btn-primary contact-cta-primary" href={getContactMailLinks(true).primary}>
               Send an email
             </a>
-            <a className="btn btn-secondary contact-cta-secondary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20discussion`}>
+            <a className="btn btn-secondary contact-cta-secondary" href={getContactMailLinks(true).secondary}>
               Discuss the project
             </a>
           </div>
@@ -7202,7 +7131,7 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <EnglishHomePage onNavigate={navigate} onAuthOpen={() => setIsAuthOpen(true)} />
+        <EnglishHomePage onNavigate={navigate} />
 
         <AuditFooterReminder onNavigate={navigate} isEnglish />
         <SiteFooter onNavigate={navigate} isEnglish />
@@ -7879,13 +7808,13 @@ function App() {
               </div>
             </address>
 
-            <ContactForm onAuthOpen={() => setIsAuthOpen(true)} />
+            <ContactEmailCard />
 
             <div className="contact-actions">
-              <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Demande%20de%20projet%20Digital%20Lab`}>
+              <a className="btn btn-primary contact-cta-primary" href={getContactMailLinks().primary}>
                 Envoyer un email
               </a>
-              <a className="btn btn-secondary contact-cta-secondary" href={`mailto:${businessContact.email}?subject=Discuter%20d’un%20projet%20Digital%20Lab`}>
+              <a className="btn btn-secondary contact-cta-secondary" href={getContactMailLinks().secondary}>
                 Discuter du projet
               </a>
             </div>
