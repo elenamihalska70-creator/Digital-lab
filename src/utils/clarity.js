@@ -1,8 +1,13 @@
+import { isTrackingAllowed } from "./trackingEnvironment.js";
+
 const CLARITY_PROJECT_ID = "xv376wrguc";
 const CLARITY_SCRIPT_ID = "microsoft-clarity-script";
 
 export const initializeMicrosoftClarity = () => {
-  if (typeof window === "undefined" || !import.meta.env.PROD) {
+  if (
+    typeof window === "undefined" ||
+    !isTrackingAllowed({ hostname: window.location.hostname, isProductionBuild: import.meta.env.PROD })
+  ) {
     return;
   }
 
