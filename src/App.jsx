@@ -3060,8 +3060,15 @@ function PrivacyPolicyPage({ onNavigate }) {
               <article>
                 <h2>2. Données collectées sur le site</h2>
                 <p>
-                  Digital Lab collecte les données que vous envoyez volontairement via les formulaires du site ou par email,
-                  notamment vos coordonnées, votre message et les informations utiles au traitement de votre demande.
+                  Le site ne propose plus de formulaire de contact public : pour toute demande, vous écrivez directement à
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Digital Lab traite alors les
+                  données que vous envoyez volontairement par e-mail, notamment vos coordonnées, votre message et les
+                  informations utiles au traitement de votre demande.
+                </p>
+                <p>
+                  Si vous disposez d’un espace client, Digital Lab traite également les informations que vous y échangez
+                  (messages, documents, devis), ainsi que les demandes envoyées auparavant via l’ancien formulaire du site,
+                  qui restent consultables dans votre espace client et par Digital Lab.
                 </p>
                 <p>
                   Le site utilise également Google Analytics afin de mesurer l’audience et d’améliorer l’expérience de navigation.
@@ -3090,7 +3097,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes envoyées via le site ou par email.</li>
+                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées.</li>
                 </ul>
               </article>
 
