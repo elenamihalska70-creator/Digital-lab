@@ -1,11 +1,14 @@
 // Single source of truth for the tax mention shown next to every public price
-// (one-off projects, subscriptions, Reels). Digital Lab's VAT regime is NOT
-// confirmed yet: keep TAX_REGIME at null until the owner validates it. While it
-// is null, prices render without any tax mention and `npm run check:release`
-// fails, which blocks publication.
+// (one-off projects, subscriptions, Reels). Set to null, prices render without
+// any tax mention and `npm run check:release` fails, which blocks publication.
+//
+// LOT WEB-SM-CONTACT-RELEASE-01: regime confirmed by the owner (franchise en base
+// de TVA, micro-entreprise BNC). Prices are amounts without VAT and carry the
+// note "TVA non applicable, art. 293 B du CGI." — no HT/TTC suffix. Review if the
+// turnover exceeds the franchise thresholds or the status changes.
 //
 // Allowed values: "HT", "TTC", "FRANCHISE" (TVA non applicable, art. 293 B du CGI).
-export const TAX_REGIME = null;
+export const TAX_REGIME = "FRANCHISE";
 
 export const TAX_MENTIONS = {
   HT: {

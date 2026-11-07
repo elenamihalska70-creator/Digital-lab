@@ -5,44 +5,8 @@ const getMissingConfigError = () => ({
   error: new Error("Supabase n’est pas configuré. Vérifiez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY."),
 });
 
-const formatReference = (count) => `DL-2026-${String(count).padStart(4, "0")}`;
-
-const createFallbackReference = () => formatReference(Number(String(Date.now()).slice(-4)));
-
-export const createProjectReference = async () => {
-  if (!supabase) {
-    return createFallbackReference();
-  }
-
-  const { count, error } = await supabase
-    .from("contact_requests")
-    .select("id", { count: "exact", head: true });
-
-  if (error) {
-    return createFallbackReference();
-  }
-
-  return formatReference((count ?? 0) + 1);
-};
-
-export const createContactRequest = async ({ userId, name, email, company, projectType, message }) => {
-  if (!supabase) {
-    return getMissingConfigError();
-  }
-
-  const reference = await createProjectReference();
-
-  return supabase.from("contact_requests").insert({
-    user_id: userId ?? null,
-    reference,
-    name,
-    email,
-    company: company || null,
-    project_type: projectType,
-    message,
-    status: "new",
-  });
-};
+// LOT WEB-CONTACT-SIMPLE-01 — the public site no longer creates contact requests (the contact form
+// was replaced by direct e-mail). Existing requests stay readable by their owner and the admin.
 
 export const getContactRequestsForUser = async (userId) => {
   if (!supabase) {

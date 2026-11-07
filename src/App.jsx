@@ -9,7 +9,6 @@ import { useAuth } from "./context/useAuth";
 import { getUnreadMessageCounts } from "./services/requestMessages";
 import { getLatestQuotesForRequests } from "./services/quotes";
 import {
-  createContactRequest,
   getAllContactRequests,
   getContactRequestsForUser,
   updateContactRequestStatus,
@@ -29,6 +28,7 @@ import {
   SOCIAL_MEDIA_PLANS,
 } from "./utils/estimator";
 import { getTaxMention } from "./config/taxMention";
+import { buildQuoteMailto } from "./utils/quoteMailto";
 
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
@@ -655,26 +655,6 @@ const socialLinks = [
     title: "Page Facebook Digital Lab",
   },
 ];
-
-const contactProjectTypes = [
-  "Site web",
-  "Réparation / amélioration",
-  "SEO & visibilité",
-  "Automatisation",
-  "Chatbot / assistant IA",
-  "MVP / prototype",
-  "Réseaux sociaux",
-  "Reels",
-  "Autre",
-];
-
-const initialContactForm = {
-  name: "",
-  email: "",
-  company: "",
-  projectType: contactProjectTypes[0],
-  message: "",
-};
 
 const initialEstimatorAnswers = {
   profile: "Indépendant",
@@ -2183,8 +2163,28 @@ const initialSocialOptions = { plan: "visibilite", networks: [], extraPosts: 0, 
 
 const reelsAnalyticsKey = { single: "reels_1", pack4: "reels_4", pack8: "reels_8", complex: "reels_complex" };
 
-// Builds the prefill passed to ContactForm: project type, editable message and
-// a summary that is appended to the request so the visitor never retypes it.
+// Subscription add-on lines, shared by the estimator result and the quote summary
+// (same amounts, same wording).
+const getSocialAddonLines = (estimate, isEnglish = false) => {
+  if (!estimate.social) {
+    return [];
+  }
+  const t = (fr, en) => (isEnglish ? en : fr);
+  const { added, addons } = estimate.social;
+
+  return [
+    added.posts > 0 &&
+      `${pluralize(added.posts, t("publication supplémentaire", "extra post"), t("publications supplémentaires", "extra posts"))} : +${formatTaxedPrice(addons.posts, isEnglish)}`,
+    added.platforms > 0 &&
+      `${pluralize(added.platforms, t("réseau supplémentaire", "extra network"), t("réseaux supplémentaires", "extra networks"))} : +${formatTaxedPrice(addons.platforms, isEnglish)}`,
+    added.reels > 0 &&
+      `${pluralize(added.reels, t("Reel supplémentaire", "extra Reel"), t("Reels supplémentaires", "extra Reels"))} : +${formatTaxedPrice(addons.reels, isEnglish)}`,
+  ].filter(Boolean);
+};
+
+// Builds the quote request: opening message and a summary of every selected
+// service, option and amount, so the visitor never retypes it (sent by e-mail,
+// see buildQuoteMailto).
 const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => {
   const t = (fr, en) => (isEnglish ? en : fr);
   const labelFor = (options, value) =>
@@ -2216,6 +2216,7 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
       `${pluralize(social.totals.posts, t("publication", "post"), t("publications", "posts"))}${t("/mois", "/month")} · ${pluralize(social.totals.platforms, t("réseau", "network"), t("réseaux", "networks"))} (${
         social.networks.length ? social.networks.join(", ") : t("à préciser", "to be defined")
       }) · ${formatReelsPerMonth(social.totals.reels, isEnglish)}`,
+      ...getSocialAddonLines(estimate, isEnglish).map((line) => `${t("Option", "Add-on")} — ${line}`),
       social.launchMonths > 0
         ? `${t("Tarif de lancement", "Launch price")} : ${formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)} ${t(
             `pendant ${social.launchMonths} mois (${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients), puis`,
@@ -2268,23 +2269,36 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
   };
 };
 
-// Homepage wiring: the estimator request pre-fills the contact form of the same page.
-const sendEstimateToContactForm = (request, setRequest, anchor) => {
+// LOT WEB-SM-CONTACT-RELEASE-01 — the estimator request is sent by e-mail (no form, no API).
+// Shows the quote e-mail panel of the page and brings it into view.
+const showEstimateEmail = (request, setRequest, anchor) => {
   setRequest(request);
   window.setTimeout(() => {
     scrollToElementWithHeaderOffset(`#${anchor}`);
-    document.getElementById("contact-name")?.focus({ preventScroll: true });
+    document.getElementById(quoteEmailPanelTitleId)?.focus({ preventScroll: true });
   }, 0);
 };
 
-const handleEstimateSubmitted = (request, setRequest) => {
-  if (request) {
-    trackEvent("estimator_quote_submit", { offer: request.offer });
+// Same analytics events as the former form submission, sent when the e-mail is opened.
+const trackQuoteEmailOpened = (request) => {
+  if (!request) {
+    return;
   }
-  if (request?.socialOffer) {
+  trackEvent("estimator_quote_submit", { offer: request.offer });
+  if (request.socialOffer) {
     trackEvent("social_media_request_submit", { offer: request.socialOffer });
   }
-  setRequest(null);
+};
+
+// Opens a mailto: link from a user gesture without leaving the page.
+const openMailtoLink = (href) => {
+  const link = document.createElement("a");
+  link.href = href;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const createEstimatorSelection = (variant) => ({
@@ -2370,21 +2384,24 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
     if (request.socialOffer) {
       trackEvent("social_media_offer_select", { offer: request.socialOffer, cta_location: `estimator_${variant}` });
     }
-    onRequest?.(request);
+    const email = buildQuoteMailto({
+      to: businessContact.email,
+      request,
+      isEnglish,
+      taxNote: isEnglish ? priceTax.noteEn : priceTax.note,
+    });
+    // The full summary fits in the link: open the visitor's mail app right away. Otherwise the
+    // panel shown by onRequest offers the copyable summary first (nothing is lost).
+    if (email.fitsInMailto) {
+      trackQuoteEmailOpened(request);
+      openMailtoLink(email.href);
+    }
+    onRequest?.({ ...request, email });
   };
 
   const plan = estimate.social ? SOCIAL_MEDIA_PLANS[estimate.social.plan] : SOCIAL_MEDIA_PLANS[social.plan];
   const sectionId = variant === "social" ? "simulateur-reseaux-sociaux" : isEnglish ? "en-estimation" : "estimation";
-  const addonLines = estimate.social
-    ? [
-        estimate.social.added.posts > 0 &&
-          `${pluralize(estimate.social.added.posts, t("publication supplémentaire", "extra post"), t("publications supplémentaires", "extra posts"))} : +${formatTaxedPrice(estimate.social.addons.posts, isEnglish)}`,
-        estimate.social.added.platforms > 0 &&
-          `${pluralize(estimate.social.added.platforms, t("réseau supplémentaire", "extra network"), t("réseaux supplémentaires", "extra networks"))} : +${formatTaxedPrice(estimate.social.addons.platforms, isEnglish)}`,
-        estimate.social.added.reels > 0 &&
-          `${pluralize(estimate.social.added.reels, t("Reel supplémentaire", "extra Reel"), t("Reels supplémentaires", "extra Reels"))} : +${formatTaxedPrice(estimate.social.addons.reels, isEnglish)}`,
-      ].filter(Boolean)
-    : [];
+  const addonLines = getSocialAddonLines(estimate, isEnglish);
 
   return (
     <section className={`section estimator-section reveal-on-scroll reveal-section estimator-${variant}`} id={sectionId}>
@@ -2850,253 +2867,221 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
   );
 }
 
-function isSupabaseAccessError(error) {
-  const message = error?.message?.toLowerCase() ?? "";
+// LOT WEB-CONTACT-SIMPLE-01 — direct e-mail contact (replaces the former ContactForm).
+// No network call, no data stored by the site: the visitor writes from their own mailbox.
+const contactMailContent = {
+  fr: {
+    primarySubject: "Demande de projet Digital Lab",
+    secondarySubject: "Discuter d’un projet Digital Lab",
+    body: [
+      "Bonjour,",
+      "",
+      "Mon activité / ma structure :",
+      "Mon besoin :",
+      "Délai souhaité :",
+      "",
+      "Merci,",
+    ].join("\n"),
+  },
+  en: {
+    primarySubject: "Digital Lab project inquiry",
+    secondarySubject: "Digital Lab project discussion",
+    body: [
+      "Hello,",
+      "",
+      "My business / organization:",
+      "What I need:",
+      "Preferred timeline:",
+      "",
+      "Thank you,",
+    ].join("\n"),
+  },
+};
+
+const buildContactMailto = ({ subject, body }) => {
+  const params = [`subject=${encodeURIComponent(subject)}`];
+
+  if (body) {
+    params.push(`body=${encodeURIComponent(body)}`);
+  }
+
+  return `mailto:${businessContact.email}?${params.join("&")}`;
+};
+
+const getContactMailLinks = (isEnglish = false) => {
+  const content = isEnglish ? contactMailContent.en : contactMailContent.fr;
+
+  return {
+    primary: buildContactMailto({ subject: content.primarySubject, body: content.body }),
+    secondary: buildContactMailto({ subject: content.secondarySubject }),
+  };
+};
+
+// Clipboard API first; legacy fallback for browsers / contexts without it (older Safari, http).
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Permission refused: fall through to the legacy path.
+    }
+  }
+
+  const field = document.createElement("textarea");
+  field.value = text;
+  field.setAttribute("readonly", "");
+  field.style.position = "fixed";
+  field.style.top = "-1000px";
+  field.style.opacity = "0";
+  document.body.appendChild(field);
+  field.select();
+
+  let copied;
+  try {
+    copied = document.execCommand("copy");
+  } catch {
+    copied = false;
+  }
+
+  document.body.removeChild(field);
+  return copied;
+}
+
+function ContactEmailCard({ isEnglish = false }) {
+  const [copyState, setCopyState] = useState("idle");
+  const resetTimerRef = useRef(null);
+  const statusId = isEnglish ? "en-contact-email-copy-status" : "contact-email-copy-status";
+  const mailLinks = getContactMailLinks(isEnglish);
+
+  useEffect(() => () => window.clearTimeout(resetTimerRef.current), []);
+
+  const handleCopy = async () => {
+    const copied = await copyTextToClipboard(businessContact.email);
+
+    setCopyState(copied ? "copied" : "error");
+    window.clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = window.setTimeout(() => setCopyState("idle"), 4000);
+  };
+
+  const statusMessage = {
+    idle: "",
+    copied: isEnglish ? "Address copied to the clipboard." : "Adresse copiée dans le presse-papiers.",
+    error: isEnglish
+      ? `Copy unavailable: select the address ${businessContact.email} manually.`
+      : `Copie impossible : sélectionnez l’adresse ${businessContact.email} manuellement.`,
+  }[copyState];
 
   return (
-    message.includes("row-level security") ||
-    message.includes("permission denied") ||
-    message.includes("policy") ||
-    message.includes("jwt")
+    <div className="contact-email-card reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }}>
+      <p className="contact-email-label">{isEnglish ? "Write to me directly" : "Écrivez-moi directement"}</p>
+
+      <div className="contact-email-row">
+        <a className="contact-email-address" href={mailLinks.primary}>
+          {businessContact.email}
+        </a>
+        <button
+          className={`contact-email-copy${copyState === "copied" ? " is-copied" : ""}`}
+          type="button"
+          onClick={handleCopy}
+          aria-describedby={statusId}
+        >
+          <span aria-hidden="true">{copyState === "copied" ? "✓" : "⧉"}</span>
+          {copyState === "copied"
+            ? isEnglish ? "Copied" : "Copiée"
+            : isEnglish ? "Copy address" : "Copier l’adresse"}
+        </button>
+      </div>
+
+      <p className="contact-email-hint">
+        {isEnglish
+          ? "A few lines are enough: your business, your need and your timeline, even if the idea is still unclear."
+          : "Quelques lignes suffisent : votre activité, votre besoin et votre délai, même si l’idée est encore floue."}
+      </p>
+
+      <p className={`contact-email-copy-status is-${copyState}`} id={statusId} role="status" aria-live="polite">
+        {statusMessage}
+      </p>
+    </div>
   );
 }
 
-// `prefill` ({ projectType, message, summary }) comes from an offer CTA. The
-// summary is appended on submit so the selected offer survives message edits.
-// Field limits aligned with the server-side rules prepared in LOT SEC-EMAIL-01
-// (the message leaves room for the estimator summary appended on submit).
-const contactFieldLimits = { name: 120, email: 254, company: 160, message: 6000 };
+const quoteEmailPanelTitleId = "quote-email-title";
 
-function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitted, onNavigate = null, showPrivacyNotice = false }) {
-  const { session } = useAuth();
-  const [form, setForm] = useState(initialContactForm);
-  const [appliedPrefill, setAppliedPrefill] = useState(null);
-  const [isSending, setIsSending] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
-  const statusRef = useRef(null);
-  const sessionEmail = session?.user?.email ?? "";
+// LOT WEB-SM-CONTACT-RELEASE-01 — quote request from the estimator, sent by e-mail.
+// `request.email` comes from buildQuoteMailto: complete text (always copyable) and a mailto: link
+// (complete, or short when the full text would make the link too long).
+function QuoteEmailPanel({ request, isEnglish = false }) {
+  const [copyState, setCopyState] = useState("idle");
+  const resetTimerRef = useRef(null);
+  const email = request?.email;
+  const t = (fr, en) => (isEnglish ? en : fr);
 
-  if (prefill && prefill !== appliedPrefill) {
-    setAppliedPrefill(prefill);
-    setForm((currentForm) => ({
-      ...currentForm,
-      projectType: prefill.projectType,
-      // Keep a message the visitor wrote themselves; replace only empty or prefilled text.
-      message:
-        !currentForm.message.trim() || currentForm.message === appliedPrefill?.message
-          ? prefill.message
-          : currentForm.message,
-    }));
+  useEffect(() => () => window.clearTimeout(resetTimerRef.current), []);
+
+  if (!email) {
+    return null;
   }
 
-  const updateField = (event) => {
-    const { name, value } = event.target;
+  const handleCopy = async () => {
+    const copied = await copyTextToClipboard(email.body);
 
-    setForm((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+    setCopyState(copied ? "copied" : "error");
+    window.clearTimeout(resetTimerRef.current);
+    resetTimerRef.current = window.setTimeout(() => setCopyState("idle"), 4000);
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setIsSending(true);
-    setSubmitStatus({ type: "", message: "" });
-
-    const email = form.email.trim() || sessionEmail;
-    const offerSummary = prefill?.summary
-      ? `\n\n${isEnglish ? "— Selected offer —" : "— Offre sélectionnée —"}\n${prefill.summary}`
-      : "";
-    const contactPayload = {
-      name: form.name.trim(),
-      email,
-      company: form.company.trim(),
-      projectType: form.projectType,
-      message: `${form.message.trim()}${offerSummary}`,
-    };
-    // A thrown network failure is handled like a returned error: never show
-    // internal details, never report a success.
-    const { error } = await createContactRequest({
-      userId: session?.user?.id,
-      name: contactPayload.name,
-      email,
-      company: contactPayload.company,
-      projectType: contactPayload.projectType,
-      message: contactPayload.message,
-    }).catch((requestError) => ({ error: requestError }));
-
-    if (error) {
-      const guestNeedsLogin = !session && isSupabaseAccessError(error);
-
-      // The contact address is appended as a link when the status is rendered.
-      setSubmitStatus({
-        type: "error",
-        message: guestNeedsLogin
-          ? isEnglish
-            ? "Sign in and try again, or write to us directly at"
-            : "Connectez-vous puis réessayez, ou écrivez-nous directement à"
-          : isEnglish
-            ? "Your request couldn't be sent right now. Please try again in a moment or write to us at"
-            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants ou écrivez-nous à",
-      });
-
-      if (guestNeedsLogin) {
-        onAuthOpen();
-      }
-
-      setIsSending(false);
-      return;
-    }
-
-    try {
-      await fetch("/api/send-contact-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(contactPayload),
-      });
-    } catch (notificationError) {
-      console.error("CONTACT EMAIL ERROR:", notificationError);
-    }
-
-    setSubmitStatus({
-      type: "success",
-      message: isEnglish
-        ? "Your request has been sent. I'll get back to you within 24–48h."
-        : "Votre demande a bien été envoyée. Je vous répondrai sous 24–48h.",
-    });
-    setForm({ ...initialContactForm, email: sessionEmail });
-    setIsSending(false);
-    onSubmitted?.(prefill);
-    window.setTimeout(() => {
-      statusRef.current?.focus();
-      statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 80);
-  };
+  const statusMessage = {
+    idle: "",
+    copied: t("Récapitulatif copié dans le presse-papiers.", "Summary copied to the clipboard."),
+    error: t(
+      "Copie impossible : sélectionnez le texte du récapitulatif manuellement.",
+      "Copy unavailable: select the summary text manually.",
+    ),
+  }[copyState];
 
   return (
-    <form className="contact-form reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }} onSubmit={handleSubmit}>
-      {prefill?.summary && (
-        <div className="contact-offer-summary" aria-live="polite">
-          <strong>{isEnglish ? "Selected offer" : "Offre sélectionnée"}</strong>
-          <p>{prefill.summary}</p>
-          <small>
-            {isEnglish
-              ? "This summary is attached to your request."
-              : "Ce récapitulatif est joint automatiquement à votre demande."}
-          </small>
-        </div>
-      )}
-      <div className="contact-form-grid">
-        <label className="contact-field" htmlFor="contact-name">
-          {isEnglish ? "Name" : "Nom"}
-          <input
-            id="contact-name"
-            name="name"
-            type="text"
-            value={form.name}
-            placeholder={isEnglish ? "Your name" : "Votre nom"}
-            maxLength={contactFieldLimits.name}
-            autoComplete="name"
-            required
-            onChange={updateField}
-          />
-        </label>
-
-        <label className="contact-field" htmlFor="contact-email">
-          Email
-          <input
-            id="contact-email"
-            name="email"
-            type="email"
-            value={form.email}
-            placeholder={sessionEmail || (isEnglish ? "you@email.com" : "vous@email.com")}
-            maxLength={contactFieldLimits.email}
-            autoComplete="email"
-            required={!sessionEmail}
-            onChange={updateField}
-          />
-        </label>
-
-        <label className="contact-field" htmlFor="contact-company">
-          {isEnglish ? "Organization" : "Structure"}
-          <input
-            id="contact-company"
-            name="company"
-            type="text"
-            value={form.company}
-            placeholder={isEnglish ? "Company, nonprofit, project..." : "Entreprise, association, projet..."}
-            maxLength={contactFieldLimits.company}
-            autoComplete="organization"
-            onChange={updateField}
-          />
-        </label>
-
-        <label className="contact-field" htmlFor="contact-project-type">
-          {isEnglish ? "Project type" : "Type de projet"}
-          <select id="contact-project-type" name="projectType" value={form.projectType} onChange={updateField}>
-            {contactProjectTypeOptions.map((projectType) => (
-              <option key={projectType.value} value={projectType.value}>
-                {isEnglish ? projectType.label : projectType.value}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="contact-field is-full" htmlFor="contact-message">
-          Message
-          <textarea
-            id="contact-message"
-            name="message"
-            value={form.message}
-            placeholder={
-              isEnglish
-                ? "Describe your need in plain terms, even if it's still unclear."
-                : "Expliquez simplement votre besoin, même s’il est encore flou."
-            }
-            maxLength={contactFieldLimits.message}
-            required
-            onChange={updateField}
-          ></textarea>
-        </label>
-      </div>
-
-      <div className="contact-form-footer">
-        <button className="btn btn-primary contact-cta-primary" type="submit" disabled={isSending}>
-          {isSending ? (isEnglish ? "Sending..." : "Envoi en cours...") : isEnglish ? "Send my request" : "Envoyer ma demande"}
-        </button>
-        {submitStatus.message && (
-          <p className={`contact-form-status is-${submitStatus.type}`} role="status" tabIndex={-1} ref={statusRef}>
-            {submitStatus.message}
-            {submitStatus.type === "error" && (
-              <>
-                {" "}
-                <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
-              </>
+    <div className="quote-email-panel" aria-labelledby={quoteEmailPanelTitleId}>
+      <h3 id={quoteEmailPanelTitleId} tabIndex={-1}>
+        {t("Votre demande de devis", "Your quote request")}
+      </h3>
+      <p className="quote-email-intro">
+        {email.fitsInMailto
+          ? t(
+              `Votre messagerie s’ouvre avec ce récapitulatif, adressé à ${businessContact.email}. Si rien ne s’ouvre, copiez-le et envoyez-le depuis votre adresse e-mail.`,
+              `Your mail app opens with this summary, addressed to ${businessContact.email}. If nothing opens, copy it and send it from your own e-mail address.`,
+            )
+          : t(
+              `Le récapitulatif est trop long pour être ajouté automatiquement à l’e-mail : copiez-le, puis collez-le dans votre message à ${businessContact.email}.`,
+              `The summary is too long to be added to the e-mail automatically: copy it, then paste it into your message to ${businessContact.email}.`,
             )}
-          </p>
-        )}
+      </p>
+
+      <label className="quote-email-summary-label" htmlFor="quote-email-summary">
+        {t("Récapitulatif", "Summary")}
+      </label>
+      <textarea
+        id="quote-email-summary"
+        className="quote-email-summary"
+        readOnly
+        value={email.body}
+        rows={Math.min(14, email.body.split("\n").length + 1)}
+        onFocus={(event) => event.target.select()}
+      ></textarea>
+
+      <div className="quote-email-actions">
+        <button className="btn btn-primary" type="button" onClick={handleCopy} aria-describedby="quote-email-copy-status">
+          {copyState === "copied" ? t("✓ Récapitulatif copié", "✓ Summary copied") : t("Copier le récapitulatif", "Copy the summary")}
+        </button>
+        <a className="btn btn-secondary" href={email.href} onClick={() => trackQuoteEmailOpened(request)}>
+          {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
+        </a>
       </div>
-      {showPrivacyNotice && (
-        <p className="contact-form-privacy">
-          {isEnglish
-            ? "Your details are used only to process your request and reply to you. "
-            : "Vos informations sont utilisées uniquement pour traiter votre demande et vous répondre. "}
-          <a
-            href={privacyPolicyPath}
-            onClick={(event) => {
-              if (onNavigate) {
-                event.preventDefault();
-                onNavigate(privacyPolicyPath);
-              }
-            }}
-          >
-            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
-          </a>
-        </p>
-      )}
-    </form>
+
+      <p className={`quote-email-status is-${copyState}`} id="quote-email-copy-status" role="status" aria-live="polite">
+        {statusMessage}
+      </p>
+    </div>
   );
 }
 
@@ -3655,8 +3640,15 @@ function PrivacyPolicyPage({ onNavigate }) {
               <article>
                 <h2>2. Données collectées sur le site</h2>
                 <p>
-                  Digital Lab collecte les données que vous envoyez volontairement via les formulaires du site ou par email,
-                  notamment vos coordonnées, votre message et les informations utiles au traitement de votre demande.
+                  Le site ne propose plus de formulaire de contact public : pour toute demande, vous écrivez directement à
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Digital Lab traite alors les
+                  données que vous envoyez volontairement par e-mail, notamment vos coordonnées, votre message et les
+                  informations utiles au traitement de votre demande.
+                </p>
+                <p>
+                  Si vous disposez d’un espace client, Digital Lab traite également les informations que vous y échangez
+                  (messages, documents, devis), ainsi que les demandes envoyées auparavant via l’ancien formulaire du site,
+                  qui restent consultables dans votre espace client et par Digital Lab.
                 </p>
                 <p>
                   Le site utilise également Google Analytics afin de mesurer l’audience et d’améliorer l’expérience de navigation.
@@ -3685,7 +3677,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes envoyées via le site ou par email.</li>
+                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées.</li>
                 </ul>
               </article>
 
@@ -4392,19 +4384,7 @@ const estimatorUrgencyOptions = [
   { value: "Urgent", label: "Urgent" },
 ];
 
-const contactProjectTypeOptions = [
-  { value: "Site web", label: "Website" },
-  { value: "Réparation / amélioration", label: "Repair / improvement" },
-  { value: "SEO & visibilité", label: "SEO & visibility" },
-  { value: "Automatisation", label: "Automation" },
-  { value: "Chatbot / assistant IA", label: "AI chatbot / assistant" },
-  { value: "MVP / prototype", label: "MVP / prototype" },
-  { value: "Réseaux sociaux", label: "Social media" },
-  { value: "Reels", label: "Reels / short videos" },
-  { value: "Autre", label: "Other" },
-];
-
-function EnglishHomePage({ onNavigate, onAuthOpen }) {
+function EnglishHomePage({ onNavigate }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [quoteRequest, setQuoteRequest] = useState(null);
 
@@ -4624,7 +4604,7 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
 
       <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} isEnglish />
 
-      <UnifiedEstimator isEnglish onRequest={(request) => sendEstimateToContactForm(request, setQuoteRequest, "en-contact")} />
+      <UnifiedEstimator isEnglish onRequest={(request) => showEstimateEmail(request, setQuoteRequest, "en-contact")} />
 
       <BlogCarousel isEnglish />
 
@@ -4917,18 +4897,14 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
             </div>
           </address>
 
-          <ContactForm
-            onAuthOpen={onAuthOpen}
-            isEnglish
-            prefill={quoteRequest}
-            onSubmitted={(request) => handleEstimateSubmitted(request, setQuoteRequest)}
-          />
+          <QuoteEmailPanel request={quoteRequest} isEnglish />
+          <ContactEmailCard isEnglish />
 
           <div className="contact-actions">
-            <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20inquiry`}>
+            <a className="btn btn-primary contact-cta-primary" href={getContactMailLinks(true).primary}>
               Send an email
             </a>
-            <a className="btn btn-secondary contact-cta-secondary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20discussion`}>
+            <a className="btn btn-secondary contact-cta-secondary" href={getContactMailLinks(true).secondary}>
               Discuss the project
             </a>
           </div>
@@ -5082,9 +5058,9 @@ function ProjectCasePage({ project, onNavigate }) {
   );
 }
 
-function ServicePage({ servicePage, onNavigate, onAuthOpen }) {
+function ServicePage({ servicePage, onNavigate }) {
   if (servicePage?.customPage === "social-media") {
-    return <SocialMediaServicePage onNavigate={onNavigate} onAuthOpen={onAuthOpen} />;
+    return <SocialMediaServicePage onNavigate={onNavigate} />;
   }
 
   if (!servicePage) {
@@ -5496,8 +5472,8 @@ function SocialPhoto({ photo, tag, headline, sizes, decorative = false, eager = 
   );
 }
 
-function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
-  const [requestPrefill, setRequestPrefill] = useState(null);
+function SocialMediaServicePage({ onNavigate }) {
+  const [quoteRequest, setQuoteRequest] = useState(null);
   const [estimatorPreset, setEstimatorPreset] = useState(null);
 
   const handleNavigateTo = (target) => (event) => {
@@ -5521,18 +5497,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
     window.setTimeout(() => scrollToElementWithHeaderOffset(`#${socialMediaEstimatorAnchor}`), 0);
   };
 
-  const requestQuote = (request) => {
-    setRequestPrefill(request);
-    window.setTimeout(() => {
-      scrollToElementWithHeaderOffset(`#${socialMediaRequestAnchor}`);
-      document.getElementById("contact-name")?.focus({ preventScroll: true });
-    }, 0);
-  };
-
-  const handleSubmitted = (request) => {
-    trackEvent("social_media_request_submit", { offer: request?.socialOffer ?? "none" });
-    setRequestPrefill(null);
-  };
+  const requestQuote = (request) => showEstimateEmail(request, setQuoteRequest, socialMediaRequestAnchor);
 
   return (
     <main className="case-page sm-page fade-in-page">
@@ -5849,6 +5814,7 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
               );
             })}
           </div>
+          {priceTax.note && <p className="sm-footnote">{priceTax.note}</p>}
         </div>
       </section>
 
@@ -5928,15 +5894,19 @@ function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
           <div className="sm-section-heading">
             <span className="sm-eyebrow">Demande de devis</span>
             <h2 id="sm-request-title">Parlons de vos réseaux sociaux.</h2>
-            <p>Vos choix du simulateur sont repris automatiquement. Réponse sous 24–48h avec une proposition adaptée.</p>
+            <p>
+              Vos choix du simulateur sont repris dans un e-mail prêt à envoyer. Réponse sous 24–48h avec une
+              proposition adaptée.
+            </p>
           </div>
-          <ContactForm
-            onAuthOpen={onAuthOpen}
-            prefill={requestPrefill}
-            onSubmitted={handleSubmitted}
-            onNavigate={onNavigate}
-            showPrivacyNotice
-          />
+          <QuoteEmailPanel request={quoteRequest} />
+          <ContactEmailCard />
+          <p className="contact-form-privacy">
+            Vos informations sont utilisées uniquement pour traiter votre demande et vous répondre.{" "}
+            <a href={privacyPolicyPath} onClick={handleNavigateTo(privacyPolicyPath)}>
+              Politique de confidentialité
+            </a>
+          </p>
           <p className="sm-related-links">
             Vous préférez commencer par votre site ?{" "}
             <a href={auditLandingPath} onClick={handleNavigateTo(auditLandingPath)}>
@@ -8185,7 +8155,7 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <ServicePage servicePage={activeServicePage} onNavigate={navigate} onAuthOpen={() => setIsAuthOpen(true)} />
+        <ServicePage servicePage={activeServicePage} onNavigate={navigate} />
 
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
@@ -8410,7 +8380,7 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <EnglishHomePage onNavigate={navigate} onAuthOpen={() => setIsAuthOpen(true)} />
+        <EnglishHomePage onNavigate={navigate} />
 
         <AuditFooterReminder onNavigate={navigate} isEnglish />
         <SiteFooter onNavigate={navigate} isEnglish />
@@ -8687,7 +8657,7 @@ function App() {
 
         <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
 
-        <UnifiedEstimator onRequest={(request) => sendEstimateToContactForm(request, setHomeQuoteRequest, "contact")} />
+        <UnifiedEstimator onRequest={(request) => showEstimateEmail(request, setHomeQuoteRequest, "contact")} />
 
         <BlogCarousel />
 
@@ -9087,17 +9057,14 @@ function App() {
               </div>
             </address>
 
-            <ContactForm
-              onAuthOpen={() => setIsAuthOpen(true)}
-              prefill={homeQuoteRequest}
-              onSubmitted={(request) => handleEstimateSubmitted(request, setHomeQuoteRequest)}
-            />
+            <QuoteEmailPanel request={homeQuoteRequest} />
+            <ContactEmailCard />
 
             <div className="contact-actions">
-              <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Demande%20de%20projet%20Digital%20Lab`}>
+              <a className="btn btn-primary contact-cta-primary" href={getContactMailLinks().primary}>
                 Envoyer un email
               </a>
-              <a className="btn btn-secondary contact-cta-secondary" href={`mailto:${businessContact.email}?subject=Discuter%20d’un%20projet%20Digital%20Lab`}>
+              <a className="btn btn-secondary contact-cta-secondary" href={getContactMailLinks().secondary}>
                 Discuter du projet
               </a>
             </div>
