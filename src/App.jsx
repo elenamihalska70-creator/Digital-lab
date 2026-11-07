@@ -17,11 +17,32 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
-import { getEstimatorResult } from "./utils/estimator";
+import {
+  getPlanMonthlyPrice,
+  getUnifiedEstimate,
+  REELS_OFFERS,
+  SOCIAL_MEDIA_ADDONS,
+  SOCIAL_MEDIA_LAUNCH_ACTIVE,
+  SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT,
+  SOCIAL_MEDIA_LAUNCH_MONTHS,
+  SOCIAL_MEDIA_NETWORKS,
+  SOCIAL_MEDIA_PLANS,
+} from "./utils/estimator";
+import { getTaxMention } from "./config/taxMention";
 
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
+const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
+// Tax mention for every public price (one-off projects, subscriptions, Reels,
+// meta description, request summary). Configured only in config/taxMention.js;
+// while the VAT regime is unconfirmed, prices carry no mention and
+// `npm run check:release` fails.
+const priceTax = getTaxMention();
+const withTaxMention = (price, isEnglish = false) => {
+  const mention = isEnglish ? priceTax.shortEn : priceTax.short;
+  return mention ? `${price} ${mention}` : price;
+};
 const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl;
@@ -146,6 +167,36 @@ const services = [
     },
   },
   {
+    icon: "social",
+    title: "Réseaux sociaux & Reels",
+    summary: "Publier régulièrement, sans y passer vos soirées.",
+    problem: "Vos réseaux sont irréguliers faute de temps, d’idées ou de visuels prêts à publier.",
+    canDo: "Je prépare un calendrier, les visuels, les textes et les Reels, puis je publie après votre validation.",
+    expectedResult: "Une présence régulière et cohérente, avec un abonnement mensuel clair.",
+    details: ["Calendrier éditorial", "Visuels", "Textes", "Reels", "Publication", "Bilan mensuel"],
+    examples:
+      "Gestion mensuelle Instagram, Facebook, LinkedIn ou Google Business Profile, création de visuels, rédaction de légendes, Reels et vidéos courtes, bilan mensuel.",
+    images: [
+      "/projects/social/v3/social-v3-card-1.webp",
+      "/projects/social/v3/social-v3-card-2.webp",
+      "/projects/social/v3/social-v3-card-3.webp",
+    ],
+    gallery: {
+      type: "carousel",
+      images: [
+        "/projects/social/v3/social-v3-card-1.webp",
+        "/projects/social/v3/social-v3-card-2.webp",
+        "/projects/social/v3/social-v3-card-3.webp",
+      ],
+    },
+    transformation: {
+      before: ["publications irrégulières", "visuels improvisés", "aucun suivi"],
+      after: ["calendrier mensuel", "visuels cohérents", "bilan chaque mois"],
+      result: "Vos réseaux restent actifs et reflètent sérieusement votre activité.",
+    },
+    learnMoreHref: socialMediaServicePath,
+  },
+  {
     icon: "connect",
     title: "Automatisation & outils connectés",
     summary: "Libérer du temps pour l’essentiel.",
@@ -266,6 +317,7 @@ const services = [
 const navLinks = [
   { label: "Audit gratuit", href: auditLaunchHref, emphasized: true },
   { label: "Services", href: "/#services" },
+  { label: "Réseaux sociaux", href: socialMediaServicePath },
   { label: "Projets", href: "/#projets" },
   { label: "Méthode", href: "/#method" },
   { label: "À propos", href: "/#about" },
@@ -278,7 +330,7 @@ const navLinks = [
 // navLinks, deliberately kept as a separate array so translating a label
 // never implies a translated destination: every href above still points at
 // the existing French sections/pages (no /en/services/... routes exist).
-const englishNavLabels = ["Free audit", "Services", "Projects", "Method", "About", "Blog", "FAQ", "Contact"];
+const englishNavLabels = ["Free audit", "Services", "Social media", "Projects", "Method", "About", "Blog", "FAQ", "Contact"];
 
 const missionSteps = [
   {
@@ -611,6 +663,8 @@ const contactProjectTypes = [
   "Automatisation",
   "Chatbot / assistant IA",
   "MVP / prototype",
+  "Réseaux sociaux",
+  "Reels",
   "Autre",
 ];
 
@@ -1053,6 +1107,14 @@ const servicePages = [
       secondaryHref: "/#contact",
     },
   },
+  {
+    // Rendered by SocialMediaServicePage; only the routing and SEO fields are read here.
+    slug: "gestion-reseaux-sociaux",
+    customPage: "social-media",
+    title: "Gestion des réseaux sociaux pour TPE, indépendants et associations",
+    metaTitle: "Gestion des réseaux sociaux pour TPE et indépendants : abonnement mensuel | Digital Lab",
+    metaDescription: `Abonnement mensuel de gestion des réseaux sociaux : calendrier, visuels, textes, Reels et publication après votre validation. ${SOCIAL_MEDIA_LAUNCH_ACTIVE ? "Tarif de lancement dès" : "Dès"} ${withTaxMention(`${getPlanMonthlyPrice(SOCIAL_MEDIA_PLANS.presence)} €`)}/mois, Reels dès ${withTaxMention(`${REELS_OFFERS.single.price} €`)}.`,
+  },
 ];
 
 const optimizedImages = {
@@ -1100,6 +1162,15 @@ const optimizedImages = {
       "/projects/microassist (2)-640.webp 640w, /projects/microassist (2)-960.webp 960w, /projects/microassist (2).webp 1809w",
   },
 };
+
+// Homepage card images rendered from the Visuals V3 page compositions (fictional brands), 1100 × 720.
+[1, 2, 3].forEach((index) => {
+  const base = `/projects/social/v3/social-v3-card-${index}`;
+  optimizedImages[`${base}.webp`] = {
+    src: `${base}.webp`,
+    srcSet: `${base}-640.webp 640w, ${base}-960.webp 960w, ${base}.webp 1100w`,
+  };
+});
 
 const getOptimizedImage = (src) => optimizedImages[src] ?? { src };
 
@@ -1364,6 +1435,45 @@ const applyPageMetadata = (pathname) => {
   } else {
     removeJsonLd("audit-landing-structured-data");
   }
+
+  if (pathname === socialMediaServicePath) {
+    setJsonLd("social-media-structured-data", {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Service",
+          "@id": `${metadata.canonical}#service`,
+          name: "Gestion des réseaux sociaux Digital Lab",
+          serviceType: "Gestion mensuelle des réseaux sociaux et création de Reels",
+          description: metadata.description,
+          url: metadata.canonical,
+          areaServed: "France",
+          provider: {
+            "@type": "ProfessionalService",
+            name: "Digital Lab",
+            url: siteUrl,
+          },
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Accueil", item: siteUrl },
+            { "@type": "ListItem", position: 2, name: "Gestion des réseaux sociaux", item: metadata.canonical },
+          ],
+        },
+        {
+          "@type": "FAQPage",
+          mainEntity: socialMediaFaq.map(({ question, answer }) => ({
+            "@type": "Question",
+            name: question,
+            acceptedAnswer: { "@type": "Answer", text: answer },
+          })),
+        },
+      ],
+    });
+  } else {
+    removeJsonLd("social-media-structured-data");
+  }
 };
 
 const trackAuditCta = (eventName, location) => {
@@ -1504,6 +1614,7 @@ function SolutionIcon({ type }) {
     seo: "M10.5 5a5.5 5.5 0 0 1 4.3 8.9l3.6 3.6-1.4 1.4-3.6-3.6A5.5 5.5 0 1 1 10.5 5Zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0 1.2 1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3 1-2.1Z",
     connect: "M7.5 7a3.5 3.5 0 0 1 3.3 2.4h2.4A3.5 3.5 0 1 1 13.2 12h-2.4A3.5 3.5 0 1 1 7.5 7Zm0 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm9 3a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z",
     mvp: "M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 17.5v-11Zm3 1.5v2h8V8H8Zm0 4v2h5v-2H8Zm0 4v2h8v-2H8Z",
+    social: "M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H7Zm3 4.2 5.4 2.8-5.4 2.8V9.2Z",
   };
 
   return (
@@ -2004,97 +2115,292 @@ function BlogCarousel({ isEnglish = false }) {
   );
 }
 
-function ProjectEstimator({ isEnglish = false }) {
+// LOT SM-04 — unified estimator, rendered on the FR/EN homepages and on the
+// social media page. Every amount comes from getUnifiedEstimate
+// (utils/estimator.js); this component only shows the relevant questions and
+// formats the structured result per language.
+const NBSP = String.fromCharCode(160);
+
+const formatEuros = (amount, isEnglish = false) =>
+  isEnglish
+    ? `€${new Intl.NumberFormat("en-GB").format(amount)}`
+    : `${new Intl.NumberFormat("fr-FR").format(amount)}${NBSP}€`;
+const formatTaxedPrice = (amount, isEnglish = false) => withTaxMention(formatEuros(amount, isEnglish), isEnglish);
+const formatMonthlyPrice = (amount, isEnglish = false) =>
+  `${formatTaxedPrice(amount, isEnglish)}${isEnglish ? "/month" : "/mois"}`;
+const pluralize = (count, singular, plural) => `${count} ${count > 1 ? plural : singular}`;
+const formatReelsPerMonth = (count, isEnglish = false) =>
+  count ? `${pluralize(count, "Reel", "Reels")}${isEnglish ? "/month" : "/mois"}` : isEnglish ? "no Reels" : "sans Reel";
+const formatDelayRange = (delay, isEnglish = false) =>
+  `${delay.min}–${delay.max} ${
+    delay.unit === "days" ? (isEnglish ? "business days" : "jours ouvrés") : isEnglish ? "weeks" : "semaines"
+  }`;
+
+const estimatorProjectTypeByNeed = {
+  "Créer un site web": "Site web",
+  "Réparer / améliorer un site existant": "Réparation / amélioration",
+  "Optimiser SEO & visibilité": "SEO & visibilité",
+  "Ajouter une automatisation": "Automatisation",
+  "Créer un chatbot / assistant IA": "Chatbot / assistant IA",
+  "Créer un MVP ou prototype web": "MVP / prototype",
+};
+
+const estimatorContentServiceOptions = [
+  { value: "none", fr: "Aucun", en: "None" },
+  { value: "social", fr: "Gestion des réseaux sociaux", en: "Social media management" },
+  { value: "reels", fr: "Reels / vidéos courtes", en: "Reels / short videos" },
+];
+
+const estimatorReelsOptions = [
+  { value: "single", fr: "1 Reel", en: "1 Reel" },
+  { value: "pack4", fr: "Pack 4 Reels / mois", en: "4 Reels / month" },
+  { value: "pack8", fr: "Pack 8 Reels / mois", en: "8 Reels / month" },
+  { value: "complex", fr: "Vidéo complexe", en: "Complex video" },
+];
+
+const projectLevelLabels = {
+  Simple: { fr: "Simple", en: "Simple" },
+  Intermédiaire: { fr: "Intermédiaire", en: "Intermediate" },
+  Avancé: { fr: "Avancé", en: "Advanced" },
+};
+
+const projectLevelMessages = {
+  Simple: {
+    fr: "Votre besoin semble ciblé. Une intervention courte peut probablement suffire pour avancer vite.",
+    en: "Your need looks well-defined. A short intervention is likely enough to move fast.",
+  },
+  Intermédiaire: {
+    fr: "Votre projet demande plusieurs éléments à coordonner. Une première version claire peut être créée rapidement.",
+    en: "Your project involves several elements to coordinate. A clear first version can be built quickly.",
+  },
+  Avancé: {
+    fr: "Votre projet implique plusieurs fonctionnalités ou workflows. Un cadrage précis permettra de sécuriser le budget et les étapes.",
+    en: "Your project involves several features or workflows. A precise scoping phase will help secure the budget and the steps.",
+  },
+};
+
+const initialSocialOptions = { plan: "visibilite", networks: [], extraPosts: 0, extraReels: 0, setupAudit: false };
+
+const reelsAnalyticsKey = { single: "reels_1", pack4: "reels_4", pack8: "reels_8", complex: "reels_complex" };
+
+// Builds the prefill passed to ContactForm: project type, editable message and
+// a summary that is appended to the request so the visitor never retypes it.
+const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => {
+  const t = (fr, en) => (isEnglish ? en : fr);
+  const labelFor = (options, value) =>
+    isEnglish ? options.find((option) => option.value === value)?.label ?? value : value;
+  const lines = [];
+  const services = [];
+
+  if (estimate.project) {
+    const need = labelFor(estimatorNeedOptions, estimate.project.need);
+    services.push(need);
+    lines.push(
+      `${t("Projet ponctuel", "One-off project")} : ${need}`,
+      `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · ${t("Fonctionnalités", "Features")} : ${
+        answers.features.length
+          ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
+          : t("à préciser", "to be defined")
+      } · ${t("Contenus", "Content")} : ${labelFor(estimatorContentOptions, answers.content)} · ${t("Urgence", "Urgency")} : ${labelFor(estimatorUrgencyOptions, answers.urgency)}`,
+      `${t("Profil", "Profile")} : ${labelFor(estimatorProfileOptions, answers.profile)} · ${t("Priorité", "Priority")} : ${labelFor(estimatorPriorityOptions, answers.priority)} · ${t("Existant", "Existing site")} : ${labelFor(estimatorExistingOptions, answers.existing)}`,
+      `${t("Estimation projet", "Project estimate")} : ${t("à partir de", "from")} ${formatTaxedPrice(estimate.project.budget, isEnglish)} · ${t("délai", "timeline")} ${formatDelayRange(estimate.project.delay, isEnglish)} · ${t("niveau", "level")} ${projectLevelLabels[estimate.project.type][isEnglish ? "en" : "fr"]}`,
+      t("Projet facturé selon son devis (acompte et échéances), hors premier mois d’abonnement.", "Project billed according to its own quote (deposit and instalments), separate from the subscription."),
+    );
+  }
+
+  if (estimate.social) {
+    const { social } = estimate;
+    services.push(t(`gestion des réseaux sociaux (formule ${social.planName})`, `social media management (${social.planName} plan)`));
+    lines.push(
+      `${t("Abonnement réseaux sociaux — formule", "Social media subscription —")} ${social.planName}${isEnglish ? " plan" : ""}`,
+      `${pluralize(social.totals.posts, t("publication", "post"), t("publications", "posts"))}${t("/mois", "/month")} · ${pluralize(social.totals.platforms, t("réseau", "network"), t("réseaux", "networks"))} (${
+        social.networks.length ? social.networks.join(", ") : t("à préciser", "to be defined")
+      }) · ${formatReelsPerMonth(social.totals.reels, isEnglish)}`,
+      social.launchMonths > 0
+        ? `${t("Tarif de lancement", "Launch price")} : ${formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)} ${t(
+            `pendant ${social.launchMonths} mois (${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients), puis`,
+            `for ${social.launchMonths} months (first ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} clients), then`,
+          )} ${formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}`
+        : `${t("Tarif", "Price")} : ${formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}`,
+    );
+  }
+
+  if (estimate.reels) {
+    const offer = estimatorReelsOptions.find((option) => option.value === reelsChoice);
+    services.push(isEnglish ? offer.en : offer.fr);
+    const price =
+      estimate.reels.billing === "quote"
+        ? t("sur devis", "on quote")
+        : estimate.reels.billing === "monthly"
+          ? formatMonthlyPrice(estimate.reels.price, isEnglish)
+          : `${formatTaxedPrice(estimate.reels.price, isEnglish)} ${t("(prestation ponctuelle)", "(one-off service)")}`;
+    lines.push(`Reels — ${isEnglish ? offer.en : offer.fr} : ${price}`);
+  }
+
+  estimate.oneTimeFees
+    .filter((fee) => fee.key === "setupAudit")
+    .forEach((fee) => lines.push(`${t("Audit de départ et mise en place (une seule fois)", "Initial audit and set-up (one-time)")} : ${formatTaxedPrice(fee.amount, isEnglish)}`));
+
+  if (estimate.firstMonth) {
+    lines.push(
+      `${t("Premier mois (abonnement + frais de mise en place)", "First month (subscription + set-up fees)")} : ${formatTaxedPrice(estimate.firstMonth.total, isEnglish)}`,
+    );
+  }
+
+  lines.push(t("Estimation indicative, à confirmer par devis.", "Indicative estimate, to be confirmed by a quote."));
+
+  const socialOffer = estimate.social
+    ? `social_${estimate.social.plan}`
+    : estimate.reels
+      ? reelsAnalyticsKey[estimate.reels.key]
+      : null;
+
+  return {
+    offer: [estimate.project && `project:${estimatorProjectTypeByNeed[estimate.project.need]}`, socialOffer].filter(Boolean).join("|"),
+    socialOffer,
+    projectType: estimate.project
+      ? estimatorProjectTypeByNeed[estimate.project.need]
+      : estimate.social
+        ? "Réseaux sociaux"
+        : "Reels",
+    message: t(`Bonjour, je souhaite un devis pour : ${services.join(" + ")}. Mon activité : `, `Hello, I'd like a quote for: ${services.join(" + ")}. My business: `),
+    summary: lines.join("\n"),
+  };
+};
+
+// Homepage wiring: the estimator request pre-fills the contact form of the same page.
+const sendEstimateToContactForm = (request, setRequest, anchor) => {
+  setRequest(request);
+  window.setTimeout(() => {
+    scrollToElementWithHeaderOffset(`#${anchor}`);
+    document.getElementById("contact-name")?.focus({ preventScroll: true });
+  }, 0);
+};
+
+const handleEstimateSubmitted = (request, setRequest) => {
+  if (request) {
+    trackEvent("estimator_quote_submit", { offer: request.offer });
+  }
+  if (request?.socialOffer) {
+    trackEvent("social_media_request_submit", { offer: request.socialOffer });
+  }
+  setRequest(null);
+};
+
+const createEstimatorSelection = (variant) => ({
+  projectNeed: variant === "social" ? null : "Créer un site web",
+  contentService: variant === "social" ? "social" : "none",
+});
+
+function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, onRequest }) {
+  const [selection, setSelection] = useState(() => createEstimatorSelection(variant));
   const [answers, setAnswers] = useState(initialEstimatorAnswers);
-  const rawResult = getEstimatorResult(answers);
-  const result = translateEstimatorResult(rawResult, isEnglish);
-  const answeredSteps = [
-    answers.profile,
-    answers.priority,
-    answers.need,
-    answers.existing,
-    answers.content,
-    answers.complexity,
-    answers.features.length > 0,
-    answers.urgency,
-  ].filter(Boolean).length;
-  const progress = Math.round((answeredSteps / 8) * 100);
-  const labelFor = (options, value) => options.find((option) => option.value === value)?.label ?? value;
-  const emailBody = isEnglish
-    ? [
-        "Hello Digital Lab,",
-        "",
-        "I'd like to talk about a project.",
-        "",
-        `Profile: ${labelFor(estimatorProfileOptions, answers.profile)}`,
-        `Main priority: ${labelFor(estimatorPriorityOptions, answers.priority)}`,
-        `Main need: ${labelFor(estimatorNeedOptions, answers.need)}`,
-        `Existing site or tool: ${labelFor(estimatorExistingOptions, answers.existing)}`,
-        `Content: ${labelFor(estimatorContentOptions, answers.content)}`,
-        `Desired complexity: ${labelFor(estimatorComplexityOptions, answers.complexity)}`,
-        `Desired features: ${
-          answers.features.length
-            ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
-            : "To be defined"
-        }`,
-        `Urgency: ${labelFor(estimatorUrgencyOptions, answers.urgency)}`,
-        "",
-        `Indicative estimate: ${result.type} — ${result.budget} — ${result.delay}`,
-        "",
-        "Could you suggest a first direction?",
-      ].join("\n")
-    : [
-        "Bonjour Digital Lab,",
-        "",
-        "Je souhaite échanger sur un projet.",
-        "",
-        `Profil : ${answers.profile}`,
-        `Priorité principale : ${answers.priority}`,
-        `Besoin principal : ${answers.need}`,
-        `Site ou outil existant : ${answers.existing}`,
-        `Contenus : ${answers.content}`,
-        `Complexité souhaitée : ${answers.complexity}`,
-        `Fonctionnalités souhaitées : ${answers.features.length ? answers.features.join(", ") : "À préciser"}`,
-        `Urgence : ${answers.urgency}`,
-        "",
-        `Estimation indicative : ${result.type} — ${result.budget} — ${result.delay}`,
-        "",
-        "Pouvez-vous me proposer une première piste ?",
-      ].join("\n");
-  const mailtoHref = `mailto:${businessContact.email}?subject=${encodeURIComponent(
-    isEnglish ? "Digital Lab project inquiry" : "Demande de projet Digital Lab",
-  )}&body=${encodeURIComponent(emailBody)}`;
+  const [social, setSocial] = useState(initialSocialOptions);
+  const [reelsChoice, setReelsChoice] = useState("pack4");
+  const [appliedPreset, setAppliedPreset] = useState(null);
+  const t = (fr, en) => (isEnglish ? en : fr);
+  const idPrefix = `estimator-${variant}${isEnglish ? "-en" : ""}`;
 
-  const updateAnswer = (key, value) => {
-    setAnswers((currentAnswers) => ({
-      ...currentAnswers,
-      [key]: value,
+  // A CTA elsewhere on the page (plan card, Reels offer) preselects a service once per click.
+  if (preset && preset !== appliedPreset) {
+    setAppliedPreset(preset);
+    if (preset.contentService) setSelection((current) => ({ ...current, contentService: preset.contentService }));
+    if (preset.plan) setSocial((current) => ({ ...current, plan: preset.plan }));
+    if (preset.reels) setReelsChoice(preset.reels);
+  }
+
+  const estimate = getUnifiedEstimate({
+    project: selection.projectNeed ? { ...answers, need: selection.projectNeed } : null,
+    contentService: selection.contentService,
+    social,
+    reels: reelsChoice,
+  });
+  const hasSelection = Boolean(estimate.project || estimate.social || estimate.reels);
+
+  const steps = [hasSelection];
+  if (selection.projectNeed) {
+    steps.push(answers.profile, answers.priority, answers.existing, answers.content, answers.complexity, answers.features.length > 0, answers.urgency);
+  }
+  if (selection.contentService === "social") steps.push(social.plan, social.networks.length > 0, true, true, true);
+  if (selection.contentService === "reels") steps.push(reelsChoice);
+  const progress = Math.round((steps.filter(Boolean).length / steps.length) * 100);
+
+  const updateAnswer = (key, value) => setAnswers((current) => ({ ...current, [key]: value }));
+  const toggleFeature = (feature) =>
+    setAnswers((current) => ({
+      ...current,
+      features: current.features.includes(feature)
+        ? current.features.filter((currentFeature) => currentFeature !== feature)
+        : [...current.features, feature],
     }));
-  };
+  const updateSocial = (key, value) => setSocial((current) => ({ ...current, [key]: value }));
+  const toggleNetwork = (network) =>
+    setSocial((current) => ({
+      ...current,
+      networks: current.networks.includes(network)
+        ? current.networks.filter((currentNetwork) => currentNetwork !== network)
+        : [...current.networks, network],
+    }));
 
-  const toggleFeature = (feature) => {
-    setAnswers((currentAnswers) => {
-      const hasFeature = currentAnswers.features.includes(feature);
+  const optionGroup = (key, options, selectedValue, onSelect, className = "") => (
+    <div className={`estimator-options ${className}`.trim()} role="group" aria-labelledby={`${idPrefix}-${key}`}>
+      {options.map((option) => (
+        <button
+          className={selectedValue === option.value ? "is-selected" : ""}
+          key={String(option.value)}
+          type="button"
+          aria-pressed={selectedValue === option.value}
+          onClick={() => onSelect(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+  const localized = (options) => options.map((option) => ({ value: option.value, label: isEnglish ? option.label : option.value }));
 
-      return {
-        ...currentAnswers,
-        features: hasFeature
-          ? currentAnswers.features.filter((currentFeature) => currentFeature !== feature)
-          : [...currentAnswers.features, feature],
-      };
+  const handleRequest = () => {
+    const request = buildEstimateRequest({ estimate, answers, reelsChoice, isEnglish });
+    trackEvent("estimator_quote_request", {
+      offer: request.offer,
+      has_project: Boolean(estimate.project),
+      content_service: selection.contentService,
+      cta_location: `estimator_${variant}`,
     });
+    if (request.socialOffer) {
+      trackEvent("social_media_offer_select", { offer: request.socialOffer, cta_location: `estimator_${variant}` });
+    }
+    onRequest?.(request);
   };
+
+  const plan = estimate.social ? SOCIAL_MEDIA_PLANS[estimate.social.plan] : SOCIAL_MEDIA_PLANS[social.plan];
+  const sectionId = variant === "social" ? "simulateur-reseaux-sociaux" : isEnglish ? "en-estimation" : "estimation";
+  const addonLines = estimate.social
+    ? [
+        estimate.social.added.posts > 0 &&
+          `${pluralize(estimate.social.added.posts, t("publication supplémentaire", "extra post"), t("publications supplémentaires", "extra posts"))} : +${formatTaxedPrice(estimate.social.addons.posts, isEnglish)}`,
+        estimate.social.added.platforms > 0 &&
+          `${pluralize(estimate.social.added.platforms, t("réseau supplémentaire", "extra network"), t("réseaux supplémentaires", "extra networks"))} : +${formatTaxedPrice(estimate.social.addons.platforms, isEnglish)}`,
+        estimate.social.added.reels > 0 &&
+          `${pluralize(estimate.social.added.reels, t("Reel supplémentaire", "extra Reel"), t("Reels supplémentaires", "extra Reels"))} : +${formatTaxedPrice(estimate.social.addons.reels, isEnglish)}`,
+      ].filter(Boolean)
+    : [];
 
   return (
-    <section className="section estimator-section reveal-on-scroll reveal-section" id={isEnglish ? "en-estimation" : "estimation"}>
+    <section className={`section estimator-section reveal-on-scroll reveal-section estimator-${variant}`} id={sectionId}>
       <div className="section-inner">
         <div className="section-heading">
-          <span>{isEnglish ? "Estimate" : "Estimation"}</span>
-          <h2>{isEnglish ? "Estimate a first version of your project" : "Estimez une première version de votre projet"}</h2>
+          <span>{variant === "social" ? t("Simulateur", "Estimator") : t("Estimation", "Estimate")}</span>
+          <h2>
+            {variant === "social"
+              ? t("Estimez votre abonnement en une minute", "Estimate your subscription in a minute")
+              : t("Estimez votre projet ou votre abonnement", "Estimate your project or subscription")}
+          </h2>
           <p>
-            {isEnglish
-              ? "Answer a few targeted questions to get an initial idea of budget, timeline, and complexity."
-              : "Répondez à quelques questions ciblées pour obtenir une première indication de budget, délai et complexité."}
+            {t(
+              "Choisissez un projet ponctuel, un abonnement réseaux sociaux ou les deux : chaque montant est affiché séparément.",
+              "Choose a one-off project, a social media subscription, or both: each amount is shown separately.",
+            )}
           </p>
         </div>
 
@@ -2105,183 +2411,342 @@ function ProjectEstimator({ isEnglish = false }) {
             aria-valuenow={progress}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label={isEnglish ? `Progress ${progress}%` : `Progression ${progress}%`}
+            aria-label={t(`Progression ${progress}%`, `Progress ${progress}%`)}
           >
             <span style={{ width: `${progress}%` }}></span>
           </div>
 
           <div className="estimator-grid">
             <div className="estimator-questions">
-              <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "180ms" }}>
-                <h3>{isEnglish ? "You are:" : "Vous êtes :"}</h3>
-                <div className="estimator-options">
-                  {estimatorProfileOptions.map((profile) => (
-                    <button
-                      className={answers.profile === profile.value ? "is-selected" : ""}
-                      key={profile.value}
-                      type="button"
-                      onClick={() => updateAnswer("profile", profile.value)}
-                    >
-                      {isEnglish ? profile.label : profile.value}
-                    </button>
-                  ))}
-                </div>
+              <div className="estimator-question estimator-services">
+                <h3 id={`${idPrefix}-project`}>{t("Projet ponctuel", "One-off project")}</h3>
+                {optionGroup(
+                  "project",
+                  [{ value: null, label: t("Aucun", "None") }, ...localized(estimatorNeedOptions)],
+                  selection.projectNeed,
+                  (value) => setSelection((current) => ({ ...current, projectNeed: value })),
+                )}
+                <h3 id={`${idPrefix}-content`} className="estimator-subheading">
+                  {t("Réseaux sociaux et vidéo", "Social media and video")}
+                </h3>
+                {optionGroup(
+                  "content",
+                  estimatorContentServiceOptions.map((option) => ({ value: option.value, label: isEnglish ? option.en : option.fr })),
+                  selection.contentService,
+                  (value) => setSelection((current) => ({ ...current, contentService: value })),
+                )}
+                {selection.contentService === "social" && (
+                  <p className="estimator-hint">
+                    {t("Les Reels s’ajoutent dans les options de l’abonnement.", "Reels are added in the subscription options.")}
+                  </p>
+                )}
               </div>
 
-              <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "220ms" }}>
-                <h3>{isEnglish ? "Your main priority:" : "Votre priorité principale :"}</h3>
-                <div className="estimator-options">
-                  {estimatorPriorityOptions.map((priority) => (
-                    <button
-                      className={answers.priority === priority.value ? "is-selected" : ""}
-                      key={priority.value}
-                      type="button"
-                      onClick={() => updateAnswer("priority", priority.value)}
-                    >
-                      {isEnglish ? priority.label : priority.value}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "260ms" }}>
-                <h3>{isEnglish ? "What's your main need?" : "Quel est votre besoin principal ?"}</h3>
-                <div className="estimator-options">
-                  {estimatorNeedOptions.map((need) => (
-                    <button
-                      className={answers.need === need.value ? "is-selected" : ""}
-                      key={need.value}
-                      type="button"
-                      onClick={() => updateAnswer("need", need.value)}
-                    >
-                      {isEnglish ? need.label : need.value}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="estimator-question estimator-question-inline reveal-on-scroll reveal-card" style={{ "--reveal-delay": "320ms" }}>
-                <div>
-                  <h3>{isEnglish ? "Do you already have a site or tool?" : "Avez-vous déjà un site ou un outil existant ?"}</h3>
-                  <div className="estimator-options compact">
-                    {estimatorExistingOptions.map((option) => (
-                      <button
-                        className={answers.existing === option.value ? "is-selected" : ""}
-                        key={option.value}
-                        type="button"
-                        onClick={() => updateAnswer("existing", option.value)}
-                      >
-                        {isEnglish ? option.label : option.value}
-                      </button>
-                    ))}
+              {selection.projectNeed && (
+                <>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-profile`}>{t("Vous êtes :", "You are:")}</h3>
+                    {optionGroup("profile", localized(estimatorProfileOptions), answers.profile, (value) => updateAnswer("profile", value))}
                   </div>
-                </div>
-
-                <div>
-                  <h3>{isEnglish ? "Do you already have the content?" : "Avez-vous déjà les contenus ?"}</h3>
-                  <div className="estimator-options compact">
-                    {estimatorContentOptions.map((option) => (
-                      <button
-                        className={answers.content === option.value ? "is-selected" : ""}
-                        key={option.value}
-                        type="button"
-                        onClick={() => updateAnswer("content", option.value)}
-                      >
-                        {isEnglish ? option.label : option.value}
-                      </button>
-                    ))}
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-priority`}>{t("Votre priorité principale :", "Your main priority:")}</h3>
+                    {optionGroup("priority", localized(estimatorPriorityOptions), answers.priority, (value) => updateAnswer("priority", value))}
                   </div>
-                </div>
-              </div>
+                  <div className="estimator-question estimator-question-inline">
+                    <div>
+                      <h3 id={`${idPrefix}-existing`}>{t("Avez-vous déjà un site ou un outil existant ?", "Do you already have a site or tool?")}</h3>
+                      {optionGroup("existing", localized(estimatorExistingOptions), answers.existing, (value) => updateAnswer("existing", value))}
+                    </div>
+                    <div>
+                      <h3 id={`${idPrefix}-content-ready`}>{t("Avez-vous déjà les contenus ?", "Do you already have the content?")}</h3>
+                      {optionGroup("content-ready", localized(estimatorContentOptions), answers.content, (value) => updateAnswer("content", value))}
+                    </div>
+                  </div>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-complexity`}>{t("Niveau de complexité souhaité", "Desired complexity level")}</h3>
+                    {optionGroup("complexity", localized(estimatorComplexityOptions), answers.complexity, (value) => updateAnswer("complexity", value))}
+                  </div>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-features`}>{t("Fonctionnalités souhaitées", "Desired features")}</h3>
+                    <div className="estimator-checkboxes" role="group" aria-labelledby={`${idPrefix}-features`}>
+                      {estimatorFeatureOptions.map((feature) => (
+                        <label className={answers.features.includes(feature.value) ? "is-selected" : ""} key={feature.value}>
+                          <input checked={answers.features.includes(feature.value)} type="checkbox" onChange={() => toggleFeature(feature.value)} />
+                          <span>{isEnglish ? feature.label : feature.value}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-urgency`}>{t("Urgence", "Urgency")}</h3>
+                    {optionGroup("urgency", localized(estimatorUrgencyOptions), answers.urgency, (value) => updateAnswer("urgency", value))}
+                  </div>
+                </>
+              )}
 
-              <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "380ms" }}>
-                <h3>{isEnglish ? "Desired complexity level" : "Niveau de complexité souhaité"}</h3>
-                <div className="estimator-options">
-                  {estimatorComplexityOptions.map((option) => (
-                    <button
-                      className={answers.complexity === option.value ? "is-selected" : ""}
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateAnswer("complexity", option.value)}
-                    >
-                      {isEnglish ? option.label : option.value}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {selection.contentService === "social" && (
+                <>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-plan`}>{t("Formule", "Plan")}</h3>
+                    {optionGroup(
+                      "plan",
+                      Object.entries(SOCIAL_MEDIA_PLANS).map(([key, option]) => ({
+                        value: key,
+                        label: `${option.name} · ${formatMonthlyPrice(getPlanMonthlyPrice(option), isEnglish)}`,
+                      })),
+                      social.plan,
+                      (value) => updateSocial("plan", value),
+                    )}
+                    <p className="estimator-hint">
+                      {t(
+                        `Inclus chaque mois : ${pluralize(plan.posts, "publication", "publications")}, ${pluralize(plan.platforms, "réseau", "réseaux")}${plan.reels ? ` et ${pluralize(plan.reels, "Reel", "Reels")}` : ", sans Reel"}.`,
+                        `Included each month: ${pluralize(plan.posts, "post", "posts")}, ${pluralize(plan.platforms, "network", "networks")}${plan.reels ? ` and ${pluralize(plan.reels, "Reel", "Reels")}` : ", no Reels"}.`,
+                      )}
+                    </p>
+                  </div>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-networks`}>{t("Réseaux sociaux concernés", "Social networks")}</h3>
+                    <div className="estimator-checkboxes" role="group" aria-labelledby={`${idPrefix}-networks`}>
+                      {SOCIAL_MEDIA_NETWORKS.map((network) => (
+                        <label className={social.networks.includes(network) ? "is-selected" : ""} key={network}>
+                          <input checked={social.networks.includes(network)} type="checkbox" onChange={() => toggleNetwork(network)} />
+                          <span>{network}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="estimator-hint">
+                      {t(
+                        `${pluralize(plan.platforms, "réseau inclus", "réseaux inclus")}, puis +${formatMonthlyPrice(SOCIAL_MEDIA_ADDONS.extraPlatform)} par réseau supplémentaire.`,
+                        `${pluralize(plan.platforms, "network", "networks")} included, then +${formatMonthlyPrice(SOCIAL_MEDIA_ADDONS.extraPlatform, true)} per extra network.`,
+                      )}
+                    </p>
+                  </div>
+                  <div className="estimator-question estimator-question-inline">
+                    <div>
+                      <h3 id={`${idPrefix}-posts`}>{t("Publications supplémentaires / mois", "Extra posts / month")}</h3>
+                      {optionGroup(
+                        "posts",
+                        [0, 4, 8].map((value) => ({ value, label: value ? `+${value}` : t("Aucune", "None") })),
+                        social.extraPosts,
+                        (value) => updateSocial("extraPosts", value),
+                        "is-numeric",
+                      )}
+                      <p className="estimator-hint">
+                        {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost, isEnglish)} {t("par publication et par mois", "per post, per month")}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 id={`${idPrefix}-extra-reels`}>{t("Reels supplémentaires / mois", "Extra Reels / month")}</h3>
+                      {optionGroup(
+                        "extra-reels",
+                        [0, 1, 2, 4, 8].map((value) => ({ value, label: value ? `+${value}` : t("Aucun", "None") })),
+                        social.extraReels,
+                        (value) => updateSocial("extraReels", value),
+                        "is-numeric",
+                      )}
+                      <p className="estimator-hint">{t("Au meilleur tarif Reels (unité ou pack).", "At the best Reels rate (single or pack).")}</p>
+                    </div>
+                  </div>
+                  <div className="estimator-question">
+                    <h3 id={`${idPrefix}-setup`}>{t("Démarrage", "Getting started")}</h3>
+                    <div className="estimator-checkboxes" role="group" aria-labelledby={`${idPrefix}-setup`}>
+                      <label className={social.setupAudit ? "is-selected" : ""}>
+                        <input checked={social.setupAudit} type="checkbox" onChange={(event) => updateSocial("setupAudit", event.target.checked)} />
+                        <span>
+                          {t("Audit de départ et mise en place", "Initial audit and set-up")} — {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.setupAudit, isEnglish)}
+                          {t(", une seule fois", ", one-time")}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              )}
 
-              <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "440ms" }}>
-                <h3>{isEnglish ? "Desired features" : "Fonctionnalités souhaitées"}</h3>
-                <div className="estimator-checkboxes">
-                  {estimatorFeatureOptions.map((feature) => (
-                    <label className={answers.features.includes(feature.value) ? "is-selected" : ""} key={feature.value}>
-                      <input
-                        checked={answers.features.includes(feature.value)}
-                        type="checkbox"
-                        onChange={() => toggleFeature(feature.value)}
-                      />
-                      <span>{isEnglish ? feature.label : feature.value}</span>
-                    </label>
-                  ))}
+              {selection.contentService === "reels" && (
+                <div className="estimator-question">
+                  <h3 id={`${idPrefix}-reels`}>{t("Offre Reels", "Reels offer")}</h3>
+                  {optionGroup(
+                    "reels",
+                    estimatorReelsOptions.map((option) => {
+                      const offer = REELS_OFFERS[option.value];
+                      const price =
+                        offer.billing === "quote"
+                          ? t("sur devis", "on quote")
+                          : offer.billing === "monthly"
+                            ? formatMonthlyPrice(offer.price, isEnglish)
+                            : formatTaxedPrice(offer.price, isEnglish);
+                      return { value: option.value, label: `${isEnglish ? option.en : option.fr} · ${price}` };
+                    }),
+                    reelsChoice,
+                    setReelsChoice,
+                  )}
                 </div>
-              </div>
-
-              <div className="estimator-question reveal-on-scroll reveal-card" style={{ "--reveal-delay": "500ms" }}>
-                <h3>{isEnglish ? "Urgency" : "Urgence"}</h3>
-                <div className="estimator-options compact">
-                  {estimatorUrgencyOptions.map((option) => (
-                    <button
-                      className={answers.urgency === option.value ? "is-selected" : ""}
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateAnswer("urgency", option.value)}
-                    >
-                      {isEnglish ? option.label : option.value}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
 
-            <aside className="estimator-result reveal-on-scroll reveal-card" style={{ "--reveal-delay": "300ms" }}>
-              <span>{isEnglish ? "Indicative result" : "Résultat indicatif"}</span>
-              <h3>{result.type}</h3>
-              <div className="result-metrics">
-                <div>
-                  <small>{isEnglish ? "Estimated budget" : "Budget indicatif"}</small>
-                  <strong>{result.budget}</strong>
-                </div>
-                <div>
-                  <small>{isEnglish ? "Estimated timeline" : "Délai indicatif"}</small>
-                  <strong>{result.delay}</strong>
-                </div>
+            <aside className="estimator-result unified-result" aria-labelledby={`${idPrefix}-result`}>
+              <span id={`${idPrefix}-result`}>{t("Résultat indicatif", "Indicative result")}</span>
+              <div className="estimate-blocks" aria-live="polite">
+                {!hasSelection && (
+                  <p className="estimate-empty">
+                    {t("Choisissez au moins une prestation pour obtenir une estimation.", "Choose at least one service to get an estimate.")}
+                  </p>
+                )}
+
+                {estimate.project && (
+                  <div className="estimate-block">
+                    <h3>
+                      {t("Projet ponctuel", "One-off project")} · {projectLevelLabels[estimate.project.type][isEnglish ? "en" : "fr"]}
+                    </h3>
+                    <div className="result-metrics">
+                      <div>
+                        <small>{t("Budget indicatif", "Estimated budget")}</small>
+                        <strong>
+                          {t("à partir de", "from")} {formatTaxedPrice(estimate.project.budget, isEnglish)}
+                        </strong>
+                      </div>
+                      <div>
+                        <small>{t("Délai indicatif", "Estimated timeline")}</small>
+                        <strong>{formatDelayRange(estimate.project.delay, isEnglish)}</strong>
+                      </div>
+                    </div>
+                    <p>{projectLevelMessages[estimate.project.type][isEnglish ? "en" : "fr"]}</p>
+                  </div>
+                )}
+
+                {estimate.social && (
+                  <div className="estimate-block">
+                    <h3>
+                      {t("Abonnement", "Subscription")} · {estimate.social.planName}
+                    </h3>
+                    <div className="result-metrics">
+                      {estimate.recurring.launchMonths > 0 ? (
+                        <>
+                          <div>
+                            <small>{t(`Les ${estimate.recurring.launchMonths} premiers mois`, `First ${estimate.recurring.launchMonths} months`)}</small>
+                            <strong>{formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)}</strong>
+                          </div>
+                          <div>
+                            <small>{t("Ensuite (prix standard)", "Then (standard price)")}</small>
+                            <strong>{formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}</strong>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <small>{t("Chaque mois", "Each month")}</small>
+                          <strong>{formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}</strong>
+                        </div>
+                      )}
+                    </div>
+                    <ul className="estimate-lines">
+                      <li>
+                        {pluralize(estimate.social.totals.posts, t("publication", "post"), t("publications", "posts"))}
+                        {t("/mois", "/month")} · {pluralize(estimate.social.totals.platforms, t("réseau", "network"), t("réseaux", "networks"))} ·{" "}
+                        {formatReelsPerMonth(estimate.social.totals.reels, isEnglish)}
+                      </li>
+                      {addonLines.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {estimate.reels && estimate.reels.billing === "monthly" && (
+                  <div className="estimate-block">
+                    <h3>{t(`Pack ${estimate.reels.quantity} Reels`, `${estimate.reels.quantity} Reels pack`)}</h3>
+                    <div className="result-metrics">
+                      <div>
+                        <small>{t("Chaque mois", "Each month")}</small>
+                        <strong>{formatMonthlyPrice(estimate.reels.price, isEnglish)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {estimate.oneTimeFees.length > 0 && (
+                  <div className="estimate-block">
+                    <h3>{t("Frais uniques", "One-time fees")}</h3>
+                    <ul className="estimate-lines">
+                      {estimate.oneTimeFees.map((fee) => (
+                        <li key={fee.key}>
+                          {fee.key === "setupAudit"
+                            ? t("Audit de départ et mise en place", "Initial audit and set-up")
+                            : t("1 Reel (prestation ponctuelle)", "1 Reel (one-off service)")}{" "}
+                          : <strong>{formatTaxedPrice(fee.amount, isEnglish)}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {estimate.onQuote && (
+                  <div className="estimate-block">
+                    <h3>{t("Vidéo complexe", "Complex video")}</h3>
+                    <p>{t("Tournage, motion design ou montage long : prix sur devis.", "Shooting, motion design or long editing: price on quote.")}</p>
+                  </div>
+                )}
+
+                {estimate.firstMonth && (
+                  <div className="estimate-block is-first-month">
+                    <h3>{t("Premier mois", "First month")}</h3>
+                    <strong className="estimate-total">{formatTaxedPrice(estimate.firstMonth.total, isEnglish)}</strong>
+                    <p>
+                      {t("Abonnement", "Subscription")} {formatTaxedPrice(estimate.firstMonth.subscription, isEnglish)}
+                      {estimate.firstMonth.setupFees > 0 &&
+                        ` + ${t("frais de mise en place", "set-up fees")} ${formatTaxedPrice(estimate.firstMonth.setupFees, isEnglish)}`}
+                      .
+                    </p>
+                  </div>
+                )}
+
+                {estimate.project && (estimate.recurring || estimate.oneTimeFees.length > 0) && (
+                  <p className="estimator-note">
+                    {t(
+                      "Le projet ponctuel est facturé selon son propre devis (acompte et échéances) ; il n’est pas inclus dans le premier mois.",
+                      "The one-off project is billed according to its own quote (deposit and instalments); it is not part of the first month.",
+                    )}
+                  </p>
+                )}
               </div>
-              <p>{result.message}</p>
+
+              {estimate.social?.launchMonths > 0 && (
+                <p className="estimator-note">
+                  {t(
+                    `Tarif de lancement réservé aux ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients, pendant ${SOCIAL_MEDIA_LAUNCH_MONTHS} mois.`,
+                    `Launch price reserved for the first ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} clients, for ${SOCIAL_MEDIA_LAUNCH_MONTHS} months.`,
+                  )}
+                </p>
+              )}
+              {(isEnglish ? priceTax.noteEn : priceTax.note) && <p className="estimator-note">{isEnglish ? priceTax.noteEn : priceTax.note}</p>}
               <p className="estimator-note">
-                {isEnglish
-                  ? "This estimate is indicative. The final quote will depend on the brief, available content, and exact features."
-                  : "Cette estimation est indicative. Le devis final dépendra du brief, des contenus disponibles et des fonctionnalités exactes."}
+                {t(
+                  "Estimation indicative. Le devis final dépendra du brief, des contenus disponibles et des prestations exactes.",
+                  "This estimate is indicative. The final quote will depend on the brief, available content, and exact services.",
+                )}
               </p>
-              <a className="btn btn-primary" href={mailtoHref}>
-                {isEnglish ? "Get this estimate" : "Recevoir cette estimation"}
-              </a>
+              <button className="btn btn-primary" type="button" disabled={!hasSelection} onClick={handleRequest}>
+                {t("Demander ce devis", "Request this quote")}
+              </button>
             </aside>
           </div>
         </div>
 
-        <div className="estimator-help reveal-on-scroll reveal-card" style={{ "--reveal-delay": "560ms" }}>
-          <span className="estimator-help-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M5.5 5.8A5.2 5.2 0 0 1 9.2 4.3h5.6A5.2 5.2 0 0 1 20 9.5v.9a5.2 5.2 0 0 1-5.2 5.2h-3.6l-3.7 3.1v-3.3a5.2 5.2 0 0 1-4-5v-.9c0-1.4.7-2.8 2-3.7Zm3.7.5a3.2 3.2 0 0 0-3.2 3.2v.9a3.2 3.2 0 0 0 3.2 3.2h.3v.8l1-0.8h4.3a3.2 3.2 0 0 0 3.2-3.2v-.9a3.2 3.2 0 0 0-3.2-3.2H9.2Z" />
-            </svg>
-          </span>
-          <p>
-            {isEnglish
-              ? "Can't find exactly what you need? You can also contact me directly and describe your project in your own words, even if it's still unclear."
-              : "Vous ne trouvez pas exactement votre besoin ? Vous pouvez aussi me contacter directement et expliquer votre projet avec vos mots, même s’il est encore flou."}
-          </p>
-          <a href={isEnglish ? "#en-contact" : "#contact"}>{isEnglish ? "Discuss my project" : "Discuter de mon projet"}</a>
-        </div>
+        {variant === "home" && (
+          <div className="estimator-help reveal-on-scroll reveal-card" style={{ "--reveal-delay": "560ms" }}>
+            <span className="estimator-help-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5.5 5.8A5.2 5.2 0 0 1 9.2 4.3h5.6A5.2 5.2 0 0 1 20 9.5v.9a5.2 5.2 0 0 1-5.2 5.2h-3.6l-3.7 3.1v-3.3a5.2 5.2 0 0 1-4-5v-.9c0-1.4.7-2.8 2-3.7Zm3.7.5a3.2 3.2 0 0 0-3.2 3.2v.9a3.2 3.2 0 0 0 3.2 3.2h.3v.8l1-0.8h4.3a3.2 3.2 0 0 0 3.2-3.2v-.9a3.2 3.2 0 0 0-3.2-3.2H9.2Z" />
+              </svg>
+            </span>
+            <p>
+              {t(
+                "Vous ne trouvez pas exactement votre besoin ? Vous pouvez aussi me contacter directement et expliquer votre projet avec vos mots, même s’il est encore flou.",
+                "Can't find exactly what you need? You can also contact me directly and describe your project in your own words, even if it's still unclear.",
+              )}
+            </p>
+            <a href={isEnglish ? "#en-contact" : "#contact"}>{t("Discuter de mon projet", "Discuss my project")}</a>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -2396,13 +2861,33 @@ function isSupabaseAccessError(error) {
   );
 }
 
-function ContactForm({ onAuthOpen, isEnglish = false }) {
+// `prefill` ({ projectType, message, summary }) comes from an offer CTA. The
+// summary is appended on submit so the selected offer survives message edits.
+// Field limits aligned with the server-side rules prepared in LOT SEC-EMAIL-01
+// (the message leaves room for the estimator summary appended on submit).
+const contactFieldLimits = { name: 120, email: 254, company: 160, message: 6000 };
+
+function ContactForm({ onAuthOpen, isEnglish = false, prefill = null, onSubmitted, onNavigate = null, showPrivacyNotice = false }) {
   const { session } = useAuth();
   const [form, setForm] = useState(initialContactForm);
+  const [appliedPrefill, setAppliedPrefill] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [submitStatus, setSubmitStatus] = useState({ type: "", message: "" });
   const statusRef = useRef(null);
   const sessionEmail = session?.user?.email ?? "";
+
+  if (prefill && prefill !== appliedPrefill) {
+    setAppliedPrefill(prefill);
+    setForm((currentForm) => ({
+      ...currentForm,
+      projectType: prefill.projectType,
+      // Keep a message the visitor wrote themselves; replace only empty or prefilled text.
+      message:
+        !currentForm.message.trim() || currentForm.message === appliedPrefill?.message
+          ? prefill.message
+          : currentForm.message,
+    }));
+  }
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -2419,13 +2904,18 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
     setSubmitStatus({ type: "", message: "" });
 
     const email = form.email.trim() || sessionEmail;
+    const offerSummary = prefill?.summary
+      ? `\n\n${isEnglish ? "— Selected offer —" : "— Offre sélectionnée —"}\n${prefill.summary}`
+      : "";
     const contactPayload = {
       name: form.name.trim(),
       email,
       company: form.company.trim(),
       projectType: form.projectType,
-      message: form.message.trim(),
+      message: `${form.message.trim()}${offerSummary}`,
     };
+    // A thrown network failure is handled like a returned error: never show
+    // internal details, never report a success.
     const { error } = await createContactRequest({
       userId: session?.user?.id,
       name: contactPayload.name,
@@ -2433,20 +2923,21 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
       company: contactPayload.company,
       projectType: contactPayload.projectType,
       message: contactPayload.message,
-    });
+    }).catch((requestError) => ({ error: requestError }));
 
     if (error) {
       const guestNeedsLogin = !session && isSupabaseAccessError(error);
 
+      // The contact address is appended as a link when the status is rendered.
       setSubmitStatus({
         type: "error",
         message: guestNeedsLogin
           ? isEnglish
-            ? "Sign in and try again, or email me directly."
-            : "Connectez-vous puis réessayez, ou envoyez-moi un email directement."
+            ? "Sign in and try again, or write to us directly at"
+            : "Connectez-vous puis réessayez, ou écrivez-nous directement à"
           : isEnglish
-            ? "Your request couldn't be sent right now. Please try again in a moment."
-            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants.",
+            ? "Your request couldn't be sent right now. Please try again in a moment or write to us at"
+            : "Votre demande n’a pas pu être envoyée pour le moment. Réessayez dans quelques instants ou écrivez-nous à",
       });
 
       if (guestNeedsLogin) {
@@ -2477,6 +2968,7 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
     });
     setForm({ ...initialContactForm, email: sessionEmail });
     setIsSending(false);
+    onSubmitted?.(prefill);
     window.setTimeout(() => {
       statusRef.current?.focus();
       statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2485,6 +2977,17 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
 
   return (
     <form className="contact-form reveal-on-scroll reveal-card" style={{ "--reveal-delay": "700ms" }} onSubmit={handleSubmit}>
+      {prefill?.summary && (
+        <div className="contact-offer-summary" aria-live="polite">
+          <strong>{isEnglish ? "Selected offer" : "Offre sélectionnée"}</strong>
+          <p>{prefill.summary}</p>
+          <small>
+            {isEnglish
+              ? "This summary is attached to your request."
+              : "Ce récapitulatif est joint automatiquement à votre demande."}
+          </small>
+        </div>
+      )}
       <div className="contact-form-grid">
         <label className="contact-field" htmlFor="contact-name">
           {isEnglish ? "Name" : "Nom"}
@@ -2494,6 +2997,8 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
             type="text"
             value={form.name}
             placeholder={isEnglish ? "Your name" : "Votre nom"}
+            maxLength={contactFieldLimits.name}
+            autoComplete="name"
             required
             onChange={updateField}
           />
@@ -2507,6 +3012,8 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
             type="email"
             value={form.email}
             placeholder={sessionEmail || (isEnglish ? "you@email.com" : "vous@email.com")}
+            maxLength={contactFieldLimits.email}
+            autoComplete="email"
             required={!sessionEmail}
             onChange={updateField}
           />
@@ -2520,6 +3027,8 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
             type="text"
             value={form.company}
             placeholder={isEnglish ? "Company, nonprofit, project..." : "Entreprise, association, projet..."}
+            maxLength={contactFieldLimits.company}
+            autoComplete="organization"
             onChange={updateField}
           />
         </label>
@@ -2546,6 +3055,7 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
                 ? "Describe your need in plain terms, even if it's still unclear."
                 : "Expliquez simplement votre besoin, même s’il est encore flou."
             }
+            maxLength={contactFieldLimits.message}
             required
             onChange={updateField}
           ></textarea>
@@ -2559,9 +3069,33 @@ function ContactForm({ onAuthOpen, isEnglish = false }) {
         {submitStatus.message && (
           <p className={`contact-form-status is-${submitStatus.type}`} role="status" tabIndex={-1} ref={statusRef}>
             {submitStatus.message}
+            {submitStatus.type === "error" && (
+              <>
+                {" "}
+                <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
+              </>
+            )}
           </p>
         )}
       </div>
+      {showPrivacyNotice && (
+        <p className="contact-form-privacy">
+          {isEnglish
+            ? "Your details are used only to process your request and reply to you. "
+            : "Vos informations sont utilisées uniquement pour traiter votre demande et vous répondre. "}
+          <a
+            href={privacyPolicyPath}
+            onClick={(event) => {
+              if (onNavigate) {
+                event.preventDefault();
+                onNavigate(privacyPolicyPath);
+              }
+            }}
+          >
+            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
+          </a>
+        </p>
+      )}
     </form>
   );
 }
@@ -3265,6 +3799,14 @@ const englishServiceTranslations = [
     details: ["SEO tags", "Heading structure", "Copy", "Alt text", "Internal linking", "Performance"],
   },
   {
+    title: "Social media & Reels",
+    summary: "Post consistently without spending your evenings on it.",
+    problem: "Your social accounts are irregular for lack of time, ideas, or ready-to-post visuals.",
+    canDo: "I prepare a calendar, visuals, captions, and Reels, then publish once you approve them.",
+    expectedResult: "A regular, consistent presence with a clear monthly subscription.",
+    details: ["Content calendar", "Visuals", "Captions", "Reels", "Publishing", "Monthly review"],
+  },
+  {
     title: "Business automation",
     summary: "Free up time for what matters.",
     problem: "Your follow-up relies on too much copy-pasting, manual messages, or scattered files.",
@@ -3850,33 +4392,6 @@ const estimatorUrgencyOptions = [
   { value: "Urgent", label: "Urgent" },
 ];
 
-// Translates the pricing engine's French output for display only — the
-// engine itself (utils/estimator.js) keeps matching on French option
-// values, so its budget/complexity logic never changes between languages.
-function translateEstimatorResult(result, isEnglish) {
-  if (!isEnglish) {
-    return result;
-  }
-
-  const typeLabels = { Simple: "Simple", Intermédiaire: "Intermediate", Avancé: "Advanced" };
-  const messages = {
-    Simple: "Your need looks well-defined. A short intervention is likely enough to move fast.",
-    Intermédiaire: "Your project involves several elements to coordinate. A clear first version can be built quickly.",
-    Avancé:
-      "Your project involves several features or workflows. A precise scoping phase will help secure the budget and the steps.",
-  };
-  const budgetAmount = result.budget.match(/(\d+)/)?.[1];
-
-  return {
-    type: typeLabels[result.type] ?? result.type,
-    budget: budgetAmount ? `from €${budgetAmount}` : result.budget,
-    delay: result.delay
-      .replace(/(\d+)–(\d+) jours ouvrés/, "$1–$2 business days")
-      .replace(/(\d+)–(\d+) semaines/, "$1–$2 weeks"),
-    message: messages[result.type] ?? result.message,
-  };
-}
-
 const contactProjectTypeOptions = [
   { value: "Site web", label: "Website" },
   { value: "Réparation / amélioration", label: "Repair / improvement" },
@@ -3884,11 +4399,14 @@ const contactProjectTypeOptions = [
   { value: "Automatisation", label: "Automation" },
   { value: "Chatbot / assistant IA", label: "AI chatbot / assistant" },
   { value: "MVP / prototype", label: "MVP / prototype" },
+  { value: "Réseaux sociaux", label: "Social media" },
+  { value: "Reels", label: "Reels / short videos" },
   { value: "Autre", label: "Other" },
 ];
 
 function EnglishHomePage({ onNavigate, onAuthOpen }) {
   const [selectedProject, setSelectedProject] = useState(null);
+  const [quoteRequest, setQuoteRequest] = useState(null);
 
   const handleAuditClick = (event) => {
     handleAuditLaunchClick(event, {
@@ -4106,7 +4624,7 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
 
       <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} isEnglish />
 
-      <ProjectEstimator isEnglish />
+      <UnifiedEstimator isEnglish onRequest={(request) => sendEstimateToContactForm(request, setQuoteRequest, "en-contact")} />
 
       <BlogCarousel isEnglish />
 
@@ -4399,7 +4917,12 @@ function EnglishHomePage({ onNavigate, onAuthOpen }) {
             </div>
           </address>
 
-          <ContactForm onAuthOpen={onAuthOpen} isEnglish />
+          <ContactForm
+            onAuthOpen={onAuthOpen}
+            isEnglish
+            prefill={quoteRequest}
+            onSubmitted={(request) => handleEstimateSubmitted(request, setQuoteRequest)}
+          />
 
           <div className="contact-actions">
             <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Digital%20Lab%20project%20inquiry`}>
@@ -4559,7 +5082,11 @@ function ProjectCasePage({ project, onNavigate }) {
   );
 }
 
-function ServicePage({ servicePage, onNavigate }) {
+function ServicePage({ servicePage, onNavigate, onAuthOpen }) {
+  if (servicePage?.customPage === "social-media") {
+    return <SocialMediaServicePage onNavigate={onNavigate} onAuthOpen={onAuthOpen} />;
+  }
+
   if (!servicePage) {
     return (
       <main className="case-page fade-in-page">
@@ -4739,6 +5266,25 @@ function ServicePage({ servicePage, onNavigate }) {
         </section>
       )}
 
+      <section className="case-section case-section-tight">
+        <div className="case-shell">
+          <article className="case-panel">
+            <span>Aussi chez Digital Lab</span>
+            <h2>Des réseaux sociaux actifs, chaque mois</h2>
+            <p>
+              Un abonnement pour publier régulièrement : contenus créés pour vous, validés par vous, publiés aux bonnes dates.
+              Dès {formatMonthlyPrice(getPlanMonthlyPrice(SOCIAL_MEDIA_PLANS.presence))}
+              {SOCIAL_MEDIA_LAUNCH_ACTIVE ? " pendant l’offre de lancement." : "."}
+            </p>
+            <p>
+              <a href={socialMediaServicePath} onClick={handleNavigateTo(socialMediaServicePath)}>
+                Découvrir la gestion des réseaux sociaux →
+              </a>
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section className="case-section case-final-cta">
         <div className="case-shell">
           <div className="case-cta-panel">
@@ -4753,6 +5299,655 @@ function ServicePage({ servicePage, onNavigate }) {
               {servicePage.cta.primaryLabel}
             </a>
           </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+// LOT SM-04 — social media page (art direction approved in Phase A). Prices
+// and quantities come from utils/estimator.js; the estimator at the bottom of
+// the page is the same UnifiedEstimator as on the homepage.
+const socialMediaEstimatorAnchor = "simulateur-reseaux-sociaux";
+const socialMediaRequestAnchor = "demande-reseaux-sociaux";
+
+const socialMediaPlanCopy = {
+  presence: {
+    audience: "Rester visible sur votre réseau principal.",
+    features: ["Calendrier éditorial", "Visuels et légendes", "Publication après validation", "Bilan mensuel"],
+  },
+  visibilite: {
+    audience: "Publier chaque semaine sur deux réseaux.",
+    features: ["Tout Présence", "Deux réseaux coordonnés", "Bilan avec recommandations"],
+    recommended: true,
+  },
+  croissance: {
+    audience: "Une présence soutenue, avec de la vidéo.",
+    features: ["Tout Visibilité", "2 Reels par mois", "Point stratégique mensuel"],
+  },
+};
+
+const socialMediaBenefits = [
+  { title: "Du temps pour votre métier", text: "Vous validez un calendrier au lieu de chercher chaque soir quoi publier." },
+  { title: "Une présence régulière", text: "Vos comptes restent actifs chaque semaine, même pendant les périodes chargées." },
+  { title: "Une image professionnelle", text: "Visuels, ton et messages suivent une même ligne, alignée avec votre activité." },
+  { title: "Un interlocuteur humain", text: "Une personne dédiée prépare, ajuste et vous explique chaque mois ce qui a été fait." },
+];
+
+// Visuals V3: licensed Unsplash photographs (see docs/visuals/SOCIAL-MEDIA-V3-PROVENANCE.md),
+// cropped without identifiable faces. Text stays in HTML. The two before/after
+// images are simulations: one photo, "before" aged digitally.
+const socialMediaPhotos = {
+  cafe: {
+    src: "/projects/social/v3/post-cafe.webp",
+    srcSet: "/projects/social/v3/post-cafe-648.webp 648w, /projects/social/v3/post-cafe.webp 1080w",
+    alt: "Cappuccino avec dessin de mousse dans une tasse bleue sur une table en bois, croissant doré en arrière-plan",
+  },
+  coach: {
+    src: "/projects/social/v3/post-coach.webp",
+    srcSet: "/projects/social/v3/post-coach-648.webp 648w, /projects/social/v3/post-coach.webp 1080w",
+    alt: "Personne en squat sumo tenant une kettlebell à deux mains dans une salle d’entraînement",
+  },
+  atelier: {
+    src: "/projects/social/v3/post-atelier.webp",
+    srcSet: "/projects/social/v3/post-atelier-648.webp 648w, /projects/social/v3/post-atelier.webp 1080w",
+    alt: "Simulation d’avant / après d’une même pièce : à gauche terne et sale, à droite rénovée et lumineuse",
+    simulation: true,
+  },
+  reelCafe: {
+    src: "/projects/social/v3/reel-cafe.webp",
+    srcSet: "/projects/social/v3/reel-cafe-432.webp 432w, /projects/social/v3/reel-cafe.webp 720w",
+    alt: "Mains d’un barista versant du lait mousseux dans une tasse",
+  },
+  reelCoach: {
+    src: "/projects/social/v3/reel-coach.webp",
+    srcSet: "/projects/social/v3/reel-coach-432.webp 432w, /projects/social/v3/reel-coach.webp 720w",
+    alt: "Bras tendus soulevant une kettlebell au-dessus de la tête dans une salle de sport",
+  },
+  reelAtelier: {
+    src: "/projects/social/v3/reel-atelier.webp",
+    srcSet: "/projects/social/v3/reel-atelier-432.webp 432w, /projects/social/v3/reel-atelier.webp 720w",
+    alt: "Simulation de transformation : en haut la pièce avant travaux, en bas la même pièce rénovée",
+    simulation: true,
+  },
+};
+
+const socialMediaPersonas = [
+  {
+    photo: "cafe",
+    tag: "Commerce de proximité",
+    headline: "Votre pause préférée commence ici.",
+    title: "Pour un commerce",
+    text: "Nouveautés, coulisses, événements en boutique",
+    networks: ["Instagram", "Facebook", "Google Business"],
+  },
+  {
+    photo: "coach",
+    tag: "Indépendant",
+    headline: "Votre progression commence par la bonne méthode.",
+    title: "Pour un professionnel indépendant",
+    text: "Conseils, expertise, prise de rendez-vous",
+    networks: ["Instagram", "LinkedIn"],
+  },
+  {
+    photo: "atelier",
+    tag: "Petite entreprise",
+    headline: "Un espace. Une nouvelle histoire.",
+    title: "Pour une petite entreprise",
+    text: "Réalisations, équipe, recrutement",
+    networks: ["LinkedIn", "Facebook"],
+  },
+];
+
+const socialMediaReelCovers = [
+  { photo: "reelCafe", intent: "Coulisses", hook: "Dans les coulisses de votre café" },
+  { photo: "reelCoach", intent: "Conseil", hook: "3 mouvements avant votre séance" },
+  { photo: "reelAtelier", intent: "Avant / après", hook: "Vous ne reconnaîtrez pas cet atelier." },
+];
+
+const socialMediaIncluded = [
+  "Analyse de vos comptes et de votre ligne éditoriale",
+  "Calendrier mensuel des publications à valider",
+  "Création des visuels aux formats de chaque réseau",
+  "Rédaction des légendes et choix des hashtags",
+  "Programmation et publication après votre accord",
+  "Bilan mensuel des publications réalisées",
+];
+
+const socialMediaExcluded = ["Budget de publicité payante", "Tournage ou shooting photo sur place", "Réponse en continu aux messages et commentaires"];
+
+const socialMediaWorkflow = [
+  { when: "Semaine 1", title: "Échange de départ", text: "Votre activité, vos clients, vos réseaux et le ton à adopter." },
+  { when: "Avant chaque mois", title: "Calendrier à valider", text: "Les sujets et dates prévus, ajustés avec vous." },
+  { when: "Chaque semaine", title: "Création et validation", text: "Visuels, textes et Reels soumis à votre accord." },
+  { when: "Chaque mois", title: "Publication et bilan", text: "Publication aux dates prévues, puis un bilan pour préparer la suite." },
+];
+
+const socialMediaReelsOffers = [
+  { key: "single", title: "1 Reel", note: "Prestation ponctuelle, idéale pour tester ou annoncer un événement." },
+  { key: "pack4", title: "Pack 4 Reels", note: "Une vidéo courte par semaine." },
+  { key: "pack8", title: "Pack 8 Reels", note: "Deux vidéos courtes par semaine." },
+  { key: "complex", title: "Vidéo complexe", note: "Tournage, motion design ou montage long." },
+];
+
+const socialMediaReelsIncluded = [
+  "Idée, accroche et script court",
+  "Montage vertical 9:16 à partir de vos photos et vidéos",
+  "Sous-titres, musique libre de droits et texte à l’écran",
+  "Une série de retouches avant livraison",
+];
+
+const socialMediaFaq = [
+  {
+    question: "Est-ce que je valide les publications avant leur mise en ligne ?",
+    answer: "Oui. Rien n’est publié sans votre accord : vous recevez le calendrier du mois, puis les visuels et textes à valider.",
+  },
+  {
+    question: "Quels réseaux sociaux pouvez-vous gérer ?",
+    answer: "Instagram, Facebook, LinkedIn et Google Business Profile. Un autre réseau peut être étudié lors du premier échange.",
+  },
+  {
+    question: "Dois-je fournir des photos ou des vidéos ?",
+    answer:
+      "Vos propres photos et vidéos rendent les publications plus authentiques. À défaut, les visuels sont créés à partir de vos contenus existants et de ressources libres de droits.",
+  },
+  {
+    // Shown only while SOCIAL_MEDIA_LAUNCH_ACTIVE is true.
+    launchOffer: true,
+    question: "Comment fonctionne le tarif de lancement ?",
+    answer: `Il est réservé aux ${SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients de l’offre et s’applique pendant les ${SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le prix standard s’applique ensuite, comme indiqué sur chaque formule.`,
+  },
+  {
+    question: "Y a-t-il une durée d’engagement ?",
+    answer: "La durée, les conditions de résiliation et le détail des prestations sont précisés dans le devis, avant tout démarrage.",
+  },
+  {
+    question: "Garantissez-vous un nombre d’abonnés ou de ventes ?",
+    answer:
+      "Non. Aucun prestataire sérieux ne peut garantir ces résultats. L’objectif est une présence régulière, cohérente et suivie, que nous ajustons chaque mois.",
+  },
+  {
+    question: "Puis-je commander des Reels sans abonnement ?",
+    answer: "Oui. L’offre Reels est indépendante : un Reel à l’unité ou un pack mensuel, sans souscrire à la gestion des réseaux sociaux.",
+  },
+];
+
+// Photographic post: licensed photo + HTML tag/headline; simulations are labelled.
+// `eager` is for the hero, visible on first paint (not lazy-loaded).
+function SocialPhoto({ photo, tag, headline, sizes, decorative = false, eager = false }) {
+  const image = socialMediaPhotos[photo];
+
+  return (
+    <div className="sm-post-art sm-photo" data-photo={photo}>
+      <img
+        alt={decorative ? "" : image.alt}
+        decoding="async"
+        fetchPriority={eager ? "high" : undefined}
+        loading={eager ? "eager" : "lazy"}
+        sizes={sizes}
+        src={image.src}
+        srcSet={image.srcSet}
+      />
+      <span className="sm-photo-shade" aria-hidden="true"></span>
+      {image.simulation && <span className="sm-sim-badge">Simulation</span>}
+      {tag && <span className="sm-post-tag">{tag}</span>}
+      {headline && <p className="sm-post-headline">{headline}</p>}
+    </div>
+  );
+}
+
+function SocialMediaServicePage({ onNavigate, onAuthOpen }) {
+  const [requestPrefill, setRequestPrefill] = useState(null);
+  const [estimatorPreset, setEstimatorPreset] = useState(null);
+
+  const handleNavigateTo = (target) => (event) => {
+    event.preventDefault();
+    onNavigate(target);
+  };
+
+  const scrollToSection = (id) => (event) => {
+    event.preventDefault();
+    scrollToElementWithHeaderOffset(`#${id}`);
+  };
+
+  // Plan cards, the hero and Reels offers preselect the shared estimator.
+  const openEstimator = (preset, location) => (event) => {
+    event.preventDefault();
+    trackEvent("social_media_offer_select", {
+      offer: preset.plan ? `social_${preset.plan}` : preset.reels ? reelsAnalyticsKey[preset.reels] : "social",
+      cta_location: location,
+    });
+    setEstimatorPreset({ ...preset });
+    window.setTimeout(() => scrollToElementWithHeaderOffset(`#${socialMediaEstimatorAnchor}`), 0);
+  };
+
+  const requestQuote = (request) => {
+    setRequestPrefill(request);
+    window.setTimeout(() => {
+      scrollToElementWithHeaderOffset(`#${socialMediaRequestAnchor}`);
+      document.getElementById("contact-name")?.focus({ preventScroll: true });
+    }, 0);
+  };
+
+  const handleSubmitted = (request) => {
+    trackEvent("social_media_request_submit", { offer: request?.socialOffer ?? "none" });
+    setRequestPrefill(null);
+  };
+
+  return (
+    <main className="case-page sm-page fade-in-page">
+      <section className="sm-hero">
+        <div className="case-bg" aria-hidden="true"></div>
+        <div className="case-shell">
+          <button className="back-button" type="button" onClick={() => onNavigate("/#services")}>
+            Retour
+          </button>
+
+          <div className="sm-hero-grid">
+            <div className="sm-hero-copy">
+              <span className="sm-eyebrow">Gestion des réseaux sociaux</span>
+              <h1>
+                Vos réseaux sociaux, <em>sans y passer vos journées.</em>
+              </h1>
+              <p className="sm-hero-lead">
+                Nous créons vos contenus, vous les validez, nous organisons leur publication.{" "}
+                <strong>Une présence régulière, des visuels professionnels et un accompagnement humain.</strong>
+              </p>
+              <div className="sm-hero-actions">
+                <a className="btn btn-primary" href={`#${socialMediaEstimatorAnchor}`} onClick={openEstimator({ contentService: "social" }, "hero")}>
+                  Estimer mon abonnement
+                </a>
+                <a className="btn btn-secondary" href="#formules" onClick={scrollToSection("formules")}>
+                  Voir les formules
+                </a>
+              </div>
+              <ul className="sm-reassure">
+                <li>Rien n’est publié sans votre accord</li>
+                <li>
+                  Dès {formatMonthlyPrice(getPlanMonthlyPrice(SOCIAL_MEDIA_PLANS.presence))}
+                  {SOCIAL_MEDIA_LAUNCH_ACTIVE && " (offre de lancement)"}
+                </li>
+                <li>Un interlocuteur dédié</li>
+              </ul>
+            </div>
+
+            <figure className="sm-hero-visual">
+              <div className="sm-stage" aria-hidden="true">
+                <div className="sm-phone sm-phone-back">
+                  <div className="sm-screen">
+                    <div className="sm-li-card">
+                      <div className="sm-app-top">
+                        <span className="sm-avatar sm-avatar-studio">CA</span>
+                        <span>
+                          <strong>Cabinet d’architecture</strong>
+                          <small>Publication professionnelle</small>
+                        </span>
+                      </div>
+                      <p>Nouvelle réalisation : un atelier rénové.</p>
+                      <div className="sm-li-visual">
+                        <SocialPhoto photo="atelier" sizes="240px" decorative eager />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="sm-phone sm-phone-main">
+                  <div className="sm-screen">
+                    <div className="sm-app-top">
+                      <span className="sm-avatar sm-avatar-florist">VC</span>
+                      <span>
+                        <strong>votre.cafe</strong>
+                        <small>Sponsorisé</small>
+                      </span>
+                    </div>
+                    <SocialPhoto photo="cafe" tag="Café de quartier" headline="Votre pause préférée commence ici." sizes="250px" decorative eager />
+                    <div className="sm-post-actions">♡ ◯ ➤</div>
+                    <p className="sm-post-caption">
+                      <b>votre.cafe</b> Pâtisseries maison.
+                    </p>
+                  </div>
+                </div>
+                <span className="sm-float-chip sm-chip-validated">
+                  <span className="sm-dot sm-dot-mint"></span>Validé par vous
+                </span>
+                <span className="sm-float-chip sm-chip-scheduled">
+                  <span className="sm-dot sm-dot-violet"></span>Programmé mardi 18 h
+                </span>
+              </div>
+              <figcaption>Exemple illustratif — marques fictives.</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section className="sm-section" aria-labelledby="sm-benefits-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">Ce que vous y gagnez</span>
+            <h2 id="sm-benefits-title">Une présence qui tient dans la durée.</h2>
+          </div>
+          <div className="sm-benefits">
+            {socialMediaBenefits.map((benefit, index) => (
+              <article className="sm-benefit" key={benefit.title}>
+                <span className="sm-benefit-number" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3>{benefit.title}</h3>
+                <p>{benefit.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="sm-section" aria-labelledby="sm-contents-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">Des contenus à votre image</span>
+            <h2 id="sm-contents-title">Chaque activité a sa façon de parler à ses clients.</h2>
+            <p>Nous adaptons le ton, les visuels et le rythme à votre métier. Vous recevez chaque mois des publications prêtes à valider.</p>
+          </div>
+          <div className="sm-personas">
+            {socialMediaPersonas.map((persona) => (
+              <article className="sm-persona" key={persona.title}>
+                <SocialPhoto
+                  photo={persona.photo}
+                  tag={persona.tag}
+                  headline={persona.headline}
+                  sizes="(max-width: 960px) 92vw, 380px"
+                />
+                <div className="sm-persona-meta">
+                  <h3>{persona.title}</h3>
+                  <p>{persona.text}</p>
+                  <ul aria-label="Réseaux adaptés">
+                    {persona.networks.map((network) => (
+                      <li key={network}>{network}</li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="sm-fiction-note">
+            Exemples illustratifs, marques fictives. Photographies Unsplash ; l’avant / après est une simulation.
+          </p>
+
+          <div className="sm-included">
+            <article>
+              <h3>Inclus chaque mois</h3>
+              <ul className="sm-check-list">
+                {socialMediaIncluded.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+            <article>
+              <h3>Non inclus, sur devis si besoin</h3>
+              <ul className="sm-check-list is-muted">
+                {socialMediaExcluded.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="sm-section" aria-labelledby="sm-method-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">Méthode</span>
+            <h2 id="sm-method-title">Un mois avec Digital Lab, en quatre temps.</h2>
+          </div>
+          <ol className="sm-method">
+            {socialMediaWorkflow.map((step) => (
+              <li key={step.title}>
+                <span className="sm-method-when">{step.when}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="sm-section" id="formules" aria-labelledby="sm-pricing-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">Formules</span>
+            <h2 id="sm-pricing-title">Un abonnement clair, adapté à votre rythme.</h2>
+            <p>Choisissez une formule, ajoutez des options si besoin, et obtenez votre estimation en une minute.</p>
+          </div>
+          {SOCIAL_MEDIA_LAUNCH_ACTIVE && (
+            <p className="sm-launch-band">
+              <strong>Offre de lancement</strong> Réservée aux {SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT} premiers clients, pendant vos{" "}
+              {SOCIAL_MEDIA_LAUNCH_MONTHS} premiers mois. Le prix standard s’applique ensuite.
+            </p>
+          )}
+          <div className="sm-plans">
+            {Object.entries(SOCIAL_MEDIA_PLANS).map(([planKey, plan]) => {
+              const copy = socialMediaPlanCopy[planKey];
+
+              return (
+                <article className={`sm-plan${copy.recommended ? " is-featured" : ""}`} key={planKey} aria-labelledby={`sm-plan-${planKey}`}>
+                  {copy.recommended && <span className="sm-plan-badge">Recommandée pour démarrer</span>}
+                  <h3 id={`sm-plan-${planKey}`}>{plan.name}</h3>
+                  <p className="sm-plan-for">{copy.audience}</p>
+                  <p className="sm-plan-price">
+                    <strong>{formatTaxedPrice(getPlanMonthlyPrice(plan))}</strong>
+                    <span>/mois</span>
+                  </p>
+                  {SOCIAL_MEDIA_LAUNCH_ACTIVE && (
+                    <p className="sm-plan-then">puis {formatMonthlyPrice(plan.referencePrice)} (prix standard)</p>
+                  )}
+                  <dl className="sm-volumes">
+                    <div>
+                      <dt>publications</dt>
+                      <dd>{plan.posts}</dd>
+                    </div>
+                    <div>
+                      <dt>{plan.platforms > 1 ? "réseaux" : "réseau"}</dt>
+                      <dd>{plan.platforms}</dd>
+                    </div>
+                    <div>
+                      <dt>Reels</dt>
+                      <dd>{plan.reels || "—"}</dd>
+                    </div>
+                  </dl>
+                  <ul className="sm-check-list">
+                    {copy.features.map((feature) => (
+                      <li key={feature}>{feature}</li>
+                    ))}
+                  </ul>
+                  <a
+                    className={`btn ${copy.recommended ? "btn-primary" : "btn-secondary"}`}
+                    href={`#${socialMediaEstimatorAnchor}`}
+                    onClick={openEstimator({ contentService: "social", plan: planKey }, "pricing_card")}
+                  >
+                    Estimer avec {plan.name}
+                  </a>
+                </article>
+              );
+            })}
+          </div>
+          <p className="sm-footnote">
+            Options : publication supplémentaire {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.extraPost)} par publication et par mois, réseau supplémentaire{" "}
+            {formatMonthlyPrice(SOCIAL_MEDIA_ADDONS.extraPlatform)}, audit de départ {formatTaxedPrice(SOCIAL_MEDIA_ADDONS.setupAudit)} (facultatif, une seule fois).
+            Budget publicitaire non inclus.{priceTax.note ? ` ${priceTax.note}` : ""}
+          </p>
+        </div>
+      </section>
+
+      <section className="sm-section sm-reels" id="reels" aria-labelledby="sm-reels-title">
+        <div className="case-shell">
+          <div className="sm-reels-layout">
+            <div>
+              <div className="sm-section-heading">
+                <span className="sm-eyebrow">Offre Reels</span>
+                <h2 id="sm-reels-title">Des Reels qui donnent envie de regarder jusqu’au bout.</h2>
+                <p>
+                  Des vidéos courtes prêtes à publier sur Instagram, Facebook ou TikTok, à l’unité ou en abonnement mensuel, avec ou
+                  sans gestion de vos réseaux sociaux.
+                </p>
+              </div>
+              <ul className="sm-check-list">
+                {socialMediaReelsIncluded.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <figure className="sm-reels-visual">
+              {/* Covers only: no video exists, so no play button or progress bar. */}
+              <div className="sm-reel-phones">
+                {socialMediaReelCovers.map((reel) => {
+                  const image = socialMediaPhotos[reel.photo];
+
+                  return (
+                    <div className="sm-reel-phone" key={reel.hook}>
+                      <img alt={image.alt} decoding="async" loading="lazy" sizes="(max-width: 600px) 112px, 178px" src={image.src} srcSet={image.srcSet} />
+                      <span className="sm-photo-shade" aria-hidden="true"></span>
+                      <span className="sm-reel-intent">{reel.intent}</span>
+                      {image.simulation && <span className="sm-sim-badge">Simulation</span>}
+                      <span className="sm-reel-hook">{reel.hook}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <figcaption>
+                Exemples illustratifs : couvertures de Reels verticaux 9:16 (aucune vidéo). Avant / après : simulation.
+              </figcaption>
+            </figure>
+          </div>
+
+          <div className="sm-reels-offers">
+            {socialMediaReelsOffers.map((offer) => {
+              const pricing = REELS_OFFERS[offer.key];
+              const price =
+                pricing.billing === "quote"
+                  ? "Sur devis"
+                  : pricing.billing === "monthly"
+                    ? formatMonthlyPrice(pricing.price)
+                    : formatTaxedPrice(pricing.price);
+
+              return (
+                <article className="sm-reels-offer" key={offer.key} aria-labelledby={`sm-reels-${offer.key}`}>
+                  <h3 id={`sm-reels-${offer.key}`}>{offer.title}</h3>
+                  <p className="sm-reels-price">{price}</p>
+                  <p>{offer.note}</p>
+                  {pricing.billing === "monthly" && (
+                    <p className="sm-reels-unit">
+                      Soit environ {formatTaxedPrice(Math.round(pricing.price / pricing.quantity))} par Reel
+                    </p>
+                  )}
+                  <a
+                    className="btn btn-secondary"
+                    href={`#${socialMediaEstimatorAnchor}`}
+                    onClick={openEstimator({ contentService: "reels", reels: offer.key }, "reels_card")}
+                  >
+                    {pricing.billing === "quote" ? "Demander un devis" : "Estimer"}
+                  </a>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="sm-section" aria-labelledby="sm-examples-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">Exemples</span>
+            <h2 id="sm-examples-title">Ce que vous recevez chaque mois.</h2>
+            <p>Un calendrier clair avant de commencer, un bilan simple à la fin du mois. Exemples de démonstration, sans données clients.</p>
+          </div>
+          <div className="sm-examples">
+            <article className="sm-demo-card" aria-labelledby="sm-demo-calendar">
+              <header>
+                <h3 id="sm-demo-calendar">Calendrier du mois</h3>
+                <span className="sm-demo-badge">Démonstration</span>
+              </header>
+              <ol className="sm-calendar">
+                {[
+                  ["Semaine 1", "Carrousel conseil", "Instagram"],
+                  ["Semaine 2", "Coulisses de l’équipe", "Facebook"],
+                  ["Semaine 3", "Reel : avant / après", "Instagram"],
+                  ["Semaine 4", "Annonce d’un événement", "Facebook"],
+                ].map(([week, topic, network]) => (
+                  <li key={week}>
+                    <span>{week}</span>
+                    <strong>{topic}</strong>
+                    <em>{network}</em>
+                  </li>
+                ))}
+              </ol>
+              <p className="sm-demo-status">✓ Validé avec vous avant toute création</p>
+            </article>
+            <article className="sm-demo-card" aria-labelledby="sm-demo-report">
+              <header>
+                <h3 id="sm-demo-report">Bilan du mois</h3>
+                <span className="sm-demo-badge">Démonstration</span>
+              </header>
+              <div className="sm-report">
+                <div>
+                  <h4>Réalisé</h4>
+                  <p>8 publications sur 2 réseaux, toutes validées avant publication.</p>
+                </div>
+                <div>
+                  <h4>Sujets traités</h4>
+                  <p>Conseils, coulisses, nouveautés, événement du mois.</p>
+                </div>
+                <div>
+                  <h4>Proposé pour le mois prochain</h4>
+                  <p>Une série « questions fréquentes » et un Reel de présentation de l’équipe.</p>
+                </div>
+              </div>
+              <p className="sm-demo-status">Exemple de présentation, sans résultats clients</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="sm-section" aria-labelledby="sm-faq-title">
+        <div className="case-shell sm-faq">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">FAQ</span>
+            <h2 id="sm-faq-title">Questions fréquentes</h2>
+          </div>
+          {socialMediaFaq.filter((item) => SOCIAL_MEDIA_LAUNCH_ACTIVE || !item.launchOffer).map((item) => (
+            <details className="sm-faq-item" key={item.question}>
+              <summary>{item.question}</summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <UnifiedEstimator variant="social" preset={estimatorPreset} onRequest={requestQuote} />
+
+      <section className="sm-section sm-request" id={socialMediaRequestAnchor} aria-labelledby="sm-request-title">
+        <div className="case-shell">
+          <div className="sm-section-heading">
+            <span className="sm-eyebrow">Demande de devis</span>
+            <h2 id="sm-request-title">Parlons de vos réseaux sociaux.</h2>
+            <p>Vos choix du simulateur sont repris automatiquement. Réponse sous 24–48h avec une proposition adaptée.</p>
+          </div>
+          <ContactForm
+            onAuthOpen={onAuthOpen}
+            prefill={requestPrefill}
+            onSubmitted={handleSubmitted}
+            onNavigate={onNavigate}
+            showPrivacyNotice
+          />
+          <p className="sm-related-links">
+            Vous préférez commencer par votre site ?{" "}
+            <a href={auditLandingPath} onClick={handleNavigateTo(auditLandingPath)}>
+              Faire l’audit gratuit
+            </a>{" "}
+            ou{" "}
+            <a href="/services/creation-site-web" onClick={handleNavigateTo("/services/creation-site-web")}>
+              découvrir la création de site web
+            </a>
+            .
+          </p>
         </div>
       </section>
     </main>
@@ -6226,7 +7421,13 @@ function SiteHeader({
   const [activeHref, setActiveHref] = useState("");
   const isAuditPage = pathname === auditLandingPath;
   const isEnglishPath = pathname === englishHomePath;
-  const visibleActiveHref = isAuditPage ? auditLandingPath : pathname === "/" ? activeHref : "";
+  const visibleActiveHref = isAuditPage
+    ? auditLandingPath
+    : pathname === socialMediaServicePath
+      ? socialMediaServicePath
+      : pathname === "/"
+        ? activeHref
+        : "";
   const userEmail = session?.user?.email;
   const userDisplayName = getUserDisplayName(session);
   const hasClientUnreadMessages = Boolean(session && !isAdmin && clientUnreadMessageCount > 0);
@@ -6334,7 +7535,13 @@ function SiteHeader({
               target={isExternalLink(link.href) ? "_blank" : undefined}
               rel={isExternalLink(link.href) ? "noreferrer" : undefined}
               key={link.href}
-              aria-current={visibleActiveHref === link.href ? (isAuditPage ? "page" : "true") : undefined}
+              aria-current={
+                visibleActiveHref === link.href
+                  ? isAuditPage || pathname === socialMediaServicePath
+                    ? "page"
+                    : "true"
+                  : undefined
+              }
               onClick={(event) => {
                 if (link.label === "Audit gratuit") {
                   trackAuditCta(auditEvents.navClick, isAuditPage ? "audit_page_nav" : "global_nav");
@@ -6509,6 +7716,7 @@ function App() {
   const [pathname, setPathname] = useState(() => normalizePathname(window.location.pathname));
   const [selectedProject, setSelectedProject] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [homeQuoteRequest, setHomeQuoteRequest] = useState(null);
   const [profileRole, setProfileRole] = useState("");
   const [profileError, setProfileError] = useState("");
   const [isProfileLoading, setIsProfileLoading] = useState(true);
@@ -6977,7 +8185,7 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <ServicePage servicePage={activeServicePage} onNavigate={navigate} />
+        <ServicePage servicePage={activeServicePage} onNavigate={navigate} onAuthOpen={() => setIsAuthOpen(true)} />
 
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
@@ -7479,7 +8687,7 @@ function App() {
 
         <ProjectModal project={selectedProject} onClose={() => setSelectedProject(null)} />
 
-        <ProjectEstimator />
+        <UnifiedEstimator onRequest={(request) => sendEstimateToContactForm(request, setHomeQuoteRequest, "contact")} />
 
         <BlogCarousel />
 
@@ -7879,7 +9087,11 @@ function App() {
               </div>
             </address>
 
-            <ContactForm onAuthOpen={() => setIsAuthOpen(true)} />
+            <ContactForm
+              onAuthOpen={() => setIsAuthOpen(true)}
+              prefill={homeQuoteRequest}
+              onSubmitted={(request) => handleEstimateSubmitted(request, setHomeQuoteRequest)}
+            />
 
             <div className="contact-actions">
               <a className="btn btn-primary contact-cta-primary" href={`mailto:${businessContact.email}?subject=Demande%20de%20projet%20Digital%20Lab`}>

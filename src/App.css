@@ -11320,3 +11320,1391 @@ html {
     transform: none;
   }
 }
+
+/* Shared by contact requests and service cards (LOT SM-01 → SM-03). */
+.contact-offer-summary {
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(199, 168, 255, 0.4);
+  border-radius: 18px;
+  background: rgba(155, 109, 255, 0.12);
+}
+
+.contact-offer-summary strong {
+  color: #c7a8ff;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.contact-offer-summary p {
+  margin: 8px 0;
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.contact-offer-summary small {
+  color: #cfc4f5;
+  font-size: 13px;
+}
+/* Keep line breaks of the initial request message (e.g. the selected offer summary). */
+.project-message-card p {
+  white-space: pre-line;
+}
+
+.sm-section-heading p.sm-tax-note {
+  margin-top: 10px;
+  color: #cfc4f5;
+  font-size: 15px;
+}
+
+/* "En savoir plus" link on homepage service cards (style only, markup unchanged). */
+.solution-detail-copy .service-learn-more {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 20px;
+  color: #c7a8ff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 220ms ease;
+}
+
+.solution-detail-copy .service-learn-more:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.solution-detail-copy .service-learn-more:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid #c7a8ff;
+  outline-offset: 4px;
+}
+
+
+/* ===== LOT SM-04 — unified estimator additions ===== */
+.estimator-services .estimator-subheading {
+  margin-top: 22px;
+}
+
+.estimator-hint {
+  margin: 12px 0 0;
+  color: #cfc4f5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.estimator-result .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.unified-result .estimate-blocks {
+  display: grid;
+  gap: 14px;
+}
+
+.unified-result .estimate-block {
+  padding: 16px;
+  border: 1px solid rgba(199, 168, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.unified-result .estimate-block h3 {
+  margin: 0 0 12px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.unified-result .estimate-block p {
+  margin: 10px 0 0;
+  color: #dcd2ff;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.unified-result .estimate-block .result-metrics {
+  margin: 0;
+}
+
+.unified-result .estimate-lines {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  color: #ebe6ff;
+  font-size: 14px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.unified-result .estimate-block.is-first-month {
+  border-color: rgba(110, 231, 183, 0.45);
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.unified-result .estimate-total {
+  display: block;
+  color: #ffffff;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.unified-result .estimate-empty {
+  margin: 0;
+  color: #dcd2ff;
+}
+
+.unified-result .btn {
+  justify-content: center;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* ===== LOT SM-04 — social media page (Phase A art direction) ===== */
+.sm-page {
+  --sm-violet: #9b6dff;
+  --sm-violet-soft: #c7a8ff;
+  --sm-mint: #6ee7b7;
+  --sm-line: rgba(199, 168, 255, 0.18);
+  --sm-text-2: #dcd2ff;
+  --sm-text-3: #b5abd6;
+}
+
+.sm-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--sm-violet-soft);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sm-eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--sm-violet-soft);
+}
+
+.sm-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 140px 24px 72px;
+}
+
+.sm-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 40px;
+  align-items: center;
+}
+
+.sm-hero-copy h1 {
+  margin: 18px 0 0;
+  color: #ffffff;
+  font-size: clamp(40px, 5vw, 68px);
+  line-height: 1.02;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.sm-hero-copy h1 em {
+  font-style: normal;
+  color: transparent;
+  background: linear-gradient(90deg, #c7a8ff, #ff8ab4);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.sm-hero-lead {
+  max-width: 580px;
+  margin: 22px 0 0;
+  color: var(--sm-text-2);
+  font-size: 20px;
+  line-height: 1.55;
+}
+
+.sm-hero-lead strong {
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.sm-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.sm-reassure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 26px 0 0;
+  padding: 0;
+  color: var(--sm-text-2);
+  font-size: 15px;
+  list-style: none;
+}
+
+.sm-reassure li::before,
+.sm-check-list li::before {
+  content: "\2713";
+  margin-right: 8px;
+  color: var(--sm-mint);
+  font-weight: 800;
+}
+
+.sm-hero-visual {
+  margin: 0;
+}
+
+.sm-hero-visual figcaption,
+.sm-reels-visual figcaption,
+.sm-fiction-note {
+  margin-top: 14px;
+  color: var(--sm-text-3);
+  font-size: 13px;
+  text-align: center;
+}
+
+.sm-stage {
+  position: relative;
+  height: 620px;
+}
+
+.sm-phone {
+  position: absolute;
+  width: 270px;
+  height: 548px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 44px;
+  background: #111018;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), 0 0 0 6px rgba(255, 255, 255, 0.03);
+}
+
+.sm-phone::before {
+  content: "";
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  z-index: 3;
+  width: 82px;
+  height: 22px;
+  border-radius: 999px;
+  background: #000000;
+  transform: translateX(-50%);
+}
+
+.sm-screen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 34px;
+  color: #17111f;
+  background: #ffffff;
+}
+
+.sm-phone-main {
+  top: 0;
+  left: 0;
+  z-index: 2;
+  transform: rotate(-3deg);
+}
+
+.sm-phone-back {
+  top: 70px;
+  right: -8px;
+  z-index: 1;
+  transform: rotate(4deg);
+}
+
+.sm-app-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 46px 16px 10px;
+}
+
+.sm-app-top strong {
+  display: block;
+  font-size: 14px;
+}
+
+.sm-app-top small {
+  color: #6b6380;
+  font-size: 12px;
+}
+
+.sm-avatar {
+  display: grid;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  place-items: center;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sm-avatar-florist {
+  background: linear-gradient(135deg, #ff8a5b, #ff4d8d);
+}
+
+.sm-avatar-studio {
+  background: #3b2f63;
+}
+
+.sm-post-art {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 270px;
+  padding: 22px;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+.sm-post-tag {
+  position: relative;
+  align-self: flex-start;
+  margin-bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.sm-post-headline {
+  position: relative;
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.sm-post-actions {
+  padding: 12px 16px 4px;
+  color: #2a2238;
+  font-size: 18px;
+  letter-spacing: 8px;
+}
+
+.sm-post-caption {
+  margin: 0;
+  padding: 4px 16px;
+  color: #2a2238;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sm-li-card {
+  margin: 46px 12px 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: #f4f2f8;
+}
+
+.sm-li-card .sm-app-top {
+  padding: 0;
+}
+
+.sm-li-card p {
+  margin: 10px 0;
+  color: #2a2238;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sm-li-visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  height: 250px;
+  padding: 16px;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: right;
+}
+
+.sm-float-chip {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  color: #17111f;
+  font-size: 15px;
+  font-weight: 700;
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35);
+}
+
+.sm-chip-validated {
+  top: 492px;
+  left: -26px;
+}
+
+.sm-chip-scheduled {
+  top: 18px;
+  right: 0;
+}
+
+.sm-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.sm-dot-mint {
+  background: var(--sm-mint);
+}
+
+.sm-dot-violet {
+  background: var(--sm-violet);
+}
+
+.sm-section {
+  position: relative;
+  padding: 88px 24px;
+}
+
+.sm-section-heading {
+  max-width: 760px;
+  margin-bottom: 36px;
+}
+
+.sm-section-heading h2 {
+  margin: 14px 0 0;
+  color: #ffffff;
+  font-size: clamp(30px, 3.6vw, 46px);
+  line-height: 1.08;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+}
+
+.sm-section-heading p {
+  margin: 16px 0 0;
+  color: var(--sm-text-2);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.sm-benefits {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.sm-benefit,
+.sm-method li,
+.sm-included article,
+.sm-plan,
+.sm-reels-offer,
+.sm-demo-card,
+.sm-faq-item {
+  border: 1px solid var(--sm-line);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sm-benefit {
+  padding: 26px;
+}
+
+.sm-benefit-number {
+  color: var(--sm-violet);
+  font-size: 30px;
+  font-weight: 750;
+}
+
+.sm-benefit h3,
+.sm-method h3,
+.sm-included h3,
+.sm-reels-offer h3,
+.sm-demo-card h3 {
+  margin: 12px 0 0;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.sm-benefit p,
+.sm-method p,
+.sm-reels-offer p,
+.sm-report p {
+  margin: 10px 0 0;
+  color: var(--sm-text-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.sm-personas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.sm-persona {
+  overflow: hidden;
+  border-radius: 24px;
+  color: #17111f;
+  background: #ffffff;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4);
+}
+
+.sm-persona .sm-post-art {
+  height: 300px;
+}
+
+.sm-persona .sm-post-headline {
+  font-size: 30px;
+}
+
+.sm-persona-meta {
+  padding: 16px 18px 20px;
+}
+
+.sm-persona-meta h3 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.sm-persona-meta p {
+  margin: 4px 0 0;
+  color: #5d5570;
+  font-size: 14px;
+}
+
+.sm-persona-meta ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-persona-meta li {
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #5b3bb3;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1ecff;
+}
+
+.sm-included {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 40px;
+}
+
+.sm-included article {
+  padding: 28px;
+}
+
+.sm-included h3 {
+  margin-top: 0;
+}
+
+.sm-check-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  color: var(--sm-text-2);
+  font-size: 16px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.sm-check-list.is-muted li::before {
+  content: "\2013";
+  color: var(--sm-text-3);
+}
+
+.sm-method {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-method li {
+  padding: 24px;
+}
+
+.sm-method-when {
+  display: inline-flex;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #160a2c;
+  font-size: 13px;
+  font-weight: 800;
+  background: var(--sm-violet-soft);
+}
+
+.sm-launch-band {
+  margin: 0 0 28px;
+  padding: 14px 18px;
+  border: 1px solid rgba(110, 231, 183, 0.35);
+  border-radius: 16px;
+  color: var(--sm-text-2);
+  font-size: 15px;
+  background: rgba(110, 231, 183, 0.08);
+}
+
+.sm-launch-band strong {
+  margin-right: 10px;
+  color: var(--sm-mint);
+}
+
+.sm-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.sm-plan {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+}
+
+.sm-plan.is-featured {
+  border-color: rgba(199, 168, 255, 0.6);
+  background: linear-gradient(180deg, rgba(155, 109, 255, 0.18), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 30px 90px rgba(124, 77, 255, 0.28);
+}
+
+.sm-plan-badge {
+  position: absolute;
+  top: -13px;
+  left: 28px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #160a2c;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--sm-violet-soft);
+}
+
+.sm-plan h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 22px;
+}
+
+.sm-plan-for {
+  min-height: 44px;
+  margin: 8px 0 0;
+  color: var(--sm-text-3);
+  font-size: 15px;
+}
+
+.sm-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 18px 0 0;
+  color: #ffffff;
+}
+
+.sm-plan-price strong {
+  font-size: 46px;
+  letter-spacing: -0.03em;
+}
+
+.sm-plan-price span {
+  color: var(--sm-text-2);
+  font-size: 16px;
+}
+
+.sm-plan-then {
+  margin: 6px 0 0;
+  color: var(--sm-text-3);
+  font-size: 15px;
+}
+
+.sm-volumes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 20px 0 0;
+}
+
+.sm-volumes div {
+  display: flex;
+  flex-direction: column-reverse;
+  padding: 12px 8px;
+  border-radius: 14px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sm-volumes dd {
+  margin: 0;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.sm-volumes dt {
+  color: var(--sm-text-3);
+  font-size: 13px;
+}
+
+.sm-plan .sm-check-list {
+  flex: 1;
+  align-content: start;
+  margin-bottom: 24px;
+}
+
+.sm-plan .btn,
+.sm-reels-offer .btn {
+  justify-content: center;
+  width: 100%;
+}
+
+.sm-footnote {
+  margin: 18px 0 0;
+  color: var(--sm-text-3);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.sm-reels {
+  background: radial-gradient(circle at 82% 20%, rgba(255, 77, 141, 0.12), transparent 42%);
+}
+
+.sm-reels-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.sm-reels-visual {
+  margin: 0;
+}
+
+.sm-reel-phones {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.sm-reel-phone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 150px;
+  aspect-ratio: 9 / 16;
+  padding: 16px 14px;
+  overflow: hidden;
+  border: 6px solid #111018;
+  border-radius: 26px;
+  color: #ffffff;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+}
+
+.sm-reel-phone:nth-child(2) {
+  transform: translateY(-24px);
+}
+
+.sm-reel-hook {
+  position: relative;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.sm-reels-offers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.sm-reels-offer {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.sm-reels-offer h3 {
+  margin-top: 0;
+}
+
+.sm-reels-offer p.sm-reels-price {
+  margin-top: 10px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 750;
+}
+
+.sm-reels-offer p.sm-reels-unit {
+  color: var(--sm-text-3);
+  font-size: 14px;
+}
+
+.sm-reels-offer p:last-of-type {
+  margin-bottom: 20px;
+}
+
+.sm-reels-offer .btn {
+  margin-top: auto;
+}
+
+.sm-examples {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.sm-demo-card {
+  padding: 28px;
+}
+
+.sm-demo-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sm-demo-card header h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.sm-demo-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #160a2c;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--sm-mint);
+}
+
+.sm-calendar {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sm-calendar li {
+  display: grid;
+  grid-template-columns: 96px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sm-calendar span {
+  color: var(--sm-violet-soft);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sm-calendar strong {
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.sm-calendar em {
+  color: var(--sm-text-3);
+  font-size: 14px;
+  font-style: normal;
+}
+
+.sm-report {
+  display: grid;
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.sm-report h4 {
+  margin: 0;
+  color: var(--sm-violet-soft);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sm-report p {
+  margin-top: 6px;
+}
+
+.sm-demo-status {
+  margin: 22px 0 0;
+  color: var(--sm-mint);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.sm-faq {
+  display: grid;
+  gap: 14px;
+  max-width: 900px;
+}
+
+.sm-faq .sm-section-heading {
+  margin-bottom: 18px;
+}
+
+/* The whole card row is the click target: padding lives on the summary (LOT SM-06A). */
+.sm-faq-item {
+  padding: 0;
+}
+
+.sm-faq-item summary {
+  padding: 22px 28px;
+  border-radius: 24px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sm-faq-item p {
+  margin: 0;
+  padding: 0 28px 22px;
+  color: var(--sm-text-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.sm-request .case-shell {
+  max-width: 900px;
+}
+
+.sm-related-links {
+  margin: 24px 0 0;
+  color: var(--sm-text-2);
+  font-size: 16px;
+}
+
+.sm-page a:not(.btn) {
+  color: var(--sm-violet-soft);
+}
+
+.sm-page button:focus-visible,
+.sm-page a:focus-visible,
+.sm-faq-item summary:focus-visible {
+  outline: 2px solid var(--sm-violet-soft);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1080px) {
+  .sm-benefits,
+  .sm-method,
+  .sm-reels-offers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .sm-hero {
+    padding-top: 120px;
+  }
+
+  .sm-hero-grid,
+  .sm-reels-layout,
+  .sm-plans,
+  .sm-personas,
+  .sm-included,
+  .sm-examples {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sm-stage {
+    width: 100%;
+    max-width: 420px;
+    height: 600px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-section {
+    padding: 64px 16px;
+  }
+
+  .sm-hero {
+    padding: 112px 16px 48px;
+  }
+
+  .sm-benefits,
+  .sm-method,
+  .sm-reels-offers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sm-stage {
+    height: 490px;
+  }
+
+  .sm-phone {
+    width: 220px;
+    height: 450px;
+  }
+
+  .sm-phone-back,
+  .sm-chip-scheduled {
+    display: none;
+  }
+
+  .sm-phone-main {
+    left: 50%;
+    transform: translateX(-50%) rotate(-2deg);
+  }
+
+  .sm-post-art {
+    height: 210px;
+  }
+
+  .sm-post-headline {
+    font-size: 22px;
+  }
+
+  .sm-chip-validated {
+    top: 396px;
+    left: -4px;
+  }
+
+  .sm-reel-phone {
+    width: 96px;
+    padding: 10px;
+    border-width: 4px;
+    border-radius: 18px;
+  }
+
+  .sm-reel-hook {
+    font-size: 13px;
+  }
+
+  .sm-calendar li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .sm-faq-item summary {
+    padding: 18px 20px;
+  }
+
+  .sm-faq-item p {
+    padding: 0 20px 18px;
+  }
+}
+
+/* The selection tick is decorative: aria-pressed already conveys the state. */
+.estimator-options button.is-selected::before {
+  content: "\2713" / "";
+}
+
+/* Short numeric options stay on one row on small screens. */
+@media (max-width: 768px) {
+  .estimator-options.is-numeric {
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  }
+
+  .estimator-options.is-numeric button {
+    justify-content: center;
+  }
+}
+
+/* ===== Visuals V3 — licensed photographs in the social media screens ===== */
+.sm-photo {
+  isolation: isolate;
+  background: #1a1024;
+}
+
+.sm-photo > img,
+.sm-reel-phone > img {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sm-photo-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 4, 18, 0.35) 0%, rgba(10, 4, 18, 0) 32%, rgba(10, 4, 18, 0) 48%, rgba(10, 4, 18, 0.85) 100%);
+}
+
+.sm-sim-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: rgba(10, 4, 18, 0.72);
+}
+
+.sm-li-visual {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.sm-li-visual {
+  display: block;
+}
+
+.sm-li-visual .sm-post-art {
+  width: 100%;
+  height: 100%;
+}
+
+.sm-reel-phone {
+  isolation: isolate;
+  background: #1a1024;
+}
+
+.sm-reel-intent {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  color: #160a2c;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  background: var(--sm-mint);
+}
+
+.sm-reel-phone .sm-sim-badge {
+  top: 40px;
+  right: auto;
+  left: 12px;
+}
+
+.sm-reel-phone .sm-reel-hook {
+  font-size: 14px;
+  line-height: 1.2;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 600px) {
+  .sm-reel-intent,
+  .sm-sim-badge {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-reel-phone .sm-reel-hook {
+    font-size: 11px;
+  }
+
+  .sm-reel-phone .sm-sim-badge {
+    top: 34px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-reel-phone .sm-reel-intent {
+    top: 8px;
+    left: 8px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  .sm-reel-phone .sm-sim-badge {
+    left: 8px;
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sm-chip-validated {
+    top: 424px;
+  }
+}
+
+/* ===== LOT SM-05 — Visual polish (layout and contrast only; copy in App.jsx) ===== */
+
+/* Hero: tighter, better-balanced pair of phones; the second screen's photo fills its card. */
+@media (min-width: 601px) {
+  .sm-phone-main {
+    top: 8px;
+    left: 12px;
+  }
+
+  .sm-phone-back {
+    top: 40px;
+    right: 0;
+    transform: rotate(3deg);
+  }
+
+  .sm-phone-main .sm-post-art {
+    height: 300px;
+  }
+
+  .sm-li-visual {
+    height: 340px;
+  }
+
+  .sm-chip-scheduled {
+    top: 0;
+    right: 28px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  .sm-stage {
+    max-width: 560px;
+  }
+}
+
+/* Post cards: same visual ratio, tag pinned top-left, headline pinned bottom, stronger shade. */
+.sm-persona .sm-post-art {
+  height: auto;
+  aspect-ratio: 5 / 4;
+}
+
+.sm-persona .sm-post-tag {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  margin: 0;
+}
+
+.sm-persona .sm-photo-shade {
+  background: linear-gradient(180deg, rgba(10, 4, 18, 0.3) 0%, rgba(10, 4, 18, 0) 26%, rgba(10, 4, 18, 0.1) 46%, rgba(10, 4, 18, 0.9) 100%);
+}
+
+.sm-persona .sm-post-headline {
+  font-size: 27px;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+.sm-post-tag {
+  color: #ffffff;
+  background: rgba(10, 4, 18, 0.58);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* Coach photo: frame the hands and kettlebell rather than the torso. */
+.sm-persona .sm-photo[data-photo="coach"] > img {
+  object-position: 50% 78%;
+}
+
+@media (min-width: 601px) and (max-width: 960px) {
+  .sm-personas {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* Reels: covers about 18% larger, shrinking with their column so nothing overflows. */
+.sm-reel-phones {
+  gap: 14px;
+}
+
+.sm-reel-phone {
+  width: auto;
+  min-width: 0;
+  flex: 0 1 178px;
+}
+
+.sm-reel-phone .sm-reel-hook {
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .sm-reel-phones {
+    gap: 10px;
+  }
+
+  .sm-reel-phone {
+    flex-basis: 112px;
+  }
+
+  .sm-reel-phone .sm-reel-hook {
+    font-size: 12px;
+  }
+
+  .sm-phone-main .sm-post-art {
+    height: 230px;
+  }
+}
+
+/* LOT SM-05a: between tablet landscape and small desktop the visual column is
+   too narrow for two full-size phones (2nd phone ~54% hidden at 1024 px).
+   Scale the whole stage proportionally so the pair keeps its desktop overlap. */
+@media (min-width: 961px) and (max-width: 1279px) {
+  .sm-stage {
+    zoom: 0.82;
+    max-width: 560px;
+    margin-left: auto;
+  }
+}
+
+/* ===== LOT SM-06A — commercial UX polish ===== */
+.contact-form-privacy {
+  margin: 14px 0 0;
+  color: #bfb2ef;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.contact-form-privacy a,
+.contact-form-status a {
+  color: #d9c8ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Desktop and tablet landscape only: tighten the space above the hero copy so
+   the CTAs sit higher on first paint. Phones and the V3 visuals are untouched. */
+@media (min-width: 961px) {
+  .sm-hero {
+    padding-top: 108px;
+  }
+
+  .sm-hero .back-button {
+    margin-bottom: 24px;
+  }
+}
