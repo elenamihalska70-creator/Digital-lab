@@ -18,7 +18,6 @@ import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import {
   getPlanMonthlyPrice,
-  getUnifiedEstimate,
   REELS_OFFERS,
   SOCIAL_MEDIA_ADDONS,
   SOCIAL_MEDIA_LAUNCH_ACTIVE,
@@ -29,6 +28,8 @@ import {
 } from "./utils/estimator";
 import { WEBSITE_NEED, WEBSITE_PACKAGES } from "./utils/websitePricing";
 import { getEffectiveProjectAnswers, isFeatureSelectable } from "./utils/estimatorAnswers";
+import { RepairDiagnostic } from "./components/RepairDiagnostic";
+import { getDiagnosticEstimate, getRepairSummary, INITIAL_REPAIR_DIAGNOSTIC, REPAIR_CATEGORIES, REPAIR_NEED, REPAIR_TERMS, validateRepairDetails, needsRepairScope } from "./utils/repairDiagnostic";
 import { getTaxMention } from "./config/taxMention";
 import { buildQuoteMailto } from "./utils/quoteMailto";
 
@@ -2099,8 +2100,8 @@ function BlogCarousel({ isEnglish = false }) {
 }
 
 // LOT SM-04 — unified estimator, rendered on the FR/EN homepages and on the
-// social media page. Every amount comes from getUnifiedEstimate
-// (utils/estimator.js); this component only shows the relevant questions and
+// social media page. The diagnostic adapter routes repair separately and keeps
+// the locked estimator engine for all other services. This component shows questions and
 // formats the structured result per language.
 const NBSP = String.fromCharCode(160);
 
@@ -2188,7 +2189,7 @@ const getSocialAddonLines = (estimate, isEnglish = false) => {
 // Builds the quote request: opening message and a summary of every selected
 // service, option and amount, so the visitor never retypes it (sent by e-mail,
 // see buildQuoteMailto).
-const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => {
+const buildEstimateRequest = ({ estimate, answers, repair, reelsChoice, isEnglish }) => {
   const t = (fr, en) => (isEnglish ? en : fr);
   const labelFor = (options, value) =>
     isEnglish ? options.find((option) => option.value === value)?.label ?? value : value;
@@ -2199,24 +2200,31 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
     const need = labelFor(estimatorNeedOptions, estimate.project.need);
     const isWebsite = estimate.project.need === WEBSITE_NEED;
     services.push(need);
-    lines.push(
-      `${t("Projet ponctuel", "One-off project")} : ${need}`,
-      ...(isWebsite
-        ? [
-            `${t("Pages du site (maximum)", "Website pages (maximum)")} : ${estimate.project.pages}`,
-            `${t("Inclus", "Included")} : ${websiteIncludedServices.map((item) => (isEnglish ? item.en : item.fr)).join(", ")}`,
-          ]
-        : []),
-      // Websites are scoped by their page package; the hidden complexity selector is not quoted.
-      `${isWebsite ? "" : `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · `}${t("Fonctionnalités", "Features")} : ${
-        answers.features.length
-          ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
-          : t("à préciser", "to be defined")
-      } · ${t("Contenus", "Content")} : ${labelFor(estimatorContentOptions, answers.content)} · ${t("Urgence", "Urgency")} : ${labelFor(estimatorUrgencyOptions, answers.urgency)}`,
-      `${t("Profil", "Profile")} : ${labelFor(estimatorProfileOptions, answers.profile)} · ${t("Priorité", "Priority")} : ${labelFor(estimatorPriorityOptions, answers.priority)} · ${t("Existant", "Existing site")} : ${labelFor(estimatorExistingOptions, answers.existing)}`,
-      `${t("Estimation projet", "Project estimate")} : ${t("à partir de", "from")} ${formatTaxedPrice(estimate.project.budget, isEnglish)} · ${t("délai", "timeline")} ${formatDelayRange(estimate.project.delay, isEnglish)} · ${t("niveau", "level")} ${projectLevelLabels[estimate.project.type][isEnglish ? "en" : "fr"]}`,
-      t("Projet facturé selon son devis (acompte et échéances), hors premier mois d’abonnement.", "Project billed according to its own quote (deposit and instalments), separate from the subscription."),
-    );
+    if (estimate.project.kind === "repair") {
+      lines.push(`${t("Projet ponctuel", "One-off project")} : ${need}`, ...getRepairSummary(repair, {
+        isEnglish, formatPrice: amount => formatTaxedPrice(amount, isEnglish),
+        profile: labelFor(estimatorProfileOptions, answers.profile),
+      }));
+    } else {
+      lines.push(
+        `${t("Projet ponctuel", "One-off project")} : ${need}`,
+        ...(isWebsite
+          ? [
+              `${t("Pages du site (maximum)", "Website pages (maximum)")} : ${estimate.project.pages}`,
+              `${t("Inclus", "Included")} : ${websiteIncludedServices.map((item) => (isEnglish ? item.en : item.fr)).join(", ")}`,
+            ]
+          : []),
+        // Websites are scoped by their page package; the hidden complexity selector is not quoted.
+        `${isWebsite ? "" : `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · `}${t("Fonctionnalités", "Features")} : ${
+          answers.features.length
+            ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
+            : t("à préciser", "to be defined")
+        } · ${t("Contenus", "Content")} : ${labelFor(estimatorContentOptions, answers.content)} · ${t("Urgence", "Urgency")} : ${labelFor(estimatorUrgencyOptions, answers.urgency)}`,
+        `${t("Profil", "Profile")} : ${labelFor(estimatorProfileOptions, answers.profile)} · ${t("Priorité", "Priority")} : ${labelFor(estimatorPriorityOptions, answers.priority)} · ${t("Existant", "Existing site")} : ${labelFor(estimatorExistingOptions, answers.existing)}`,
+        `${t("Estimation projet", "Project estimate")} : ${t("à partir de", "from")} ${formatTaxedPrice(estimate.project.budget, isEnglish)} · ${t("délai", "timeline")} ${formatDelayRange(estimate.project.delay, isEnglish)} · ${t("niveau", "level")} ${projectLevelLabels[estimate.project.type][isEnglish ? "en" : "fr"]}`,
+        t("Projet facturé selon son devis (acompte et échéances), hors premier mois d’abonnement.", "Project billed according to its own quote (deposit and instalments), separate from the subscription."),
+      );
+    }
   }
 
   if (estimate.social) {
@@ -2268,6 +2276,7 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
       : null;
 
   return {
+    isRepair: estimate.project?.kind === "repair",
     offer: [estimate.project && `project:${estimatorProjectTypeByNeed[estimate.project.need]}`, socialOffer].filter(Boolean).join("|"),
     socialOffer,
     projectType: estimate.project
@@ -2302,7 +2311,12 @@ const trackQuoteEmailOpened = (request) => {
 };
 
 // Opens a mailto: link from a user gesture without leaving the page.
-const openMailtoLink = (href) => {
+const openMailtoLink = (href, privateDetails = false) => {
+  if (privateDetails) {
+    // No mailto anchor with private details for automatic outbound-link analytics to inspect.
+    window.open(href, "_self", "noopener");
+    return;
+  }
   const link = document.createElement("a");
   link.href = href;
   link.rel = "noopener";
@@ -2321,6 +2335,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const [selection, setSelection] = useState(() => createEstimatorSelection(variant));
   const [answers, setAnswers] = useState(initialEstimatorAnswers);
   const [social, setSocial] = useState(initialSocialOptions);
+  const [repair, setRepair] = useState({ ...INITIAL_REPAIR_DIAGNOSTIC });
   const [reelsChoice, setReelsChoice] = useState("pack4");
   const [appliedPreset, setAppliedPreset] = useState(null);
   const t = (fr, en) => (isEnglish ? en : fr);
@@ -2335,11 +2350,15 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   }
 
   const isWebsiteProject = selection.projectNeed === WEBSITE_NEED;
+  const isRepairProject = selection.projectNeed === REPAIR_NEED;
+  const repairErrors = isRepairProject ? validateRepairDetails(repair) : {};
+  const repairInvalid = Object.keys(repairErrors).length > 0;
   // Website mode derives its scope from the page package, so a complexity chosen for
   // another project type stays stored (restored on switch back) but never prices a website.
   const projectAnswers = selection.projectNeed ? getEffectiveProjectAnswers(answers, selection.projectNeed) : null;
-  const estimate = getUnifiedEstimate({
+  const estimate = getDiagnosticEstimate({
     project: projectAnswers,
+    repair,
     contentService: selection.contentService,
     social,
     reels: reelsChoice,
@@ -2347,7 +2366,10 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const hasSelection = Boolean(estimate.project || estimate.social || estimate.reels);
 
   const steps = [hasSelection];
-  if (selection.projectNeed) {
+  if (isRepairProject) {
+    steps.push(answers.profile, repair.issue, repair.intervention, repair.platform, repair.urgency);
+    if (needsRepairScope(repair)) steps.push(repair.scope);
+  } else if (selection.projectNeed) {
     steps.push(answers.profile, answers.priority, answers.existing, answers.content, isWebsiteProject ? answers.pages : answers.complexity, projectAnswers.features.length > 0, answers.urgency);
   }
   if (selection.contentService === "social") steps.push(social.plan, social.networks.length > 0, true, true, true);
@@ -2389,7 +2411,8 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const localized = (options) => options.map((option) => ({ value: option.value, label: isEnglish ? option.label : option.value }));
 
   const handleRequest = () => {
-    const request = buildEstimateRequest({ estimate, answers: projectAnswers ?? answers, reelsChoice, isEnglish });
+    if (repairInvalid) return;
+    const request = buildEstimateRequest({ estimate, answers: projectAnswers ?? answers, repair, reelsChoice, isEnglish });
     trackEvent("estimator_quote_request", {
       offer: request.offer,
       has_project: Boolean(estimate.project),
@@ -2409,7 +2432,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
     // panel shown by onRequest offers the copyable summary first (nothing is lost).
     if (email.fitsInMailto) {
       trackQuoteEmailOpened(request);
-      openMailtoLink(email.href);
+      openMailtoLink(email.href, request.isRepair);
     }
     onRequest?.({ ...request, email });
   };
@@ -2480,6 +2503,13 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                     <h3 id={`${idPrefix}-profile`}>{t("Vous êtes :", "You are:")}</h3>
                     {optionGroup("profile", localized(estimatorProfileOptions), answers.profile, (value) => updateAnswer("profile", value))}
                   </div>
+                  {isRepairProject ? (
+                    <RepairDiagnostic value={repair} errors={repairErrors} idPrefix={idPrefix} isEnglish={isEnglish}
+                      onChange={(key, value) => setRepair(current => ({ ...current, [key]: value,
+                        ...(["issue", "intervention"].includes(key) && current[key] !== value ? { scope: "" } : {}),
+                      }))} />
+                  ) : (
+                    <>
                   <div className="estimator-question">
                     <h3 id={`${idPrefix}-priority`}>{t("Votre priorité principale :", "Your main priority:")}</h3>
                     {optionGroup("priority", localized(estimatorPriorityOptions), answers.priority, (value) => updateAnswer("priority", value))}
@@ -2543,6 +2573,8 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                     <h3 id={`${idPrefix}-urgency`}>{t("Urgence", "Urgency")}</h3>
                     {optionGroup("urgency", localized(estimatorUrgencyOptions), answers.urgency, (value) => updateAnswer("urgency", value))}
                   </div>
+                    </>
+                  )}
                 </>
               )}
 
@@ -2655,7 +2687,19 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                   </p>
                 )}
 
-                {estimate.project && (
+                {isRepairProject && (
+                  <div className="estimate-block repair-result">
+                    <h3>{REPAIR_CATEGORIES[estimate.project.category][isEnglish ? "en" : "fr"]}</h3>
+                    <div className="result-metrics"><div>
+                      <small>{t("Orientation préliminaire après vos réponses", "Preliminary guidance based on your answers")}</small>
+                      <strong>{estimate.project.price === null ? t("sur devis", "on quote")
+                        : t("dès", "from") + " " + formatTaxedPrice(estimate.project.price, isEnglish)}</strong>
+                    </div></div>
+                    <p>{REPAIR_TERMS[estimate.project.category][isEnglish ? "en" : "fr"]}</p>
+                    <p>{REPAIR_TERMS.approval[isEnglish ? "en" : "fr"]}</p>
+                  </div>
+                )}
+                {estimate.project && !isRepairProject && (
                   <div className="estimate-block">
                     <h3>
                       {t("Projet ponctuel", "One-off project")} · {projectLevelLabels[estimate.project.type][isEnglish ? "en" : "fr"]}
@@ -2781,14 +2825,17 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               )}
               {(isEnglish ? priceTax.noteEn : priceTax.note) && <p className="estimator-note">{isEnglish ? priceTax.noteEn : priceTax.note}</p>}
               <p className="estimator-note">
-                {t(
+                {isRepairProject ? t("Orientation préliminaire : le diagnostic permettra de confirmer la catégorie, le périmètre et le devis.", "Preliminary guidance: diagnosis will confirm the category, scope and quote.") : t(
                   "Estimation indicative. Le devis final dépendra du brief, des contenus disponibles et des prestations exactes.",
                   "This estimate is indicative. The final quote will depend on the brief, available content, and exact services.",
                 )}
               </p>
-              <button className="btn btn-primary" type="button" disabled={!hasSelection} onClick={handleRequest}>
+              <button className="btn btn-primary" type="button" disabled={!hasSelection || repairInvalid} aria-describedby={repairInvalid ? `${idPrefix}-repair-request-error` : undefined} onClick={handleRequest}>
                 {t("Demander ce devis", "Request this quote")}
               </button>
+              {repairInvalid && <p id={`${idPrefix}-repair-request-error`} className="repair-error">
+                {t("Corrigez les champs signalés avant de demander un devis.", "Correct the marked fields before requesting a quote.")}
+              </p>}
             </aside>
           </div>
         </div>
@@ -3116,9 +3163,18 @@ function QuoteEmailPanel({ request, isEnglish = false }) {
         <button className="btn btn-primary" type="button" onClick={handleCopy} aria-describedby="quote-email-copy-status">
           {copyState === "copied" ? t("✓ Récapitulatif copié", "✓ Summary copied") : t("Copier le récapitulatif", "Copy the summary")}
         </button>
-        <a className="btn btn-secondary" href={email.href} onClick={() => trackQuoteEmailOpened(request)}>
-          {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
-        </a>
+        {request.isRepair ? (
+          <button className="btn btn-secondary" type="button" onClick={() => {
+            trackQuoteEmailOpened(request);
+            openMailtoLink(email.href, true);
+          }}>
+            {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
+          </button>
+        ) : (
+          <a className="btn btn-secondary" href={email.href} onClick={() => trackQuoteEmailOpened(request)}>
+            {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
+          </a>
+        )}
       </div>
 
       <p className={`quote-email-status is-${copyState}`} id="quote-email-copy-status" role="status" aria-live="polite">
