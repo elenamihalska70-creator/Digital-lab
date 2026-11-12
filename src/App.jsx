@@ -27,6 +27,7 @@ import {
   SOCIAL_MEDIA_NETWORKS,
   SOCIAL_MEDIA_PLANS,
 } from "./utils/estimator";
+import { WEBSITE_NEED, WEBSITE_PACKAGES } from "./utils/websitePricing";
 import { getTaxMention } from "./config/taxMention";
 import { buildQuoteMailto } from "./utils/quoteMailto";
 
@@ -657,6 +658,7 @@ const socialLinks = [
 ];
 
 const initialEstimatorAnswers = {
+  pages: WEBSITE_PACKAGES[0].pages,
   profile: "Indépendant",
   priority: "Être visible",
   need: "Créer un site web",
@@ -2197,6 +2199,9 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
     services.push(need);
     lines.push(
       `${t("Projet ponctuel", "One-off project")} : ${need}`,
+      ...(estimate.project.need === WEBSITE_NEED
+        ? [`${t("Pages du site (maximum)", "Website pages (maximum)")} : ${estimate.project.pages}`]
+        : []),
       `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · ${t("Fonctionnalités", "Features")} : ${
         answers.features.length
           ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
@@ -2479,6 +2484,26 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                       {optionGroup("content-ready", localized(estimatorContentOptions), answers.content, (value) => updateAnswer("content", value))}
                     </div>
                   </div>
+                  {selection.projectNeed === WEBSITE_NEED && (
+                    <div className="estimator-question">
+                      <h3 id={`${idPrefix}-pages`}>{t("Pages du site", "Website pages")}</h3>
+                      {optionGroup(
+                        "pages",
+                        WEBSITE_PACKAGES.map(({ pages, price }) => ({
+                          value: pages,
+                          label: (pages === 1 ? t("1 page", "1 page") : t("Jusqu’à " + pages + " pages", "Up to " + pages + " pages")) + " · " + formatTaxedPrice(price, isEnglish),
+                        })),
+                        answers.pages,
+                        (value) => updateAnswer("pages", value),
+                      )}
+                      <p className="estimator-hint">
+                        {t(
+                          "Responsive, SEO de base, formulaire de contact simple et adaptation légère des contenus fournis inclus. Création de contenu et fonctions complexes en supplément ; au-delà de 5 pages, devis personnalisé.",
+                          "Responsive layout, basic SEO, a simple contact form and minor adaptation of supplied content included. Content creation and complex features cost extra; more than 5 pages requires a custom quote.",
+                        )}
+                      </p>
+                    </div>
+                  )}
                   <div className="estimator-question">
                     <h3 id={`${idPrefix}-complexity`}>{t("Niveau de complexité souhaité", "Desired complexity level")}</h3>
                     {optionGroup("complexity", localized(estimatorComplexityOptions), answers.complexity, (value) => updateAnswer("complexity", value))}
