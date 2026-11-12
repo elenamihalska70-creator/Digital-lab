@@ -2336,10 +2336,10 @@
 .estimator-help {
   display: grid;
   justify-items: center;
-  gap: 14px;
+  gap: 10px;
   max-width: 760px;
   margin: 24px auto 0;
-  padding: 22px;
+  padding: 18px;
   border: 1px solid rgba(199, 168, 255, 0.16);
   border-radius: 24px;
   text-align: center;
@@ -2385,7 +2385,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 10px 16px;
   border: 1px solid rgba(199, 168, 255, 0.28);
   border-radius: 999px;
@@ -2399,6 +2401,11 @@
     border-color 300ms ease,
     box-shadow 300ms ease,
     background 300ms ease;
+}
+
+.estimator-help a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
 }
 
 .estimator-help a:hover {
@@ -11636,6 +11643,46 @@ html {
   color: #cfc4f5;
   font-size: 14px;
   line-height: 1.5;
+}
+
+/* DL-PRICING-V3-06: services included in every website package (not selectable). */
+.estimator-included {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(207, 196, 245, 0.25);
+  border-radius: 12px;
+}
+
+.estimator-included-title {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.estimator-included ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.estimator-included li {
+  position: relative;
+  padding-left: 22px;
+  color: #cfc4f5;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.estimator-included li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #9be7c4;
+  font-weight: 700;
 }
 
 .estimator-result .btn:disabled {

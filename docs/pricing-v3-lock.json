@@ -1,0 +1,12 @@
+{
+  "lot": "DL-PRICING-V3-03",
+  "base": "b083723248ecf9bd72999cad35b37192ab18841c",
+  "status": "integration candidate pending review; no publication authorization",
+  "files": {
+    "src/utils/websitePricing.js": "883d660f8da840d925d50b5eb2e423f93a39018a6eb5b5115c00c24bc21545cb",
+    "src/utils/estimator.js": "a83f9fedc707b107f3908985672886d1ea1fb56e6ce4a8e3858377988eac1813",
+    "src/utils/quoteMailto.js": "6fe27829bc82fb48d77f02b9e873418855ea1123626c6cb0fc011d8d7810d576",
+    "src/config/taxMention.js": "4cc2c1712507b341afda4fd53b1220403258b24cfa468dee1cd8573dab0e3c9f",
+    "scripts/check-release.mjs": "ba09a2abd9e443632e62e66a4d18c7a806a0fd5a61e2c42d112db0df3ce8b408"
+  }
+}

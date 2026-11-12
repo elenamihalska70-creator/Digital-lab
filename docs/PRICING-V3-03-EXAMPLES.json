@@ -1,0 +1,69 @@
+{
+  "base": "b083723248ecf9bd72999cad35b37192ab18841c",
+  "currency": "EUR",
+  "rows": [
+    {
+      "scenario": "Website: one page",
+      "before": 400,
+      "after": 390
+    },
+    {
+      "scenario": "Website: SEO + partial content",
+      "before": 750,
+      "after": 390
+    },
+    {
+      "scenario": "Website: up to 3 pages (new selector)",
+      "before": 400,
+      "after": 590,
+      "note": "Production had no page selector; the before engine ignored pages."
+    },
+    {
+      "scenario": "Website: up to 5 pages (new selector)",
+      "before": 400,
+      "after": 890,
+      "note": "Production had no page selector; the before engine ignored pages."
+    },
+    {
+      "scenario": "Website: 3 pages + standard + partial + SEO",
+      "before": 1000,
+      "after": 590,
+      "note": "Production had no page selector; the before engine ignored pages."
+    },
+    {
+      "scenario": "Website: content from scratch",
+      "before": 700,
+      "after": 690
+    },
+    {
+      "scenario": "Website: rapid",
+      "before": 450,
+      "after": 429
+    },
+    {
+      "scenario": "SEO + partial content (unchanged)",
+      "before": 450,
+      "after": 450
+    },
+    {
+      "scenario": "Automation + partial content (unchanged)",
+      "before": 700,
+      "after": 700
+    },
+    {
+      "scenario": "Repair + rapid (unchanged)",
+      "before": 300,
+      "after": 300
+    },
+    {
+      "scenario": "Chatbot with included Chatbot (unchanged)",
+      "before": 800,
+      "after": 800
+    },
+    {
+      "scenario": "MVP from scratch (unchanged)",
+      "before": 1100,
+      "after": 1100
+    }
+  ]
+}

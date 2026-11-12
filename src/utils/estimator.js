@@ -1,7 +1,9 @@
+import { WEBSITE_NEED, WEBSITE_PACKAGES, WEBSITE_PRICING } from "./websitePricing.js";
+
 // Each value is an indicative starting point, not a quote. Keeping the pricing
 // model in one configuration makes every simulator choice explicit and auditable.
 const NEED_ADJUSTMENTS = {
-  "Créer un site web": { budget: 400, days: 5, complexity: 0 },
+  "Créer un site web": { budget: WEBSITE_PACKAGES[0].price, days: 5, complexity: 0 },
   "Réparer / améliorer un site existant": { budget: 250, days: 3, complexity: 0 },
   "Optimiser SEO & visibilité": { budget: 300, days: 4, complexity: 1 },
   "Ajouter une automatisation": { budget: 550, days: 6, complexity: 2 },
@@ -107,18 +109,30 @@ const formatDelay = (days) => {
   return `${range.min}–${range.max} ${range.unit === "days" ? "jours ouvrés" : "semaines"}`;
 };
 
-// One-off project estimate as numbers. Urgency, the 50 € rounding and the
-// delay apply to one-off projects only, never to subscriptions.
+// Websites use V3 packages; other one-off projects retain production rules
+// and rounding to 50 EUR. Subscriptions remain separate.
 export function getProjectEstimate(answers) {
-  const includedFeatures = PRIMARY_NEED_INCLUDED_FEATURES[answers.need] ?? [];
+  const isWebsite = answers.need === WEBSITE_NEED;
+  const websitePackage = isWebsite
+    ? WEBSITE_PACKAGES.find((pack) => pack.pages === Number(answers.pages ?? 1))
+    : null;
+  if (isWebsite && !websitePackage) throw new RangeError("Unsupported website page count");
+  const includedFeatures = isWebsite
+    ? WEBSITE_PRICING.includedFeatures
+    : PRIMARY_NEED_INCLUDED_FEATURES[answers.need] ?? [];
+  const features = isWebsite ? [...new Set(answers.features ?? [])] : answers.features;
   const adjustments = [
-    NEED_ADJUSTMENTS[answers.need],
-    COMPLEXITY_ADJUSTMENTS[answers.complexity],
+    isWebsite ? { ...NEED_ADJUSTMENTS[answers.need], budget: websitePackage.price } : NEED_ADJUSTMENTS[answers.need],
+    isWebsite
+      ? { ...COMPLEXITY_ADJUSTMENTS[answers.complexity], budget: WEBSITE_PRICING.complexity[answers.complexity] ?? 0 }
+      : COMPLEXITY_ADJUSTMENTS[answers.complexity],
     PROFILE_ADJUSTMENTS[answers.profile],
     PRIORITY_ADJUSTMENTS[answers.priority],
     EXISTING_ADJUSTMENTS[answers.existing],
-    CONTENT_ADJUSTMENTS[answers.content],
-    ...answers.features
+    isWebsite
+      ? { ...CONTENT_ADJUSTMENTS[answers.content], budget: WEBSITE_PRICING.content[answers.content] ?? 0 }
+      : CONTENT_ADJUSTMENTS[answers.content],
+    ...features
       .filter((feature) => !includedFeatures.includes(feature))
       .map((feature) => ESTIMATOR_FEATURE_ADJUSTMENTS[feature]),
   ].filter(Boolean);
@@ -132,8 +146,11 @@ export function getProjectEstimate(answers) {
     { ...EMPTY_ADJUSTMENT },
   );
 
-  const urgency = URGENCY_ADJUSTMENTS[answers.urgency] ?? URGENCY_ADJUSTMENTS.Normal;
-  const budget = Math.ceil((totals.budget * urgency.budgetMultiplier) / 50) * 50;
+  const urgencyOptions = isWebsite ? WEBSITE_PRICING.urgency : URGENCY_ADJUSTMENTS;
+  const urgency = urgencyOptions[answers.urgency] ?? urgencyOptions.Normal;
+  const budget = isWebsite
+    ? Math.ceil((totals.budget * urgency.budgetMultiplier - 1e-9) / WEBSITE_PRICING.roundingEuros) * WEBSITE_PRICING.roundingEuros
+    : Math.ceil((totals.budget * urgency.budgetMultiplier) / 50) * 50;
   const days = Math.max(2, Math.ceil(totals.days * urgency.delayMultiplier));
 
   // Explicit choices establish a minimum; budget and technical weight can raise it.
@@ -147,7 +164,7 @@ export function getProjectEstimate(answers) {
     NEED_MINIMUM_LEVELS[answers.need] ?? 0,
   )];
 
-  return { kind: "one-off", need: answers.need, budget, days, delay: getDelayRange(days), type };
+  return { kind: "one-off", need: answers.need, budget, days, delay: getDelayRange(days), type, ...(isWebsite ? { pages: websitePackage.pages } : {}) };
 }
 
 // Legacy French text output, kept for existing callers and tests.

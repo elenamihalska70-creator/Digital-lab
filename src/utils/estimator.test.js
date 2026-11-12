@@ -20,21 +20,21 @@ const result = (answers = {}) => getEstimatorResult({ ...base, ...answers });
 const budget = (answers) => Number(result(answers).budget.match(/\d+/)[0]);
 
 const scenarios = [
-  ["A", {}, 400],
-  ["B", { features: ["SEO"] }, 600],
-  ["C", { complexity: standard, features: ["SEO"] }, 850],
-  ["D", { complexity: standard, features: ["Formulaire de contact", "SEO"] }, 950],
-  ["E", { complexity: standard, features: ["SEO"], content: partialContent }, 1000],
-  ["F", { complexity: standard, features: ["Réservation", "SEO"] }, 1150],
+  ["A", {}, 390],
+  ["B", { features: ["SEO"] }, 390],
+  ["C", { complexity: standard, features: ["SEO"] }, 390],
+  ["D", { complexity: standard, features: ["Formulaire de contact", "SEO"] }, 390],
+  ["E", { complexity: standard, features: ["SEO"], content: partialContent }, 390],
+  ["F", { complexity: standard, features: ["Réservation", "SEO"] }, 690],
   ["G", { need: "Réparer / améliorer un site existant", features: ["SEO"] }, 450],
   ["H", { need: seo, features: ["SEO"] }, 300],
   ["I", { need: automation }, 550],
   ["J", { need: automation, complexity: standard, features: ["Google Sheets / CRM", "Email automatique"] }, 1400],
   ["K", { need: chatbot, features: ["Chatbot"] }, 800],
-  ["L", { complexity: standard, features: ["Chatbot"] }, 1300],
+  ["L", { complexity: standard, features: ["Chatbot"] }, 1040],
   ["M", { need: mvp }, 800],
   ["N", { need: mvp, complexity: advanced, features: ["Tableau de bord"] }, 2000],
-  ["O", { complexity: advanced, features: ["Paiement", "Tableau de bord", "SEO"], content: partialContent, urgency: "Urgent" }, 2750],
+  ["O", { complexity: advanced, features: ["Paiement", "Tableau de bord", "SEO"], content: partialContent, urgency: "Urgent" }, 2328],
 ];
 
 for (const [name, answers, expected] of scenarios) {
@@ -50,7 +50,7 @@ for (const [field, values] of Object.entries({
     for (const value of values) {
       const answers = { ...base, complexity: advanced, features: ["Paiement"], urgency: "Urgent", [field]: value };
       const original = structuredClone(answers);
-      assert.equal(budget(answers), 1700);
+      assert.equal(budget(answers), 1668);
       assert.deepEqual(answers, original);
     }
   });
@@ -73,18 +73,18 @@ for (const [need, feature, extraBudget] of [[seo, "SEO", 500], [chatbot, "Chatbo
   test(`${feature} is included only for its explicit primary need`, () => {
     assert.equal(budget({ need, features: [feature] }), budget({ need }));
     assert.equal(budget({ need, features: [feature, "Email automatique"] }), extraBudget);
-    assert.equal(budget({ features: [feature] }), feature === "SEO" ? 600 : 1050);
+    assert.equal(budget({ features: [feature] }), feature === "SEO" ? 390 : 1040);
   });
 }
 
-test("Urgency is applied before rounding up to 50 euros", () => {
-  assert.equal(budget({ urgency: "Normal" }), 400);
-  assert.equal(budget({ urgency: "Rapide" }), 450);
-  assert.equal(budget({ urgency: "Urgent" }), 500);
-  assert.equal(budget({ complexity: standard, features: ["SEO"], urgency: "Rapide" }), 950);
-  assert.equal(budget({ complexity: standard, content: partialContent }), 800);
-  assert.equal(budget({ features: ["Maintenance"] }), 550);
-  assert.equal(budget({ content: "Je pars de zéro" }), 700);
+test("Website urgency is applied before rounding up to whole euros", () => {
+  assert.equal(budget({ urgency: "Normal" }), 390);
+  assert.equal(budget({ urgency: "Rapide" }), 429);
+  assert.equal(budget({ urgency: "Urgent" }), 468);
+  assert.equal(budget({ complexity: standard, features: ["SEO"], urgency: "Rapide" }), 429);
+  assert.equal(budget({ complexity: standard, content: partialContent }), 390);
+  assert.equal(budget({ features: ["Maintenance"] }), 510);
+  assert.equal(budget({ content: "Je pars de zéro" }), 690);
 });
 
 test("All feature prices match V2", () => {
@@ -100,7 +100,7 @@ test("Explicit complexity sets the minimum displayed level", () => {
   assert.equal(result({ complexity: standard, features: ["SEO"] }).type, "Intermédiaire");
   assert.equal(result({ complexity: standard, features: ["Formulaire de contact", "SEO"] }).type, "Intermédiaire");
   const advancedResult = result({ complexity: advanced });
-  assert.equal(advancedResult.budget, "à partir de 1050€");
+  assert.equal(advancedResult.budget, "à partir de 1040€");
   assert.equal(advancedResult.type, "Avancé");
 });
 
@@ -118,10 +118,11 @@ test("Budget and technical complexity can raise the minimum displayed level", ()
   assert.equal(technical.type, "Avancé");
   // These features have only 3 points; budget alone reaches the advanced threshold.
   const monetary = result({
+    pages: 5,
     features: ["Réservation", "Email automatique", "SEO", "Maintenance", "Formulaire de contact"],
     content: "Je pars de zéro", urgency: "Urgent",
   });
-  assert.equal(monetary.budget, "à partir de 1950€");
+  assert.equal(monetary.budget, "à partir de 2172€");
   assert.equal(monetary.type, "Avancé");
   assert.equal(result({ features: ["Chatbot"] }).type, "Intermédiaire");
 });
@@ -325,12 +326,12 @@ test("Unified: project + subscription keeps both apart; first month excludes the
     contentService: "social",
     social: { plan: "visibilite", networks: ["Instagram", "Facebook"], setupAudit: true },
   });
-  assert.equal(estimate.project.budget, 1300);
+  assert.equal(estimate.project.budget, 1040);
   assert.deepEqual(estimate.recurring, { launchMonthly: 299, standardMonthly: 390, launchMonths: 3 });
   assert.deepEqual(estimate.firstMonth, { subscription: 299, setupFees: 150, total: 449 });
   // Project + single Reel: two one-off amounts, still no first-month total.
   const withReel = getUnifiedEstimate({ project: base, contentService: "reels", reels: "single" });
-  assert.equal(withReel.project.budget, 400);
+  assert.equal(withReel.project.budget, 390);
   assert.deepEqual(withReel.oneTimeFees, [{ key: "singleReel", amount: 69 }]);
   assert.equal(withReel.firstMonth, null);
 });
@@ -407,4 +408,38 @@ test("Launch switch off: a lower plan plus add-ons still never costs less than t
       assert.ok(equivalent.launchMonthly >= high.referencePrice, `${low.name} → ${high.name}`);
     }
   }
+});
+
+// DL-PRICING-V3-03 — website packages only; recurring production tests above stay intact.
+for (const [pages, price] of [[1,390], [3,590], [5,890]]) {
+  test("Website V3 package " + pages + " pages", () => {
+    for (const complexity of [simple, standard]) {
+      for (const content of ["Textes et images prêts", partialContent]) {
+        assert.equal(budget({pages, complexity, content, features:["SEO", "Formulaire de contact"]}), price);
+      }
+    }
+  });
+}
+test("Regression: one page, SEO, partial content and normal urgency costs 390", () => {
+  assert.equal(budget({pages:1, features:["SEO"], content:partialContent, urgency:"Normal"}),390);
+});
+test("Included and repeated website features never duplicate price, delay or level", () => {
+  assert.deepEqual(result({features:["SEO","Formulaire de contact","SEO"]}),result());
+  assert.deepEqual(result({features:["Paiement","Paiement"]}),result({features:["Paiement"]}));
+});
+test("Website extras, page changes and urgency remain additive", () => {
+  assert.equal(budget({pages:3, urgency:"Rapide"}),649);
+  assert.equal(budget({pages:5, urgency:"Urgent"}),1068);
+  assert.equal(budget({pages:3, content:"Je pars de zéro"}),890);
+  assert.equal(budget({pages:3, features:["Paiement"], content:"Je pars de zéro"}),1240);
+  assert.equal(budget({pages:5, complexity:advanced}),1540);
+  assert.equal(result({pages:5, complexity:advanced}).type,"Avancé");
+  for (const pages of [0,2,4,6,"",NaN]) assert.throws(()=>result({pages}),RangeError);
+});
+test("Unified website + subscription keeps page count and monthly billing separate", () => {
+  const estimate=getUnifiedEstimate({project:{...base,pages:3,content:partialContent},contentService:"social",social:{plan:"presence",networks:["Instagram"],setupAudit:true}});
+  assert.equal(estimate.project.pages,3);
+  assert.equal(estimate.project.budget,590);
+  assert.equal(estimate.recurring.launchMonthly,149);
+  assert.equal(estimate.firstMonth.total,299);
 });

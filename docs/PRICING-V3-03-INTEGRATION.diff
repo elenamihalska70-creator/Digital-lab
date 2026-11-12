@@ -1,0 +1,839 @@
+diff --git a/package.json b/package.json
+index 4d2d47e..37863a3 100644
+--- a/package.json
++++ b/package.json
+@@ -11,8 +11,10 @@
+     "lint": "eslint .",
+     "preview": "vite preview",
+     "postinstall": "node scripts/postinstall.mjs",
+-    "check:release": "node scripts/check-release.mjs",
+-    "test": "node --test api/_lib/security/legacy-email-routes.test.js src/utils/estimator.test.js src/config/taxMention.test.js src/utils/trackingEnvironment.test.js src/utils/quoteMailto.test.js"
++    "check:release": "node scripts/check-release.mjs && npm run check:pricing",
++    "test": "node --test api/_lib/security/legacy-email-routes.test.js src/utils/estimator.test.js src/config/taxMention.test.js src/utils/trackingEnvironment.test.js src/utils/quoteMailto.test.js src/utils/estimator.compatibility.test.js scripts/pricing-lock.test.mjs",
++    "check:pricing": "node scripts/check-pricing.mjs",
++    "check:pricing:ui": "node scripts/check-pricing-ui.mjs"
+   },
+   "engines": {
+     "node": ">=22.17.0"
+diff --git a/src/App.jsx b/src/App.jsx
+index 996151c..50505f3 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -27,6 +27,7 @@ import {
+   SOCIAL_MEDIA_NETWORKS,
+   SOCIAL_MEDIA_PLANS,
+ } from "./utils/estimator";
++import { WEBSITE_NEED, WEBSITE_PACKAGES } from "./utils/websitePricing";
+ import { getTaxMention } from "./config/taxMention";
+ import { buildQuoteMailto } from "./utils/quoteMailto";
+
+@@ -657,6 +658,7 @@ const socialLinks = [
+ ];
+
+ const initialEstimatorAnswers = {
++  pages: WEBSITE_PACKAGES[0].pages,
+   profile: "Indépendant",
+   priority: "Être visible",
+   need: "Créer un site web",
+@@ -2197,6 +2199,9 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) =>
+     services.push(need);
+     lines.push(
+       `${t("Projet ponctuel", "One-off project")} : ${need}`,
++      ...(estimate.project.need === WEBSITE_NEED
++        ? [`${t("Pages du site (maximum)", "Website pages (maximum)")} : ${estimate.project.pages}`]
++        : []),
+       `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · ${t("Fonctionnalités", "Features")} : ${
+         answers.features.length
+           ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
+@@ -2479,6 +2484,26 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null,
+                       {optionGroup("content-ready", localized(estimatorContentOptions), answers.content, (value) => updateAnswer("content", value))}
+                     </div>
+                   </div>
++                  {selection.projectNeed === WEBSITE_NEED && (
++                    <div className="estimator-question">
++                      <h3 id={`${idPrefix}-pages`}>{t("Pages du site", "Website pages")}</h3>
++                      {optionGroup(
++                        "pages",
++                        WEBSITE_PACKAGES.map(({ pages, price }) => ({
++                          value: pages,
++                          label: (pages === 1 ? t("1 page", "1 page") : t("Jusqu’à " + pages + " pages", "Up to " + pages + " pages")) + " · " + formatTaxedPrice(price, isEnglish),
++                        })),
++                        answers.pages,
++                        (value) => updateAnswer("pages", value),
++                      )}
++                      <p className="estimator-hint">
++                        {t(
++                          "Responsive, SEO de base, formulaire de contact simple et adaptation légère des contenus fournis inclus. Création de contenu et fonctions complexes en supplément ; au-delà de 5 pages, devis personnalisé.",
++                          "Responsive layout, basic SEO, a simple contact form and minor adaptation of supplied content included. Content creation and complex features cost extra; more than 5 pages requires a custom quote.",
++                        )}
++                      </p>
++                    </div>
++                  )}
+                   <div className="estimator-question">
+                     <h3 id={`${idPrefix}-complexity`}>{t("Niveau de complexité souhaité", "Desired complexity level")}</h3>
+                     {optionGroup("complexity", localized(estimatorComplexityOptions), answers.complexity, (value) => updateAnswer("complexity", value))}
+diff --git a/src/utils/estimator.js b/src/utils/estimator.js
+index 4edf5e8..7c3bb91 100644
+--- a/src/utils/estimator.js
++++ b/src/utils/estimator.js
+@@ -1,7 +1,9 @@
++import { WEBSITE_NEED, WEBSITE_PACKAGES, WEBSITE_PRICING } from "./websitePricing.js";
++
+ // Each value is an indicative starting point, not a quote. Keeping the pricing
+ // model in one configuration makes every simulator choice explicit and auditable.
+ const NEED_ADJUSTMENTS = {
+-  "Créer un site web": { budget: 400, days: 5, complexity: 0 },
++  "Créer un site web": { budget: WEBSITE_PACKAGES[0].price, days: 5, complexity: 0 },
+   "Réparer / améliorer un site existant": { budget: 250, days: 3, complexity: 0 },
+   "Optimiser SEO & visibilité": { budget: 300, days: 4, complexity: 1 },
+   "Ajouter une automatisation": { budget: 550, days: 6, complexity: 2 },
+@@ -107,18 +109,30 @@ const formatDelay = (days) => {
+   return `${range.min}–${range.max} ${range.unit === "days" ? "jours ouvrés" : "semaines"}`;
+ };
+
+-// One-off project estimate as numbers. Urgency, the 50 € rounding and the
+-// delay apply to one-off projects only, never to subscriptions.
++// Websites use V3 packages; other one-off projects retain production rules
++// and rounding to 50 EUR. Subscriptions remain separate.
+ export function getProjectEstimate(answers) {
+-  const includedFeatures = PRIMARY_NEED_INCLUDED_FEATURES[answers.need] ?? [];
++  const isWebsite = answers.need === WEBSITE_NEED;
++  const websitePackage = isWebsite
++    ? WEBSITE_PACKAGES.find((pack) => pack.pages === Number(answers.pages ?? 1))
++    : null;
++  if (isWebsite && !websitePackage) throw new RangeError("Unsupported website page count");
++  const includedFeatures = isWebsite
++    ? WEBSITE_PRICING.includedFeatures
++    : PRIMARY_NEED_INCLUDED_FEATURES[answers.need] ?? [];
++  const features = isWebsite ? [...new Set(answers.features ?? [])] : answers.features;
+   const adjustments = [
+-    NEED_ADJUSTMENTS[answers.need],
+-    COMPLEXITY_ADJUSTMENTS[answers.complexity],
++    isWebsite ? { ...NEED_ADJUSTMENTS[answers.need], budget: websitePackage.price } : NEED_ADJUSTMENTS[answers.need],
++    isWebsite
++      ? { ...COMPLEXITY_ADJUSTMENTS[answers.complexity], budget: WEBSITE_PRICING.complexity[answers.complexity] ?? 0 }
++      : COMPLEXITY_ADJUSTMENTS[answers.complexity],
+     PROFILE_ADJUSTMENTS[answers.profile],
+     PRIORITY_ADJUSTMENTS[answers.priority],
+     EXISTING_ADJUSTMENTS[answers.existing],
+-    CONTENT_ADJUSTMENTS[answers.content],
+-    ...answers.features
++    isWebsite
++      ? { ...CONTENT_ADJUSTMENTS[answers.content], budget: WEBSITE_PRICING.content[answers.content] ?? 0 }
++      : CONTENT_ADJUSTMENTS[answers.content],
++    ...features
+       .filter((feature) => !includedFeatures.includes(feature))
+       .map((feature) => ESTIMATOR_FEATURE_ADJUSTMENTS[feature]),
+   ].filter(Boolean);
+@@ -132,8 +146,11 @@ export function getProjectEstimate(answers) {
+     { ...EMPTY_ADJUSTMENT },
+   );
+
+-  const urgency = URGENCY_ADJUSTMENTS[answers.urgency] ?? URGENCY_ADJUSTMENTS.Normal;
+-  const budget = Math.ceil((totals.budget * urgency.budgetMultiplier) / 50) * 50;
++  const urgencyOptions = isWebsite ? WEBSITE_PRICING.urgency : URGENCY_ADJUSTMENTS;
++  const urgency = urgencyOptions[answers.urgency] ?? urgencyOptions.Normal;
++  const budget = isWebsite
++    ? Math.ceil((totals.budget * urgency.budgetMultiplier - 1e-9) / WEBSITE_PRICING.roundingEuros) * WEBSITE_PRICING.roundingEuros
++    : Math.ceil((totals.budget * urgency.budgetMultiplier) / 50) * 50;
+   const days = Math.max(2, Math.ceil(totals.days * urgency.delayMultiplier));
+
+   // Explicit choices establish a minimum; budget and technical weight can raise it.
+@@ -147,7 +164,7 @@ export function getProjectEstimate(answers) {
+     NEED_MINIMUM_LEVELS[answers.need] ?? 0,
+   )];
+
+-  return { kind: "one-off", need: answers.need, budget, days, delay: getDelayRange(days), type };
++  return { kind: "one-off", need: answers.need, budget, days, delay: getDelayRange(days), type, ...(isWebsite ? { pages: websitePackage.pages } : {}) };
+ }
+
+ // Legacy French text output, kept for existing callers and tests.
+diff --git a/src/utils/estimator.test.js b/src/utils/estimator.test.js
+index d7421ea..bc5212e 100644
+--- a/src/utils/estimator.test.js
++++ b/src/utils/estimator.test.js
+@@ -20,21 +20,21 @@ const result = (answers = {}) => getEstimatorResult({ ...base, ...answers });
+ const budget = (answers) => Number(result(answers).budget.match(/\d+/)[0]);
+
+ const scenarios = [
+-  ["A", {}, 400],
+-  ["B", { features: ["SEO"] }, 600],
+-  ["C", { complexity: standard, features: ["SEO"] }, 850],
+-  ["D", { complexity: standard, features: ["Formulaire de contact", "SEO"] }, 950],
+-  ["E", { complexity: standard, features: ["SEO"], content: partialContent }, 1000],
+-  ["F", { complexity: standard, features: ["Réservation", "SEO"] }, 1150],
++  ["A", {}, 390],
++  ["B", { features: ["SEO"] }, 390],
++  ["C", { complexity: standard, features: ["SEO"] }, 390],
++  ["D", { complexity: standard, features: ["Formulaire de contact", "SEO"] }, 390],
++  ["E", { complexity: standard, features: ["SEO"], content: partialContent }, 390],
++  ["F", { complexity: standard, features: ["Réservation", "SEO"] }, 690],
+   ["G", { need: "Réparer / améliorer un site existant", features: ["SEO"] }, 450],
+   ["H", { need: seo, features: ["SEO"] }, 300],
+   ["I", { need: automation }, 550],
+   ["J", { need: automation, complexity: standard, features: ["Google Sheets / CRM", "Email automatique"] }, 1400],
+   ["K", { need: chatbot, features: ["Chatbot"] }, 800],
+-  ["L", { complexity: standard, features: ["Chatbot"] }, 1300],
++  ["L", { complexity: standard, features: ["Chatbot"] }, 1040],
+   ["M", { need: mvp }, 800],
+   ["N", { need: mvp, complexity: advanced, features: ["Tableau de bord"] }, 2000],
+-  ["O", { complexity: advanced, features: ["Paiement", "Tableau de bord", "SEO"], content: partialContent, urgency: "Urgent" }, 2750],
++  ["O", { complexity: advanced, features: ["Paiement", "Tableau de bord", "SEO"], content: partialContent, urgency: "Urgent" }, 2328],
+ ];
+
+ for (const [name, answers, expected] of scenarios) {
+@@ -50,7 +50,7 @@ for (const [field, values] of Object.entries({
+     for (const value of values) {
+       const answers = { ...base, complexity: advanced, features: ["Paiement"], urgency: "Urgent", [field]: value };
+       const original = structuredClone(answers);
+-      assert.equal(budget(answers), 1700);
++      assert.equal(budget(answers), 1668);
+       assert.deepEqual(answers, original);
+     }
+   });
+@@ -73,18 +73,18 @@ for (const [need, feature, extraBudget] of [[seo, "SEO", 500], [chatbot, "Chatbo
+   test(`${feature} is included only for its explicit primary need`, () => {
+     assert.equal(budget({ need, features: [feature] }), budget({ need }));
+     assert.equal(budget({ need, features: [feature, "Email automatique"] }), extraBudget);
+-    assert.equal(budget({ features: [feature] }), feature === "SEO" ? 600 : 1050);
++    assert.equal(budget({ features: [feature] }), feature === "SEO" ? 390 : 1040);
+   });
+ }
+
+-test("Urgency is applied before rounding up to 50 euros", () => {
+-  assert.equal(budget({ urgency: "Normal" }), 400);
+-  assert.equal(budget({ urgency: "Rapide" }), 450);
+-  assert.equal(budget({ urgency: "Urgent" }), 500);
+-  assert.equal(budget({ complexity: standard, features: ["SEO"], urgency: "Rapide" }), 950);
+-  assert.equal(budget({ complexity: standard, content: partialContent }), 800);
+-  assert.equal(budget({ features: ["Maintenance"] }), 550);
+-  assert.equal(budget({ content: "Je pars de zéro" }), 700);
++test("Website urgency is applied before rounding up to whole euros", () => {
++  assert.equal(budget({ urgency: "Normal" }), 390);
++  assert.equal(budget({ urgency: "Rapide" }), 429);
++  assert.equal(budget({ urgency: "Urgent" }), 468);
++  assert.equal(budget({ complexity: standard, features: ["SEO"], urgency: "Rapide" }), 429);
++  assert.equal(budget({ complexity: standard, content: partialContent }), 390);
++  assert.equal(budget({ features: ["Maintenance"] }), 510);
++  assert.equal(budget({ content: "Je pars de zéro" }), 690);
+ });
+
+ test("All feature prices match V2", () => {
+@@ -100,7 +100,7 @@ test("Explicit complexity sets the minimum displayed level", () => {
+   assert.equal(result({ complexity: standard, features: ["SEO"] }).type, "Intermédiaire");
+   assert.equal(result({ complexity: standard, features: ["Formulaire de contact", "SEO"] }).type, "Intermédiaire");
+   const advancedResult = result({ complexity: advanced });
+-  assert.equal(advancedResult.budget, "à partir de 1050€");
++  assert.equal(advancedResult.budget, "à partir de 1040€");
+   assert.equal(advancedResult.type, "Avancé");
+ });
+
+@@ -118,10 +118,11 @@ test("Budget and technical complexity can raise the minimum displayed level", ()
+   assert.equal(technical.type, "Avancé");
+   // These features have only 3 points; budget alone reaches the advanced threshold.
+   const monetary = result({
++    pages: 5,
+     features: ["Réservation", "Email automatique", "SEO", "Maintenance", "Formulaire de contact"],
+     content: "Je pars de zéro", urgency: "Urgent",
+   });
+-  assert.equal(monetary.budget, "à partir de 1950€");
++  assert.equal(monetary.budget, "à partir de 2172€");
+   assert.equal(monetary.type, "Avancé");
+   assert.equal(result({ features: ["Chatbot"] }).type, "Intermédiaire");
+ });
+@@ -325,12 +326,12 @@ test("Unified: project + subscription keeps both apart; first month excludes the
+     contentService: "social",
+     social: { plan: "visibilite", networks: ["Instagram", "Facebook"], setupAudit: true },
+   });
+-  assert.equal(estimate.project.budget, 1300);
++  assert.equal(estimate.project.budget, 1040);
+   assert.deepEqual(estimate.recurring, { launchMonthly: 299, standardMonthly: 390, launchMonths: 3 });
+   assert.deepEqual(estimate.firstMonth, { subscription: 299, setupFees: 150, total: 449 });
+   // Project + single Reel: two one-off amounts, still no first-month total.
+   const withReel = getUnifiedEstimate({ project: base, contentService: "reels", reels: "single" });
+-  assert.equal(withReel.project.budget, 400);
++  assert.equal(withReel.project.budget, 390);
+   assert.deepEqual(withReel.oneTimeFees, [{ key: "singleReel", amount: 69 }]);
+   assert.equal(withReel.firstMonth, null);
+ });
+@@ -408,3 +409,37 @@ test("Launch switch off: a lower plan plus add-ons still never costs less than t
+     }
+   }
+ });
++
++// DL-PRICING-V3-03 — website packages only; recurring production tests above stay intact.
++for (const [pages, price] of [[1,390], [3,590], [5,890]]) {
++  test("Website V3 package " + pages + " pages", () => {
++    for (const complexity of [simple, standard]) {
++      for (const content of ["Textes et images prêts", partialContent]) {
++        assert.equal(budget({pages, complexity, content, features:["SEO", "Formulaire de contact"]}), price);
++      }
++    }
++  });
++}
++test("Regression: one page, SEO, partial content and normal urgency costs 390", () => {
++  assert.equal(budget({pages:1, features:["SEO"], content:partialContent, urgency:"Normal"}),390);
++});
++test("Included and repeated website features never duplicate price, delay or level", () => {
++  assert.deepEqual(result({features:["SEO","Formulaire de contact","SEO"]}),result());
++  assert.deepEqual(result({features:["Paiement","Paiement"]}),result({features:["Paiement"]}));
++});
++test("Website extras, page changes and urgency remain additive", () => {
++  assert.equal(budget({pages:3, urgency:"Rapide"}),649);
++  assert.equal(budget({pages:5, urgency:"Urgent"}),1068);
++  assert.equal(budget({pages:3, content:"Je pars de zéro"}),890);
++  assert.equal(budget({pages:3, features:["Paiement"], content:"Je pars de zéro"}),1240);
++  assert.equal(budget({pages:5, complexity:advanced}),1540);
++  assert.equal(result({pages:5, complexity:advanced}).type,"Avancé");
++  for (const pages of [0,2,4,6,"",NaN]) assert.throws(()=>result({pages}),RangeError);
++});
++test("Unified website + subscription keeps page count and monthly billing separate", () => {
++  const estimate=getUnifiedEstimate({project:{...base,pages:3,content:partialContent},contentService:"social",social:{plan:"presence",networks:["Instagram"],setupAudit:true}});
++  assert.equal(estimate.project.pages,3);
++  assert.equal(estimate.project.budget,590);
++  assert.equal(estimate.recurring.launchMonthly,149);
++  assert.equal(estimate.firstMonth.total,299);
++});
+diff --git a/.github/workflows/pricing.yml b/.github/workflows/pricing.yml
+new file mode 100644
+index 0000000..7660720
+--- /dev/null
++++ b/.github/workflows/pricing.yml
+@@ -0,0 +1,19 @@
++name: Public pricing contract
++on: [push, pull_request]
++permissions:
++  contents: read
++jobs:
++  pricing:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: actions/setup-node@v4
++        with:
++          node-version: 24
++          cache: npm
++      - run: npm ci
++      - run: npm test
++      - run: npm run check:release
++      - run: npx playwright install --with-deps chromium
++      - run: npm run build
++      - run: npm run check:pricing:ui
+diff --git a/PRICING-V3-LOCK.md b/PRICING-V3-LOCK.md
+new file mode 100644
+index 0000000..6da9579
+--- /dev/null
++++ b/PRICING-V3-LOCK.md
+@@ -0,0 +1,11 @@
++# Public website pricing V3 - DL-PRICING-V3-03
++
++Integration candidate from production b083723248ecf9bd72999cad35b37192ab18841c. No commit or publication is authorized by this document.
++
++The runtime source for website packages is src/utils/websitePricing.js: one page 390 EUR, up to 3 pages 590 EUR, up to 5 pages 890 EUR. Responsive layout, basic SEO, a simple contact form and minor adaptation of supplied content are included. Partial content covers minor adaptation only, not writing missing content. Creation from scratch adds 300 EUR. Advanced scope adds 650 EUR; selected complex features use the existing estimator feature table and are additional. Standard scope does not bill page count twice. Larger sites require a bespoke quote.
++
++Website urgency: Normal x1, Rapide x1.1, Urgent x1.2, with one final upward rounding to a whole euro. Included/repeated website features never add price, days or complexity. Other one-off services keep production content surcharges, urgency, feature handling and 50 EUR rounding. Monthly Social Media/Reels billing is separate, including first-month totals. Tax formatting and mailto fallback stay in the existing production modules.
++
++Changing prices, inclusions, coefficients, rounding, or expected checksums requires a separate LOT and explicit owner approval. There is no command to regenerate this lock automatically. Do not rewrite the manifest to make CI pass. The manifest pins the website config and complete estimator (including unchanged Social Media/Reels), plus preserved tax and mailto/release modules. Hashes normalize CRLF/LF.
++
++A checksum detects accidental drift; someone who can change both code and the manifest can bypass it. Regression tests also pin approved amounts and production compatibility outputs. Mandatory owner review and required CI checks need GitHub branch protection configured separately; no such settings are changed by this LOT. The unchanged TVA release gate runs before pricing checks.
+diff --git a/docs/PRICING-V3-03-EXAMPLES.json b/docs/PRICING-V3-03-EXAMPLES.json
+new file mode 100644
+index 0000000..f56f29d
+--- /dev/null
++++ b/docs/PRICING-V3-03-EXAMPLES.json
+@@ -0,0 +1,69 @@
++{
++  "base": "b083723248ecf9bd72999cad35b37192ab18841c",
++  "currency": "EUR",
++  "rows": [
++    {
++      "scenario": "Website: one page",
++      "before": 400,
++      "after": 390
++    },
++    {
++      "scenario": "Website: SEO + partial content",
++      "before": 750,
++      "after": 390
++    },
++    {
++      "scenario": "Website: up to 3 pages (new selector)",
++      "before": 400,
++      "after": 590,
++      "note": "Production had no page selector; the before engine ignored pages."
++    },
++    {
++      "scenario": "Website: up to 5 pages (new selector)",
++      "before": 400,
++      "after": 890,
++      "note": "Production had no page selector; the before engine ignored pages."
++    },
++    {
++      "scenario": "Website: 3 pages + standard + partial + SEO",
++      "before": 1000,
++      "after": 590,
++      "note": "Production had no page selector; the before engine ignored pages."
++    },
++    {
++      "scenario": "Website: content from scratch",
++      "before": 700,
++      "after": 690
++    },
++    {
++      "scenario": "Website: rapid",
++      "before": 450,
++      "after": 429
++    },
++    {
++      "scenario": "SEO + partial content (unchanged)",
++      "before": 450,
++      "after": 450
++    },
++    {
++      "scenario": "Automation + partial content (unchanged)",
++      "before": 700,
++      "after": 700
++    },
++    {
++      "scenario": "Repair + rapid (unchanged)",
++      "before": 300,
++      "after": 300
++    },
++    {
++      "scenario": "Chatbot with included Chatbot (unchanged)",
++      "before": 800,
++      "after": 800
++    },
++    {
++      "scenario": "MVP from scratch (unchanged)",
++      "before": 1100,
++      "after": 1100
++    }
++  ]
++}
+diff --git a/docs/PRICING-V3-03-INTEGRATION-REVIEW.md b/docs/PRICING-V3-03-INTEGRATION-REVIEW.md
+new file mode 100644
+index 0000000..dc5b07d
+--- /dev/null
++++ b/docs/PRICING-V3-03-INTEGRATION-REVIEW.md
+@@ -0,0 +1,56 @@
++# DL-PRICING-V3-03 - integration review
++
++Status: implemented locally for owner review. No commit, push, merge or deployment.
++
++## Base and isolation
++
++- Branch: fix/dl-pricing-v3-integration.
++- Worktree: C:/Users/Lenovo/Projets/DigitalLab-pricing-v3-integration.
++- Exact HEAD/base: b083723248ecf9bd72999cad35b37192ab18841c. Live GitHub main matched before creation and again after implementation.
++- Original dirty main stays at 5b710a112dd92905f58641b9ae0be1ae5f817b52. Its original status and all 174 inventoried tracked/untracked paths (including absent files) match the before inventory. No existing files were restored, deleted or staged.
++- Inventory evidence: C:/Users/Lenovo/AppData/Local/Temp/DL-PRICING-V3-03-review/dirty-main-inventory-before.json and dirty-main-preservation-after.json.
++
++## Behavior
++
++Only the exact need "Créer un site web" uses V3: 390 EUR for one page, 590 EUR for up to 3, 890 EUR for up to 5. The initial choice is one page. Responsive, basic SEO, a simple contact form and minor adaptation of supplied materials are included. Creating content from scratch and complex features are additional. Page count does not incur a second Standard-complexity surcharge. Website urgency is applied once, then rounded up to a whole euro.
++
++Other one-off services keep production surcharges, repeated-feature behavior, 50 EUR rounding, delays and levels. All production exports are preserved. The source from the recurring Social Media section through getUnifiedEstimate is byte-for-byte unchanged after LF normalization. Social Media launch/reference prices, Reels and first-month calculation are unchanged.
++
++The production UnifiedEstimator receives page count and returns it through getProjectEstimate. buildEstimateRequest includes the maximum page count only for a website. The existing summary, QuoteEmailPanel, clipboard, mailto fallback and tax formatter remain in use. No legacy ContactForm or email route is restored.
++
++## Scope
++
++Modified: package.json, src/App.jsx, src/utils/estimator.js, src/utils/estimator.test.js.
++
++Added implementation/contract files: src/utils/websitePricing.js, src/utils/estimator.compatibility.test.js, scripts/pricing-lock.mjs, scripts/pricing-lock.test.mjs, scripts/check-pricing.mjs, scripts/check-pricing-ui.mjs, .github/workflows/pricing.yml, docs/pricing-v3-lock.json, PRICING-V3-LOCK.md.
++
++Review artifacts: this report, PRICING-V3-03-EXAMPLES.json, PRICING-V3-03-INTEGRATION.diff. The diff includes all other LOT files and excludes itself.
++
++Unchanged versus b083723: App.css, index.html, public/**, api/** (including email handlers), quoteMailto.js, taxMention.js, scripts/check-release.mjs and package-lock.json. No dependency upgrade, GitHub protection setting or production write.
++
++## Verification
++
++- npm test: PASS, 79/79; retains legacy-email, tax, tracking, quote-mailto and all recurring/unified tests.
++- Non-website golden contract: 69,255 combinations, all feature subsets plus repeated-feature cases; budgets, rounding, delays and levels match a digest captured from production BEFORE editing.
++- Social/Reels golden contract: 900 option combinations through both social and unified APIs, plus all standalone offers and Reel quantities 0-24; matches production.
++- npm run build: PASS; Vite plus prerender of all 14 production routes, including Social Media. Existing >500 kB chunk warning remains.
++- npm run check:release: PASS; unchanged TVA gate confirms FRANCHISE, then pricing lock.
++- Pricing UI: PASS on FR/EN at 1440 and 390 px. Verifies package labels, selected states, 390/590/890/back, included features, urgency, content, payment/advanced extras, summary/page count, clipboard, long mailto fallback, tax notes, monthly separation, removal of page count outside website mode, no legacy contact form and no horizontal overflow. Also checks the Social Media page's plan/Reels CTA presets and combined website quote.
++- Browser guard is installed before navigation: only local GET/HEAD allowed, external HTTP and all WebSockets blocked. Mailto clicks are intercepted and clipboard mocked. No external write/send or actual mail client opening.
++- npm run lint: FAIL with the same 13 errors and 3 warnings as untouched b083723. All diagnostics, including embedded source frames, match after normalizing shifted line numbers. No rule is disabled and no unrelated fix is included. Baseline/after JSON lives beside the inventory in TEMP.
++- Targeted ESLint for changed/new estimator logic, config, tests and scripts: PASS. App.jsx retains its pre-existing diagnostics.
++- git diff --check: PASS. No staged changes.
++
++## Price lock and CI
++
++The original production npm test list is extended, not replaced. check:release runs scripts/check-release.mjs before check:pricing. CI runs npm ci, tests, combined release gate, build and the guarded browser suite. CI has not run remotely because nothing was pushed.
++
++The lock pins websitePricing.js, the complete estimator, and preserved quoteMailto/tax/release-gate modules. Missing lock entries, accidental code changes and CRLF portability are tested. A test explicitly demonstrates that a rewritten expected checksum can accept changed code: this is drift detection, not proof of owner consent. Separate LOT plus explicit owner approval is required for tariff/checksum changes. Branch protection and required owner review remain an external governance prerequisite; no GitHub settings were changed.
++
++## Price comparison and limits
++
++See PRICING-V3-03-EXAMPLES.json, calculated using the exact production engine and integrated engine on identical inputs. The old engine had no page selector and ignored pages, so its 400 EUR output for pages=3/5 is not an old approved package price.
++
++Examples: simple website 400 -> 390; one page + SEO + partial content 750 -> 390; 3 pages + Standard + partial + SEO 1000 -> 590; website content from scratch 700 -> 690. Unchanged: SEO + partial 450, automation + partial 700, rapid repair 300, included chatbot 800, MVP from scratch 1100 EUR.
++
++Remaining review reservations: inherited lint failures; npm ci reports 13 existing dependency vulnerabilities (5 moderate, 7 high, 1 critical) under the unchanged production lockfile; bundle-size warning; browser coverage is Chromium on desktop/mobile viewports, not physical devices or Safari/Firefox. Email delivery and production persistence are intentionally not exercised. No commit or publication until separate owner approval.
+diff --git a/docs/pricing-v3-lock.json b/docs/pricing-v3-lock.json
+new file mode 100644
+index 0000000..f6dbf7f
+--- /dev/null
++++ b/docs/pricing-v3-lock.json
+@@ -0,0 +1,12 @@
++{
++  "lot": "DL-PRICING-V3-03",
++  "base": "b083723248ecf9bd72999cad35b37192ab18841c",
++  "status": "integration candidate pending review; no publication authorization",
++  "files": {
++    "src/utils/websitePricing.js": "883d660f8da840d925d50b5eb2e423f93a39018a6eb5b5115c00c24bc21545cb",
++    "src/utils/estimator.js": "a83f9fedc707b107f3908985672886d1ea1fb56e6ce4a8e3858377988eac1813",
++    "src/utils/quoteMailto.js": "6fe27829bc82fb48d77f02b9e873418855ea1123626c6cb0fc011d8d7810d576",
++    "src/config/taxMention.js": "4cc2c1712507b341afda4fd53b1220403258b24cfa468dee1cd8573dab0e3c9f",
++    "scripts/check-release.mjs": "ba09a2abd9e443632e62e66a4d18c7a806a0fd5a61e2c42d112db0df3ce8b408"
++  }
++}
+diff --git a/scripts/check-pricing-ui.mjs b/scripts/check-pricing-ui.mjs
+new file mode 100644
+index 0000000..e5ac609
+--- /dev/null
++++ b/scripts/check-pricing-ui.mjs
+@@ -0,0 +1,200 @@
++import assert from "node:assert/strict";
++import { preview } from "vite";
++import { chromium } from "playwright";
++import { WEBSITE_PACKAGES } from "../src/utils/websitePricing.js";
++
++const server = await preview({ preview: { host: "127.0.0.1", port: 4321, strictPort: true } });
++let browser;
++const results = [];
++try {
++  browser = await chromium.launch({ headless: true });
++  for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
++    for (const en of [false, true]) {
++      console.log("Checking", en ? "EN" : "FR", viewport.width);
++      const context = await browser.newContext({ viewport, reducedMotion: "reduce" });
++      const forbiddenWrites = [];
++      const pageErrors = [];
++      await context.route("**/*", route => {
++        const request = route.request();
++        const url = new URL(request.url());
++        if (!["GET", "HEAD"].includes(request.method())) forbiddenWrites.push(request.method() + " " + url.pathname);
++        if (url.hostname !== "127.0.0.1" || !["GET", "HEAD"].includes(request.method()) || ["image", "media", "font"].includes(request.resourceType())) return route.abort();
++        return route.continue();
++      });
++      await context.routeWebSocket("**/*", socket => socket.close());
++      await context.addInitScript(() => {
++        window.pricingAudit = { mailto: [], copied: [] };
++        document.addEventListener("click", event => {
++          const link = event.target.closest?.("a[href^='mailto:']");
++          if (link) {
++            event.preventDefault();
++            window.pricingAudit.mailto.push(link.href);
++          }
++        }, true);
++        Object.defineProperty(navigator, "clipboard", {
++          configurable: true,
++          value: { writeText: async text => { window.pricingAudit.copied.push(text); } },
++        });
++      });
++      const page = await context.newPage();
++      page.setDefaultTimeout(15000);
++      page.on("pageerror", error => pageErrors.push(error.message));
++      await page.goto("http://127.0.0.1:4321/" + (en ? "en/" : ""), { waitUntil: "domcontentloaded" });
++      const section = page.locator(".estimator-home");
++      const group = (fr, english) => section.getByRole("group", { name: en ? english : fr, exact: true });
++      const pages = () => group("Pages du site", "Website pages");
++      const expectedPrice = amount => (en ? "from €" + new Intl.NumberFormat("en-GB").format(amount) : "à partir de " + new Intl.NumberFormat("fr-FR").format(amount) + " €").replaceAll("\u00a0", " ").replaceAll("\u202f", " ");
++      const price = () => section.locator(".result-metrics strong").first().textContent();
++      const expectBudget = async amount => {
++        await page.waitForFunction(({ expected }) => {
++          const actual = document.querySelector(".estimator-home .result-metrics strong")?.textContent.replaceAll("\u00a0", " ").replaceAll("\u202f", " ");
++          return actual === expected;
++        }, { expected: expectedPrice(amount) });
++        assert.equal((await price()).replaceAll("\u00a0", " ").replaceAll("\u202f", " "), expectedPrice(amount));
++      };
++      const setCheckbox = async (box, checked = true) => {
++        if (await box.isChecked() !== checked) await box.locator("..").click();
++        assert.equal(await box.isChecked(), checked);
++      };
++      const pickPages = async count => {
++        const index = WEBSITE_PACKAGES.findIndex(pack => pack.pages === count);
++        await pages().getByRole("button").nth(index).click();
++        assert.equal(await pages().getByRole("button").nth(index).getAttribute("aria-pressed"), "true");
++      };
++      await expectBudget(390);
++      for (const [index, pack] of WEBSITE_PACKAGES.entries()) {
++        const label = (await pages().getByRole("button").nth(index).textContent()).replaceAll("\u00a0", " ");
++        assert.ok(label.includes(String(pack.price)) && label.includes("€"));
++        await pickPages(pack.pages);
++        await expectBudget(pack.price);
++      }
++      console.log("Package labels and selection passed");
++      await pickPages(1);
++      await expectBudget(390);
++      await group("Niveau de complexité souhaité", "Desired complexity level").getByRole("button").first().click();
++      await setCheckbox(section.getByRole("checkbox", { name: "SEO" }));
++      await setCheckbox(section.getByRole("checkbox", { name: en ? "Contact form" : "Formulaire de contact" }));
++      await expectBudget(390);
++      await pickPages(3);
++      await group("Urgence", "Urgency").getByRole("button", { name: en ? "Fast" : "Rapide", exact: true }).click();
++      await expectBudget(649);
++      await group("Urgence", "Urgency").getByRole("button", { name: "Normal", exact: true }).click();
++      await expectBudget(590);
++      const requestButton = section.getByRole("button", { name: en ? "Request this quote" : "Demander ce devis", exact: true });
++      console.log("Requesting summary");
++      await requestButton.click();
++      const summary = page.locator("#quote-email-summary");
++      const initialSummary = await summary.inputValue();
++      assert.ok(initialSummary.includes(en ? "Website pages (maximum) : 3" : "Pages du site (maximum) : 3"));
++      assert.ok(initialSummary.includes("590"));
++      assert.ok(initialSummary.includes(en ? "VAT not applicable" : "TVA non applicable"));
++      await page.locator(".quote-email-actions button").click();
++      assert.equal(await page.evaluate(() => window.pricingAudit.copied.at(-1)), initialSummary);
++      await page.locator(".quote-email-actions a").click();
++      const initialHref = await page.evaluate(() => window.pricingAudit.mailto.at(-1));
++      assert.equal(new URL(initialHref).protocol, "mailto:");
++      assert.ok(initialHref.length <= 1900);
++
++      console.log("Short summary/copy/mailto passed");
++      await group("Avez-vous déjà les contenus ?", "Do you already have the content?").getByRole("button").last().click();
++      await expectBudget(890);
++      await setCheckbox(section.getByRole("checkbox", { name: en ? "Payments" : "Paiement" }));
++      await expectBudget(1240);
++      await group("Niveau de complexité souhaité", "Desired complexity level").getByRole("button").last().click();
++      await expectBudget(1890);
++      await group("Réseaux sociaux et vidéo", "Social media and video").getByRole("button").nth(1).click();
++      await setCheckbox(group("Réseaux sociaux concernés", "Social networks").getByRole("checkbox").nth(0));
++      await setCheckbox(group("Réseaux sociaux concernés", "Social networks").getByRole("checkbox").nth(1));
++      const monthlyBefore = await section.locator(".estimate-block").filter({ hasText: en ? "Subscription" : "Abonnement" }).first().textContent();
++      assert.ok(monthlyBefore.includes("299") && monthlyBefore.includes("390"));
++      await pickPages(5);
++      await expectBudget(2190);
++      const monthlyAfter = await section.locator(".estimate-block").filter({ hasText: en ? "Subscription" : "Abonnement" }).first().textContent();
++      assert.equal(monthlyAfter, monthlyBefore);
++      await setCheckbox(section.getByRole("checkbox", { name: en ? "Payments" : "Paiement" }), false);
++      // Use real maximum add-ons so even the English summary exceeds the mailto limit.
++      for (const box of await group("Réseaux sociaux concernés", "Social networks").getByRole("checkbox").all()) await setCheckbox(box);
++      await group("Publications supplémentaires / mois", "Extra posts / month").getByRole("button").last().click();
++      await group("Reels supplémentaires / mois", "Extra Reels / month").getByRole("button").last().click();
++      await setCheckbox(group("Démarrage", "Getting started").getByRole("checkbox"));
++      // Make a long, combined summary: fallback must keep every line in the panel.
++      for (const box of await group("Fonctionnalités souhaitées", "Desired features").getByRole("checkbox").all()) await setCheckbox(box);
++      await group("Urgence", "Urgency").getByRole("button", { name: "Urgent", exact: true }).click();
++      await requestButton.click();
++      const longSummary = await summary.inputValue();
++      assert.ok(longSummary.includes(en ? "Website pages (maximum) : 5" : "Pages du site (maximum) : 5"));
++      assert.ok(longSummary.includes(en ? "Social media subscription" : "Abonnement réseaux sociaux"));
++      assert.match(await page.locator(".quote-email-actions a").textContent(), en ? /then paste/ : /puis coller/);
++      await page.locator(".quote-email-actions a").click();
++      const fallbackHref = await page.evaluate(() => window.pricingAudit.mailto.at(-1));
++      assert.ok(fallbackHref.length <= 1900);
++      await page.locator(".quote-email-actions button").click();
++      assert.equal(await page.evaluate(() => window.pricingAudit.copied.at(-1)), longSummary);
++
++      // Leaving website mode hides page count and removes it from future quote summaries.
++      await group("Projet ponctuel", "One-off project").getByRole("button").first().click();
++      assert.equal(await pages().count(), 0);
++      await requestButton.click();
++      assert.ok(!(await summary.inputValue()).includes(en ? "Website pages" : "Pages du site"));
++      await group("Réseaux sociaux et vidéo", "Social media and video").getByRole("button").last().click();
++      assert.ok((await section.locator(".unified-result").textContent()).includes("249"));
++      assert.equal(await page.locator("form.contact-form").count(), 0);
++      assert.ok((await page.locator(en ? "#en-contact" : "#contact").textContent()).includes(en ? "VAT" : "Contact"));
++      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
++      assert.deepEqual(forbiddenWrites, []);
++      assert.deepEqual(pageErrors, []);
++      results.push({ language: en ? "EN" : "FR", width: viewport.width, packages: "390/590/890/back", extras: "649/890/1240/1890/2190", summaryAndCopy: "PASS", fallback: "PASS", recurringUnchanged: "PASS", externalWrites: 0 });
++      console.log("Case passed", en ? "EN" : "FR", viewport.width);
++      await context.close();
++    }
++  }
++  // Check the production social page: plan/Reels CTA presets and the shared website selector.
++  const socialContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
++  const socialWrites = [];
++  const socialErrors = [];
++  await socialContext.route("**/*", route => {
++    const request = route.request();
++    if (!["GET", "HEAD"].includes(request.method())) socialWrites.push(request.method());
++    if (new URL(request.url()).hostname !== "127.0.0.1" || !["GET", "HEAD"].includes(request.method()) || ["image", "media", "font"].includes(request.resourceType())) return route.abort();
++    return route.continue();
++  });
++  await socialContext.routeWebSocket("**/*", socket => socket.close());
++  await socialContext.addInitScript(() => document.addEventListener("click", event => {
++    if (event.target.closest?.("a[href^='mailto:']")) event.preventDefault();
++  }, true));
++  const socialPage = await socialContext.newPage();
++  socialPage.on("pageerror", error => socialErrors.push(error.message));
++  await socialPage.goto("http://127.0.0.1:4321/services/gestion-reseaux-sociaux", { waitUntil: "domcontentloaded" });
++  const socialSection = socialPage.locator(".estimator-social");
++  await socialSection.waitFor();
++  assert.equal(await socialSection.getByRole("group", { name: "Pages du site", exact: true }).count(), 0);
++  for (const [name, launch, standard] of [["Présence",149,190],["Visibilité",299,390],["Croissance",549,690]]) {
++    await socialPage.getByRole("link", { name: "Estimer avec " + name, exact: true }).click();
++    assert.equal(await socialSection.getByRole("group", { name: "Formule", exact: true }).getByRole("button", { name: new RegExp(name) }).getAttribute("aria-pressed"), "true");
++    const result = await socialSection.locator(".unified-result").textContent();
++    assert.ok(result.includes(String(launch)) && result.includes(String(standard)));
++  }
++  for (const [index, amount] of [[0,69],[1,249],[2,449]]) {
++    await socialPage.locator(".sm-reels-offer").nth(index).getByRole("link").click();
++    assert.ok((await socialSection.locator(".unified-result").textContent()).includes(String(amount)));
++  }
++  await socialPage.locator(".sm-reels-offer").nth(3).getByRole("link").click();
++  assert.match(await socialSection.locator(".unified-result").textContent(), /sur devis/);
++  await socialPage.locator(".sm-reels-offer").nth(1).getByRole("link").click();
++  await socialSection.getByRole("group", { name: "Projet ponctuel", exact: true }).getByRole("button", { name: "Créer un site web", exact: true }).click();
++  assert.equal(await socialSection.getByRole("group", { name: "Pages du site", exact: true }).getByRole("button").first().getAttribute("aria-pressed"), "true");
++  assert.match(await socialSection.locator(".result-metrics strong").first().textContent(), /390/);
++  await socialSection.getByRole("button", { name: "Demander ce devis", exact: true }).click();
++  assert.match(await socialPage.locator("#quote-email-summary").inputValue(), /Pages du site \(maximum\) : 1/);
++  assert.equal(await socialPage.locator("form.contact-form").count(),0);
++  assert.deepEqual(socialWrites,[]);
++  assert.deepEqual(socialErrors,[]);
++  await socialContext.close();
++  console.log("Social page: plan/Reels CTA presets and shared website quote PASS");
++  console.table(results);
++  console.log("Pricing UI: FR/EN desktop/mobile, CTA, summary/copy/fallback and billing separation PASS");
++} finally {
++  console.log("Closing browser");
++  await browser?.close();
++  await server.close();
++}
+diff --git a/scripts/check-pricing.mjs b/scripts/check-pricing.mjs
+new file mode 100644
+index 0000000..920af04
+--- /dev/null
++++ b/scripts/check-pricing.mjs
+@@ -0,0 +1,6 @@
++import { readFileSync } from "node:fs";
++import { verifyPricingLock } from "./pricing-lock.mjs";
++const root = new URL("../", import.meta.url);
++const lock = JSON.parse(readFileSync(new URL("docs/pricing-v3-lock.json", root), "utf8"));
++verifyPricingLock(lock, path => readFileSync(new URL(path, root), "utf8"));
++console.log("Approved pricing source/engine and preserved tax/mailto contracts: PASS");
+diff --git a/scripts/pricing-lock.mjs b/scripts/pricing-lock.mjs
+new file mode 100644
+index 0000000..28410f1
+--- /dev/null
++++ b/scripts/pricing-lock.mjs
+@@ -0,0 +1,20 @@
++import assert from "node:assert/strict";
++import { createHash } from "node:crypto";
++
++export const pricingSourceHash = (source) => createHash("sha256")
++  .update(source.replaceAll("\r\n", "\n")).digest("hex");
++
++export const LOCKED_PRICING_PATHS = [
++  "src/utils/websitePricing.js", "src/utils/estimator.js", "src/utils/quoteMailto.js",
++  "src/config/taxMention.js", "scripts/check-release.mjs",
++];
++
++// Detects accidental edits; owner review is enforced outside this checksum.
++export function verifyPricingLock(lock, readSource) {
++  assert.ok(lock.files && Object.keys(lock.files).length > 0, "Empty pricing lock");
++  assert.deepEqual(Object.keys(lock.files).sort(), [...LOCKED_PRICING_PATHS].sort(), "Incomplete pricing lock coverage");
++  for (const [path, expected] of Object.entries(lock.files)) {
++    assert.equal(pricingSourceHash(readSource(path)), expected,
++      "Pricing contract changed: " + path + ". Requires a separate LOT and owner approval.");
++  }
++}
+diff --git a/scripts/pricing-lock.test.mjs b/scripts/pricing-lock.test.mjs
+new file mode 100644
+index 0000000..dd7e06f
+--- /dev/null
++++ b/scripts/pricing-lock.test.mjs
+@@ -0,0 +1,20 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { pricingSourceHash, verifyPricingLock, LOCKED_PRICING_PATHS } from "./pricing-lock.mjs";
++
++const fixtureLock = source => ({ files: Object.fromEntries(LOCKED_PRICING_PATHS.map(path => [path, pricingSourceHash(source)])) });
++
++test("Price lock accepts its exact source and normalizes CRLF", () => {
++  const source = "approved price: 390\n";
++  verifyPricingLock(fixtureLock(source), () => source.replaceAll("\n","\r\n"));
++});
++test("Accidental price or engine changes fail with the original lock", () => {
++  const lock = fixtureLock("price:390");
++  assert.throws(() => verifyPricingLock(lock, () => "price:399"), /Requires a separate LOT/);
++  assert.throws(() => verifyPricingLock({files:{}}, () => ""), /Empty pricing lock/);
++  assert.throws(() => verifyPricingLock({files:{source:pricingSourceHash("price:390")}}, () => "price:390"), /Incomplete pricing lock coverage/);
++});
++test("A rewritten checksum can accept changed code: it is not owner authorization", () => {
++  const changedSource = "price:399";
++  verifyPricingLock(fixtureLock(changedSource), () => changedSource);
++});
+diff --git a/src/utils/estimator.compatibility.test.js b/src/utils/estimator.compatibility.test.js
+new file mode 100644
+index 0000000..2d9d3d9
+--- /dev/null
++++ b/src/utils/estimator.compatibility.test.js
+@@ -0,0 +1,38 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++import { createHash } from "node:crypto";
++import * as pricing from "./estimator.js";
++// Golden digests captured before modification from production b083723 (V3-03).
++// Covers 69,255 non-website cases: every feature subset plus repeated paid features.
++function compatibilityDigest(pricing, socialOnly = false) {
++  const hash = createHash('sha256');
++  const add = value => hash.update(JSON.stringify(value) + '\n');
++  if (!socialOnly) {
++    const needs = ['Réparer / améliorer un site existant','Optimiser SEO & visibilité','Ajouter une automatisation','Créer un chatbot / assistant IA','Créer un MVP ou prototype web'];
++    const complexities = ['Simple : page ou fonctionnalité basique','Standard : plusieurs pages ou plusieurs fonctions','Avancé : espace utilisateur, tableau de bord, automatisation ou IA'];
++    const contents = ['Textes et images prêts','Quelques éléments seulement','Je pars de zéro'];
++    const features = Object.keys(pricing.ESTIMATOR_FEATURE_ADJUSTMENTS);
++    for (const need of needs) for (const complexity of complexities) for (const content of contents) for (const urgency of ['Normal','Rapide','Urgent']) {
++      for (let mask = 0; mask <= 2 ** features.length; mask += 1) {
++        const selected = mask === 2 ** features.length ? ['Paiement','Paiement','SEO'] : features.filter((_, bit) => mask & (1 << bit));
++        const answers = {need,complexity,content,urgency,features:selected,pages:5,profile:'Indépendant',priority:'Être visible',existing:'Non'};
++        add([pricing.getProjectEstimate(answers),pricing.getEstimatorResult(answers)]);
++      }
++    }
++  } else {
++    add([pricing.SOCIAL_MEDIA_PLANS,pricing.SOCIAL_MEDIA_ADDONS,pricing.REELS_PACKS,pricing.REELS_OFFERS,pricing.SOCIAL_MEDIA_LAUNCH_ACTIVE,pricing.SOCIAL_MEDIA_LAUNCH_MONTHS,pricing.SOCIAL_MEDIA_LAUNCH_CLIENT_LIMIT]);
++    for (let n=0;n<=24;n+=1) add(pricing.getReelsPrice(n));
++    for (const plan of ['presence','visibilite','croissance']) for (const launchActive of [false,true]) for (let platforms=0;platforms<=4;platforms+=1) for (const extraPosts of [0,4,8]) for (const extraReels of [0,1,2,4,8]) for (const setupAudit of [false,true]) {
++      add(pricing.getSocialMediaEstimate({plan,launchActive,platforms,extraPosts,reels:extraReels,setupAudit}));
++      add(pricing.getUnifiedEstimate({contentService:'social',launchActive,social:{plan,networks:pricing.SOCIAL_MEDIA_NETWORKS.slice(0,platforms),extraPosts,extraReels,setupAudit}}));
++    }
++    for (const reels of ['single','pack4','pack8','complex']) add(pricing.getUnifiedEstimate({contentService:'reels',reels}));
++  }
++  return hash.digest('hex');
++}
++test("Other one-off services preserve production budgets, rounding, delays and levels", () => {
++  assert.equal(compatibilityDigest(pricing), "f51f8bf4175deabf62bf2d30d94922ee06466c94c4662e7aab1d9611989dbdb4");
++});
++test("Social Media and Reels preserve production prices, options and unified outputs", () => {
++  assert.equal(compatibilityDigest(pricing, true), "4c60366812040decce0cbdf9e067861bc7815be9eed83f07cee85cd9cadeb5f1");
++});
+diff --git a/src/utils/websitePricing.js b/src/utils/websitePricing.js
+new file mode 100644
+index 0000000..8a22a62
+--- /dev/null
++++ b/src/utils/websitePricing.js
+@@ -0,0 +1,26 @@
++// V3-03: owner-approved website-only pricing. Other services keep production rules.
++export const WEBSITE_NEED = "Créer un site web";
++export const WEBSITE_PACKAGES = [
++  { pages: 1, price: 390 },
++  { pages: 3, price: 590 },
++  { pages: 5, price: 890 },
++];
++export const WEBSITE_PRICING = {
++  includedFeatures: ["SEO", "Formulaire de contact"],
++  complexity: {
++    "Simple : page ou fonctionnalité basique": 0,
++    "Standard : plusieurs pages ou plusieurs fonctions": 0,
++    "Avancé : espace utilisateur, tableau de bord, automatisation ou IA": 650,
++  },
++  content: {
++    "Textes et images prêts": 0,
++    "Quelques éléments seulement": 0,
++    "Je pars de zéro": 300,
++  },
++  urgency: {
++    Normal: { budgetMultiplier: 1, delayMultiplier: 1 },
++    Rapide: { budgetMultiplier: 1.1, delayMultiplier: 0.85 },
++    Urgent: { budgetMultiplier: 1.2, delayMultiplier: 0.7 },
++  },
++  roundingEuros: 1,
++};
