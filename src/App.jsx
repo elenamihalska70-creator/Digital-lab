@@ -28,6 +28,7 @@ import {
   SOCIAL_MEDIA_PLANS,
 } from "./utils/estimator";
 import { WEBSITE_NEED, WEBSITE_PACKAGES } from "./utils/websitePricing";
+import { getEffectiveProjectAnswers, isFeatureSelectable } from "./utils/estimatorAnswers";
 import { getTaxMention } from "./config/taxMention";
 import { buildQuoteMailto } from "./utils/quoteMailto";
 
@@ -2196,13 +2197,18 @@ const buildEstimateRequest = ({ estimate, answers, reelsChoice, isEnglish }) => 
 
   if (estimate.project) {
     const need = labelFor(estimatorNeedOptions, estimate.project.need);
+    const isWebsite = estimate.project.need === WEBSITE_NEED;
     services.push(need);
     lines.push(
       `${t("Projet ponctuel", "One-off project")} : ${need}`,
-      ...(estimate.project.need === WEBSITE_NEED
-        ? [`${t("Pages du site (maximum)", "Website pages (maximum)")} : ${estimate.project.pages}`]
+      ...(isWebsite
+        ? [
+            `${t("Pages du site (maximum)", "Website pages (maximum)")} : ${estimate.project.pages}`,
+            `${t("Inclus", "Included")} : ${websiteIncludedServices.map((item) => (isEnglish ? item.en : item.fr)).join(", ")}`,
+          ]
         : []),
-      `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · ${t("Fonctionnalités", "Features")} : ${
+      // Websites are scoped by their page package; the hidden complexity selector is not quoted.
+      `${isWebsite ? "" : `${t("Complexité", "Complexity")} : ${labelFor(estimatorComplexityOptions, answers.complexity)} · `}${t("Fonctionnalités", "Features")} : ${
         answers.features.length
           ? answers.features.map((feature) => labelFor(estimatorFeatureOptions, feature)).join(", ")
           : t("à préciser", "to be defined")
@@ -2328,8 +2334,12 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
     if (preset.reels) setReelsChoice(preset.reels);
   }
 
+  const isWebsiteProject = selection.projectNeed === WEBSITE_NEED;
+  // Website mode derives its scope from the page package, so a complexity chosen for
+  // another project type stays stored (restored on switch back) but never prices a website.
+  const projectAnswers = selection.projectNeed ? getEffectiveProjectAnswers(answers, selection.projectNeed) : null;
   const estimate = getUnifiedEstimate({
-    project: selection.projectNeed ? { ...answers, need: selection.projectNeed } : null,
+    project: projectAnswers,
     contentService: selection.contentService,
     social,
     reels: reelsChoice,
@@ -2338,7 +2348,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
 
   const steps = [hasSelection];
   if (selection.projectNeed) {
-    steps.push(answers.profile, answers.priority, answers.existing, answers.content, answers.complexity, answers.features.length > 0, answers.urgency);
+    steps.push(answers.profile, answers.priority, answers.existing, answers.content, isWebsiteProject ? answers.pages : answers.complexity, projectAnswers.features.length > 0, answers.urgency);
   }
   if (selection.contentService === "social") steps.push(social.plan, social.networks.length > 0, true, true, true);
   if (selection.contentService === "reels") steps.push(reelsChoice);
@@ -2379,7 +2389,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const localized = (options) => options.map((option) => ({ value: option.value, label: isEnglish ? option.label : option.value }));
 
   const handleRequest = () => {
-    const request = buildEstimateRequest({ estimate, answers, reelsChoice, isEnglish });
+    const request = buildEstimateRequest({ estimate, answers: projectAnswers ?? answers, reelsChoice, isEnglish });
     trackEvent("estimator_quote_request", {
       offer: request.offer,
       has_project: Boolean(estimate.project),
@@ -2484,7 +2494,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                       {optionGroup("content-ready", localized(estimatorContentOptions), answers.content, (value) => updateAnswer("content", value))}
                     </div>
                   </div>
-                  {selection.projectNeed === WEBSITE_NEED && (
+                  {isWebsiteProject && (
                     <div className="estimator-question">
                       <h3 id={`${idPrefix}-pages`}>{t("Pages du site", "Website pages")}</h3>
                       {optionGroup(
@@ -2496,22 +2506,32 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                         answers.pages,
                         (value) => updateAnswer("pages", value),
                       )}
+                      <div className="estimator-included">
+                        <p id={`${idPrefix}-included`} className="estimator-included-title">{t("Inclus dans votre site", "Included in your website")}</p>
+                        <ul aria-labelledby={`${idPrefix}-included`}>
+                          {websiteIncludedServices.map((item) => (
+                            <li key={item.fr}>{isEnglish ? item.en : item.fr}</li>
+                          ))}
+                        </ul>
+                      </div>
                       <p className="estimator-hint">
                         {t(
-                          "Responsive, SEO de base, formulaire de contact simple et adaptation légère des contenus fournis inclus. Création de contenu et fonctions complexes en supplément ; au-delà de 5 pages, devis personnalisé.",
-                          "Responsive layout, basic SEO, a simple contact form and minor adaptation of supplied content included. Content creation and complex features cost extra; more than 5 pages requires a custom quote.",
+                          "Création de contenu et fonctions complexes en supplément ; au-delà de 5 pages, devis personnalisé.",
+                          "Content creation and complex features cost extra; more than 5 pages requires a custom quote.",
                         )}
                       </p>
                     </div>
                   )}
-                  <div className="estimator-question">
-                    <h3 id={`${idPrefix}-complexity`}>{t("Niveau de complexité souhaité", "Desired complexity level")}</h3>
-                    {optionGroup("complexity", localized(estimatorComplexityOptions), answers.complexity, (value) => updateAnswer("complexity", value))}
-                  </div>
+                  {!isWebsiteProject && (
+                    <div className="estimator-question">
+                      <h3 id={`${idPrefix}-complexity`}>{t("Niveau de complexité souhaité", "Desired complexity level")}</h3>
+                      {optionGroup("complexity", localized(estimatorComplexityOptions), answers.complexity, (value) => updateAnswer("complexity", value))}
+                    </div>
+                  )}
                   <div className="estimator-question">
                     <h3 id={`${idPrefix}-features`}>{t("Fonctionnalités souhaitées", "Desired features")}</h3>
                     <div className="estimator-checkboxes" role="group" aria-labelledby={`${idPrefix}-features`}>
-                      {estimatorFeatureOptions.map((feature) => (
+                      {estimatorFeatureOptions.filter((feature) => isFeatureSelectable(selection.projectNeed, feature.value)).map((feature) => (
                         <label className={answers.features.includes(feature.value) ? "is-selected" : ""} key={feature.value}>
                           <input checked={answers.features.includes(feature.value)} type="checkbox" onChange={() => toggleFeature(feature.value)} />
                           <span>{isEnglish ? feature.label : feature.value}</span>
@@ -4389,6 +4409,14 @@ const estimatorComplexityOptions = [
     value: "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
     label: "Advanced: client area, dashboard, automation, or AI",
   },
+];
+
+// Services included in every website package (V3): displayed, never selectable or charged.
+const websiteIncludedServices = [
+  { fr: "Design responsive (mobile, tablette, ordinateur)", en: "Responsive design (mobile, tablet, desktop)" },
+  { fr: "SEO de base", en: "Basic SEO" },
+  { fr: "Formulaire de contact simple", en: "Simple contact form" },
+  { fr: "Adaptation légère des contenus fournis", en: "Minor adaptation of supplied content" },
 ];
 
 const estimatorFeatureOptions = [

@@ -11638,6 +11638,46 @@ html {
   line-height: 1.5;
 }
 
+/* DL-PRICING-V3-06: services included in every website package (not selectable). */
+.estimator-included {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(207, 196, 245, 0.25);
+  border-radius: 12px;
+}
+
+.estimator-included-title {
+  margin: 0 0 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.estimator-included ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.estimator-included li {
+  position: relative;
+  padding-left: 22px;
+  color: #cfc4f5;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.estimator-included li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #9be7c4;
+  font-weight: 700;
+}
+
 .estimator-result .btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;

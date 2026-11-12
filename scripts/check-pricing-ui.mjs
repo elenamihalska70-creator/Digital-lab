@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { preview } from "vite";
 import { chromium } from "playwright";
 import { WEBSITE_PACKAGES } from "../src/utils/websitePricing.js";
+import { getProjectEstimate } from "../src/utils/estimator.js";
 
 const server = await preview({ preview: { host: "127.0.0.1", port: 4321, strictPort: true } });
 let browser;
@@ -71,10 +72,66 @@ try {
       console.log("Package labels and selection passed");
       await pickPages(1);
       await expectBudget(390);
-      await group("Niveau de complexité souhaité", "Desired complexity level").getByRole("button").first().click();
-      await setCheckbox(section.getByRole("checkbox", { name: "SEO" }));
-      await setCheckbox(section.getByRole("checkbox", { name: en ? "Contact form" : "Formulaire de contact" }));
+
+      // DL-PRICING-V3-06: website mode hides the complexity selector; other types keep it and
+      // a complexity chosen there never prices a website (no hidden/stale surcharge).
+      const complexityGroup = () => group("Niveau de complexité souhaité", "Desired complexity level");
+      const projectGroup = () => group("Projet ponctuel", "One-off project");
+      const pickNeed = async index => {
+        await projectGroup().getByRole("button").nth(index).click();
+        assert.equal(await projectGroup().getByRole("button").nth(index).getAttribute("aria-pressed"), "true");
+      };
+      const automationBudget = getProjectEstimate({
+        need: "Ajouter une automatisation", complexity: "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
+        pages: 1, profile: "Indépendant", priority: "Être visible", existing: "Non", content: "Quelques éléments seulement", features: [], urgency: "Normal",
+      }).budget;
+      assert.equal(await complexityGroup().count(), 0);
+      await pickNeed(4);
+      assert.equal(await pages().count(), 0);
+      assert.equal(await complexityGroup().count(), 1);
+      await complexityGroup().getByRole("button").last().click();
+      await expectBudget(automationBudget);
+      await section.getByRole("button", { name: en ? "Request this quote" : "Demander ce devis", exact: true }).click();
+      assert.ok((await page.locator("#quote-email-summary").inputValue()).includes(en ? "Complexity : Advanced" : "Complexité : Avancé"));
+      await pickNeed(1);
+      assert.equal(await complexityGroup().count(), 0);
       await expectBudget(390);
+      await pickNeed(4);
+      assert.equal(await complexityGroup().getByRole("button").last().getAttribute("aria-pressed"), "true");
+      await expectBudget(automationBudget);
+      // SEO and contact form stay paid options for other project types...
+      const seoBox = () => section.getByRole("checkbox", { name: "SEO" });
+      const contactBox = () => section.getByRole("checkbox", { name: en ? "Contact form" : "Formulaire de contact" });
+      assert.equal(await seoBox().count(), 1);
+      assert.equal(await contactBox().count(), 1);
+      await setCheckbox(seoBox());
+      const automationSeoBudget = getProjectEstimate({
+        need: "Ajouter une automatisation", complexity: "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
+        pages: 1, profile: "Indépendant", priority: "Être visible", existing: "Non", content: "Quelques éléments seulement", features: ["SEO"], urgency: "Normal",
+      }).budget;
+      assert.ok(automationSeoBudget > automationBudget);
+      await expectBudget(automationSeoBudget);
+      await pickNeed(1);
+      await expectBudget(390);
+      // ...but are included (not selectable) in every website package.
+      assert.equal(await seoBox().count(), 0);
+      assert.equal(await contactBox().count(), 0);
+      const included = section.getByRole("list", { name: en ? "Included in your website" : "Inclus dans votre site", exact: true });
+      const includedText = (await included.getByRole("listitem").allTextContents()).join(" | ");
+      assert.equal(await included.getByRole("listitem").count(), 4);
+      for (const item of en
+        ? ["Responsive design", "Basic SEO", "Simple contact form", "Minor adaptation of supplied content"]
+        : ["Design responsive", "SEO de base", "Formulaire de contact simple", "Adaptation légère des contenus fournis"]) {
+        assert.ok(includedText.includes(item), item);
+      }
+      await pickNeed(4);
+      assert.equal(await seoBox().isChecked(), true);
+      await expectBudget(automationSeoBudget);
+      await setCheckbox(seoBox(), false);
+      await expectBudget(automationBudget);
+      await pickNeed(1);
+      await expectBudget(390);
+      console.log("Website complexity hidden, included SEO/contact form, other types preserved, no stale surcharge passed");
       await pickPages(3);
       await group("Urgence", "Urgency").getByRole("button", { name: en ? "Fast" : "Rapide", exact: true }).click();
       await expectBudget(649);
@@ -86,6 +143,11 @@ try {
       const summary = page.locator("#quote-email-summary");
       const initialSummary = await summary.inputValue();
       assert.ok(initialSummary.includes(en ? "Website pages (maximum) : 3" : "Pages du site (maximum) : 3"));
+      assert.ok(!initialSummary.includes(en ? "Complexity" : "Complexité"));
+      assert.ok(initialSummary.includes(en
+        ? "Included : Responsive design (mobile, tablet, desktop), Basic SEO, Simple contact form, Minor adaptation of supplied content"
+        : "Inclus : Design responsive (mobile, tablette, ordinateur), SEO de base, Formulaire de contact simple, Adaptation légère des contenus fournis"));
+      assert.ok(initialSummary.includes(en ? "Features : to be defined" : "Fonctionnalités : à préciser"));
       assert.ok(initialSummary.includes("590"));
       assert.ok(initialSummary.includes(en ? "VAT not applicable" : "TVA non applicable"));
       await page.locator(".quote-email-actions button").click();
@@ -100,15 +162,16 @@ try {
       await expectBudget(890);
       await setCheckbox(section.getByRole("checkbox", { name: en ? "Payments" : "Paiement" }));
       await expectBudget(1240);
-      await group("Niveau de complexité souhaité", "Desired complexity level").getByRole("button").last().click();
-      await expectBudget(1890);
+      // Advanced work is charged only through explicitly selected features (Payments above).
+      assert.equal(await complexityGroup().count(), 0);
+      await expectBudget(1240);
       await group("Réseaux sociaux et vidéo", "Social media and video").getByRole("button").nth(1).click();
       await setCheckbox(group("Réseaux sociaux concernés", "Social networks").getByRole("checkbox").nth(0));
       await setCheckbox(group("Réseaux sociaux concernés", "Social networks").getByRole("checkbox").nth(1));
       const monthlyBefore = await section.locator(".estimate-block").filter({ hasText: en ? "Subscription" : "Abonnement" }).first().textContent();
       assert.ok(monthlyBefore.includes("299") && monthlyBefore.includes("390"));
       await pickPages(5);
-      await expectBudget(2190);
+      await expectBudget(1540);
       const monthlyAfter = await section.locator(".estimate-block").filter({ hasText: en ? "Subscription" : "Abonnement" }).first().textContent();
       assert.equal(monthlyAfter, monthlyBefore);
       await setCheckbox(section.getByRole("checkbox", { name: en ? "Payments" : "Paiement" }), false);
@@ -118,11 +181,16 @@ try {
       await group("Reels supplémentaires / mois", "Extra Reels / month").getByRole("button").last().click();
       await setCheckbox(group("Démarrage", "Getting started").getByRole("checkbox"));
       // Make a long, combined summary: fallback must keep every line in the panel.
-      for (const box of await group("Fonctionnalités souhaitées", "Desired features").getByRole("checkbox").all()) await setCheckbox(box);
+      const websiteFeatureBoxes = await group("Fonctionnalités souhaitées", "Desired features").getByRole("checkbox").all();
+      assert.equal(websiteFeatureBoxes.length, 7);
+      for (const box of websiteFeatureBoxes) await setCheckbox(box);
       await group("Urgence", "Urgency").getByRole("button", { name: "Urgent", exact: true }).click();
       await requestButton.click();
       const longSummary = await summary.inputValue();
       assert.ok(longSummary.includes(en ? "Website pages (maximum) : 5" : "Pages du site (maximum) : 5"));
+      const featureLine = longSummary.split("\n").find(line => line.includes(en ? "Features :" : "Fonctionnalités :"));
+      assert.ok(featureLine.includes(en ? "Payments" : "Paiement"));
+      assert.ok(!/SEO|Contact form|Formulaire de contact/.test(featureLine), featureLine);
       assert.ok(longSummary.includes(en ? "Social media subscription" : "Abonnement réseaux sociaux"));
       assert.match(await page.locator(".quote-email-actions a").textContent(), en ? /then paste/ : /puis coller/);
       await page.locator(".quote-email-actions a").click();
@@ -143,7 +211,7 @@ try {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       assert.deepEqual(forbiddenWrites, []);
       assert.deepEqual(pageErrors, []);
-      results.push({ language: en ? "EN" : "FR", width: viewport.width, packages: "390/590/890/back", extras: "649/890/1240/1890/2190", summaryAndCopy: "PASS", fallback: "PASS", recurringUnchanged: "PASS", externalWrites: 0 });
+      results.push({ language: en ? "EN" : "FR", width: viewport.width, packages: "390/590/890/back", extras: "649/890/1240/1540", complexity: "hidden/restored", included: "SEO+contact", summaryAndCopy: "PASS", fallback: "PASS", recurringUnchanged: "PASS", externalWrites: 0 });
       console.log("Case passed", en ? "EN" : "FR", viewport.width);
       await context.close();
     }

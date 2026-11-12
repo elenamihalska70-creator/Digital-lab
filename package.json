@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "postinstall": "node scripts/postinstall.mjs",
     "check:release": "node scripts/check-release.mjs && npm run check:pricing",
-    "test": "node --test api/_lib/security/legacy-email-routes.test.js src/utils/estimator.test.js src/config/taxMention.test.js src/utils/trackingEnvironment.test.js src/utils/quoteMailto.test.js src/utils/estimator.compatibility.test.js scripts/pricing-lock.test.mjs",
+    "test": "node --test api/_lib/security/legacy-email-routes.test.js src/utils/estimator.test.js src/config/taxMention.test.js src/utils/trackingEnvironment.test.js src/utils/quoteMailto.test.js src/utils/estimator.compatibility.test.js src/utils/estimatorAnswers.test.js scripts/pricing-lock.test.mjs",
     "check:pricing": "node scripts/check-pricing.mjs",
     "check:pricing:ui": "node scripts/check-pricing-ui.mjs"
   },
