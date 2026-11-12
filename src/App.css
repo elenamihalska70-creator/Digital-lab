@@ -2336,10 +2336,10 @@
 .estimator-help {
   display: grid;
   justify-items: center;
-  gap: 14px;
+  gap: 10px;
   max-width: 760px;
   margin: 24px auto 0;
-  padding: 22px;
+  padding: 18px;
   border: 1px solid rgba(199, 168, 255, 0.16);
   border-radius: 24px;
   text-align: center;
@@ -2385,7 +2385,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
+  min-height: 44px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 10px 16px;
   border: 1px solid rgba(199, 168, 255, 0.28);
   border-radius: 999px;
@@ -2399,6 +2401,11 @@
     border-color 300ms ease,
     box-shadow 300ms ease,
     background 300ms ease;
+}
+
+.estimator-help a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
 }
 
 .estimator-help a:hover {

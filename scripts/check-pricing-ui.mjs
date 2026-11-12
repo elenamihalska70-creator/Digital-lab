@@ -62,6 +62,28 @@ try {
         await pages().getByRole("button").nth(index).click();
         assert.equal(await pages().getByRole("button").nth(index).getAttribute("aria-pressed"), "true");
       };
+      const help = section.getByRole("region", { name: en ? "Contact and guidance" : "Contact et conseil", exact: true });
+      const guidance = en
+        ? "Not sure which package to choose? Tell us about your business, and we'll help you find the most suitable solution, with no obligation."
+        : "Vous ne savez pas quelle formule choisir ? Décrivez votre activité, nous vous conseillerons la solution la plus adaptée, sans engagement.";
+      const configuredEmail = await page.locator("footer a[href^='mailto:']").first().getAttribute("href");
+      const checkHelp = async website => {
+        assert.equal(await help.count(), 1);
+        await help.scrollIntoViewIfNeeded();
+        assert.equal(await help.isVisible(), true);
+        assert.equal((await help.locator("p").textContent()).trim() === guidance, website);
+        const email = help.getByRole("link");
+        assert.equal(await email.getAttribute("href"), configuredEmail);
+        assert.equal((await email.textContent()).trim(), configuredEmail.slice(7));
+        await email.focus();
+        assert.equal(await email.evaluate(el => el === document.activeElement), true);
+        const bounds = await email.boundingBox();
+        assert.ok(bounds.height >= 44 && bounds.x >= 0 && bounds.x + bounds.width <= viewport.width);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      };
+      await checkHelp(true);
+      await help.getByRole("link").click();
+      assert.equal(await page.evaluate(() => window.pricingAudit.mailto.at(-1)), configuredEmail);
       await expectBudget(390);
       for (const [index, pack] of WEBSITE_PACKAGES.entries()) {
         const label = (await pages().getByRole("button").nth(index).textContent()).replaceAll("\u00a0", " ");
@@ -86,6 +108,13 @@ try {
         pages: 1, profile: "Indépendant", priority: "Être visible", existing: "Non", content: "Quelques éléments seulement", features: [], urgency: "Normal",
       }).budget;
       assert.equal(await complexityGroup().count(), 0);
+      await pickNeed(4);
+      await checkHelp(false);
+      // Every one-off category shares one contact block; guidance is website-only.
+      for (let index = 0; index < await projectGroup().getByRole("button").count(); index++) {
+        await pickNeed(index);
+        await checkHelp(index === 1);
+      }
       await pickNeed(4);
       assert.equal(await pages().count(), 0);
       assert.equal(await complexityGroup().count(), 1);
@@ -202,10 +231,12 @@ try {
       // Leaving website mode hides page count and removes it from future quote summaries.
       await group("Projet ponctuel", "One-off project").getByRole("button").first().click();
       assert.equal(await pages().count(), 0);
+      await checkHelp(false);
       await requestButton.click();
       assert.ok(!(await summary.inputValue()).includes(en ? "Website pages" : "Pages du site"));
       await group("Réseaux sociaux et vidéo", "Social media and video").getByRole("button").last().click();
       assert.ok((await section.locator(".unified-result").textContent()).includes("249"));
+      await checkHelp(false);
       assert.equal(await page.locator("form.contact-form").count(), 0);
       assert.ok((await page.locator(en ? "#en-contact" : "#contact").textContent()).includes(en ? "VAT" : "Contact"));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
@@ -235,6 +266,8 @@ try {
   await socialPage.goto("http://127.0.0.1:4321/services/gestion-reseaux-sociaux", { waitUntil: "domcontentloaded" });
   const socialSection = socialPage.locator(".estimator-social");
   await socialSection.waitFor();
+  assert.equal(await socialSection.getByRole("region", { name: "Contact et conseil", exact: true }).count(), 1);
+  assert.equal(await socialSection.locator(".estimator-help a").getAttribute("href"), await socialPage.locator("footer a[href^='mailto:']").first().getAttribute("href"));
   assert.equal(await socialSection.getByRole("group", { name: "Pages du site", exact: true }).count(), 0);
   for (const [name, launch, standard] of [["Présence",149,190],["Visibilité",299,390],["Croissance",549,690]]) {
     await socialPage.getByRole("link", { name: "Estimer avec " + name, exact: true }).click();

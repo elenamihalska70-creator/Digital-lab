@@ -2793,22 +2793,20 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
           </div>
         </div>
 
-        {variant === "home" && (
-          <div className="estimator-help reveal-on-scroll reveal-card" style={{ "--reveal-delay": "560ms" }}>
-            <span className="estimator-help-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M5.5 5.8A5.2 5.2 0 0 1 9.2 4.3h5.6A5.2 5.2 0 0 1 20 9.5v.9a5.2 5.2 0 0 1-5.2 5.2h-3.6l-3.7 3.1v-3.3a5.2 5.2 0 0 1-4-5v-.9c0-1.4.7-2.8 2-3.7Zm3.7.5a3.2 3.2 0 0 0-3.2 3.2v.9a3.2 3.2 0 0 0 3.2 3.2h.3v.8l1-0.8h4.3a3.2 3.2 0 0 0 3.2-3.2v-.9a3.2 3.2 0 0 0-3.2-3.2H9.2Z" />
-              </svg>
-            </span>
-            <p>
-              {t(
-                "Vous ne trouvez pas exactement votre besoin ? Vous pouvez aussi me contacter directement et expliquer votre projet avec vos mots, même s’il est encore flou.",
-                "Can't find exactly what you need? You can also contact me directly and describe your project in your own words, even if it's still unclear.",
-              )}
-            </p>
-            <a href={isEnglish ? "#en-contact" : "#contact"}>{t("Discuter de mon projet", "Discuss my project")}</a>
-          </div>
-        )}
+        <div className="estimator-help" role="region" aria-label={t("Contact et conseil", "Contact and guidance")}>
+          <p>
+            {isWebsiteProject ? t(
+              "Vous ne savez pas quelle formule choisir ? Décrivez votre activité, nous vous conseillerons la solution la plus adaptée, sans engagement.",
+              "Not sure which package to choose? Tell us about your business, and we'll help you find the most suitable solution, with no obligation.",
+            ) : t(
+              "Vous ne trouvez pas exactement votre besoin ? Décrivez votre projet avec vos mots, même s’il est encore flou.",
+              "Can't find exactly what you need? Describe your project in your own words, even if it's still unclear.",
+            )}
+          </p>
+          <a href={`mailto:${businessContact.email}`} aria-label={t(`Écrire à ${businessContact.email}`, `Email ${businessContact.email}`)}>
+            {businessContact.email}
+          </a>
+        </div>
       </div>
     </section>
   );
