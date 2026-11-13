@@ -12997,3 +12997,68 @@ html {
     margin-bottom: 24px;
   }
 }
+
+/* DL-ESTIMATOR-REPAIR-01: diagnostic fields use the existing estimator layout. */
+.repair-diagnostic {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.repair-field label {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+}
+.repair-field input,
+.repair-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(199, 168, 255, 0.5);
+  border-radius: 12px;
+  background: #160f26;
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.repair-field textarea { resize: vertical; }
+.repair-field input:focus-visible,
+.repair-field textarea:focus-visible,
+.repair-diagnostic button:focus-visible {
+  outline: 2px solid #c7a8ff;
+  outline-offset: 3px;
+}
+.repair-field [aria-invalid="true"] { border-color: #ffb4c4; }
+.repair-error { color: #ffb4c4 !important; font-size: 14px; line-height: 1.5; }
+.repair-result { overflow-wrap: anywhere; }
+
+/* Compact repair layout; other estimator services retain their spacing. */
+.repair-diagnostic { gap: 12px; }
+.repair-diagnostic .estimator-question { padding: 14px; border-radius: 16px; }
+.repair-diagnostic .estimator-question h3 { margin-bottom: 10px; font-size: 17px; line-height: 1.4; }
+.repair-required { font-size: 14px; font-weight: 400; color: #d9ccec; }
+.repair-diagnostic .estimator-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.repair-diagnostic .estimator-options button {
+  width: auto; max-width: 100%; min-height: 44px; padding: 8px 12px;
+  font-size: 15px; line-height: 1.4; border-radius: 12px; text-align: left;
+}
+.repair-diagnostic .estimator-options button::before { flex-shrink: 0; }
+.repair-diagnostic .estimator-options button.is-selected,
+.repair-diagnostic .estimator-options button:hover { transform: none; }
+.repair-details { border: 1px solid rgba(199, 168, 255, 0.3); border-radius: 16px; padding: 0 14px; }
+.repair-details summary { padding: 12px 0; min-height: 44px; cursor: pointer; color: #f0ebff; font-size: 16px; line-height: 1.5; }
+.repair-details-content { display: grid; gap: 12px; padding-bottom: 14px; }
+.repair-details-content .estimator-hint { margin: 0; }
+.repair-details summary:focus-visible { outline: 2px solid #c7a8ff; outline-offset: 3px; }
+.repair-diagnostic :is(button, input, textarea, summary) { scroll-margin-block: 180px 24px; }
+.has-repair .unified-result { top: 170px; padding: 22px; }
+.has-repair .repair-result h3 { font-size: 26px; line-height: 1.25; }
+.has-repair .repair-result p { margin-block: 10px; }
+.repair-email { margin-top: 12px; width: 100%; }
+@media (max-width: 960px) {
+  .has-repair .unified-result { position: static; }
+}
