@@ -8,7 +8,7 @@ export function RepairDiagnostic({ value, onChange, errors, idPrefix, isEnglish 
     const id = idPrefix + "-repair-" + key;
     return (
       <div className="estimator-question" key={key}>
-        <h3 id={id}>{item[lang]}</h3>
+        <h3 id={id}>{item[lang]} <span className="repair-required">{t("(requis)", "(required)")}</span></h3>
         <div className="estimator-options" role="group" aria-labelledby={id}>
           {item.options.map(([option, fr, en]) => (
             <button key={option} type="button" className={value[key] === option ? "is-selected" : ""}
@@ -42,15 +42,30 @@ export function RepairDiagnostic({ value, onChange, errors, idPrefix, isEnglish 
     );
   };
   return (
-    <div className="repair-diagnostic">
+    <div className="repair-diagnostic" onFocusCapture={event => {
+      const field = event.target;
+      requestAnimationFrame(() => {
+        const headerBottom = document.querySelector(".navbar")?.getBoundingClientRect().bottom ?? 0;
+        if (field.getBoundingClientRect().top < headerBottom + 12) {
+          window.scrollBy({ top: field.getBoundingClientRect().top - headerBottom - 16, behavior: "instant" });
+        }
+      });
+    }}>
       {question("issue")}
       {question("intervention")}
       {question("platform")}
       {needsRepairScope(value) && question("scope")}
-      <p className="estimator-hint" id={privacyId}>{REPAIR_TERMS.privacy[lang]}</p>
-      {field("url", t("URL publique du site (facultatif)", "Public website URL (optional)"))}
       {question("urgency")}
-      {field("description", t("Description du problème (facultatif)", "Problem description (optional)"), true)}
+      <details className="repair-details">
+        <summary>{t("Ajouter des précisions (facultatif) : URL et description", "Add details (optional): URL and description")}
+          {Object.keys(errors).length > 0 && <span className="repair-error"> — {t("Champs à corriger", "Fields need correction")}</span>}
+        </summary>
+        <div className="repair-details-content">
+          <p className="estimator-hint" id={privacyId}>{REPAIR_TERMS.privacy[lang]}</p>
+          {field("url", t("URL publique du site (facultatif)", "Public website URL (optional)"))}
+          {field("description", t("Description du problème (facultatif)", "Problem description (optional)"), true)}
+        </div>
+      </details>
     </div>
   );
 }

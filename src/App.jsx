@@ -2471,7 +2471,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
             <span style={{ width: `${progress}%` }}></span>
           </div>
 
-          <div className="estimator-grid">
+          <div className={`estimator-grid${isRepairProject ? " has-repair" : ""}`}>
             <div className="estimator-questions">
               <div className="estimator-question estimator-services">
                 <h3 id={`${idPrefix}-project`}>{t("Projet ponctuel", "One-off project")}</h3>
@@ -2691,7 +2691,6 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                   <div className="estimate-block repair-result">
                     <h3>{REPAIR_CATEGORIES[estimate.project.category][isEnglish ? "en" : "fr"]}</h3>
                     <div className="result-metrics"><div>
-                      <small>{t("Orientation préliminaire après vos réponses", "Preliminary guidance based on your answers")}</small>
                       <strong>{estimate.project.price === null ? t("sur devis", "on quote")
                         : t("dès", "from") + " " + formatTaxedPrice(estimate.project.price, isEnglish)}</strong>
                     </div></div>
@@ -2824,18 +2823,21 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                 </p>
               )}
               {(isEnglish ? priceTax.noteEn : priceTax.note) && <p className="estimator-note">{isEnglish ? priceTax.noteEn : priceTax.note}</p>}
-              <p className="estimator-note">
-                {isRepairProject ? t("Orientation préliminaire : le diagnostic permettra de confirmer la catégorie, le périmètre et le devis.", "Preliminary guidance: diagnosis will confirm the category, scope and quote.") : t(
+              {!isRepairProject && <p className="estimator-note">
+                {t(
                   "Estimation indicative. Le devis final dépendra du brief, des contenus disponibles et des prestations exactes.",
                   "This estimate is indicative. The final quote will depend on the brief, available content, and exact services.",
                 )}
-              </p>
+              </p>}
               <button className="btn btn-primary" type="button" disabled={!hasSelection || repairInvalid} aria-describedby={repairInvalid ? `${idPrefix}-repair-request-error` : undefined} onClick={handleRequest}>
                 {t("Demander ce devis", "Request this quote")}
               </button>
               {repairInvalid && <p id={`${idPrefix}-repair-request-error`} className="repair-error">
                 {t("Corrigez les champs signalés avant de demander un devis.", "Correct the marked fields before requesting a quote.")}
               </p>}
+              {isRepairProject && <a className="btn btn-secondary repair-email" href={`mailto:${businessContact.email}`}>
+                {t("Écrire par email", "Contact by email")}
+              </a>}
             </aside>
           </div>
         </div>

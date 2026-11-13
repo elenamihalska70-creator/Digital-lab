@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { preview } from "vite";
 import { chromium } from "playwright";
 import { REPAIR_CATEGORIES, REPAIR_QUESTIONS, REPAIR_NEED, REPAIR_TERMS } from "../src/utils/repairDiagnostic.js";
@@ -8,6 +8,7 @@ const server = await preview({ preview: { host: "127.0.0.1", port: 4322, strictP
 let browser;
 const results = [];
 const artifacts = new URL("../repair-review.local/", import.meta.url);
+const baseline = JSON.parse(await readFile(new URL("baseline.json", artifacts), "utf8").catch(() => "[]"));
 await mkdir(artifacts, { recursive: true });
 try {
   browser = await chromium.launch({ headless: true });
@@ -47,7 +48,7 @@ try {
       const need = (fr, english) => project.getByRole("button", { name: en ? english : fr, exact: true }).click();
       const select = async (key, value) => {
         const q = REPAIR_QUESTIONS[key], option = q.options.find(([id]) => id === value);
-        const button = section.getByRole("group", { name: q[en ? "en" : "fr"], exact: true }).getByRole("button", { name: option[en ? 2 : 1], exact: true });
+        const button = section.getByRole("group", { name: q[en ? "en" : "fr"] + (en ? " (required)" : " (requis)"), exact: true }).getByRole("button", { name: option[en ? 2 : 1], exact: true });
         await button.click(); assert.equal(await button.getAttribute("aria-pressed"), "true");
       };
       const result = section.locator(".repair-result");
@@ -83,6 +84,21 @@ try {
       };
       await need(REPAIR_NEED, "Repair / improve an existing site");
       await assertResult("technical"); await assertQuoteCategory("technical");
+      const diagnostic = section.locator(".repair-diagnostic");
+      const details = diagnostic.locator("details");
+      const toggle = details.locator("summary");
+      assert.equal(await diagnostic.locator('[aria-pressed="true"]').count(), 0);
+      assert.equal(await details.getAttribute("open"), null);
+      assert.equal(await url.isVisible(), false);
+      const collapsedHeight = (await diagnostic.boundingBox()).height;
+      const before = baseline.find(row => row.width === viewport.width && row.en === en)?.height;
+      if (before) assert.ok(collapsedHeight < before * 0.8, `Expected >=20% reduction: ${collapsedHeight}/${before}`);
+      await toggle.focus(); await toggle.press("Enter");
+      assert.equal(await url.isVisible(), true);
+      const expandedHeight = (await diagnostic.boundingBox()).height;
+      assert.ok(expandedHeight > collapsedHeight);
+      await toggle.press("Space"); assert.equal(await url.isVisible(), false);
+      await toggle.press("Enter");
       for (const [fr, english] of [
         ["Vous êtes :", "You are:"],
       ]) assert.equal(await section.getByRole("group", { name: en ? english : fr, exact: true }).count(), 1);
@@ -120,7 +136,9 @@ try {
       const storageBefore = await page.evaluate(() => [JSON.stringify(localStorage), JSON.stringify(sessionStorage)]);
       await url.focus(); assert.equal(await url.evaluate(el => el === document.activeElement), true);
       await url.press("Tab");
-      const urgencyButton = section.getByRole("group", { name: REPAIR_QUESTIONS.urgency[en ? "en" : "fr"], exact: true }).getByRole("button").first();
+      assert.equal(await description.evaluate(el => el === document.activeElement), true);
+      const urgencyButton = diagnostic.getByRole("group", { name: REPAIR_QUESTIONS.urgency[en ? "en" : "fr"] + (en ? " (required)" : " (requis)"), exact: true }).getByRole("button").first();
+      await urgencyButton.focus();
       assert.equal(await urgencyButton.evaluate(el => el === document.activeElement), true);
       await urgencyButton.press("Enter");
       assert.equal(await urgencyButton.getAttribute("aria-pressed"), "true");
@@ -150,6 +168,10 @@ try {
       await description.fill("password: synthetic-secret-only");
       assert.equal(await description.getAttribute("aria-invalid"), "true");
       assert.equal(await request.isDisabled(), true);
+      await toggle.click();
+      assert.equal(await description.isVisible(), false);
+      assert.ok((await toggle.textContent()).includes(en ? "Fields need correction" : "Champs à corriger"));
+      await toggle.press("Enter");
       assert.ok(!(await section.locator(".repair-error").allTextContents()).join(" ").includes("synthetic-secret-only"));
       await request.evaluate(el => { el.disabled = false; }); await request.click();
       assert.equal(await page.evaluate(() => window.repairAudit.opened.length), openedBefore);
@@ -190,6 +212,7 @@ try {
         assert.equal(await section.getByRole("group", { name: en ? "Desired complexity level" : "Niveau de complexité souhaité", exact: true }).count(), 1);
       }
       await need(REPAIR_NEED, "Repair / improve an existing site");
+      await section.locator(".repair-details summary").click();
       assert.equal(await url.inputValue(), publicUrl); assert.equal(await description.inputValue(), problem);
       await assertResult("small");
       // Invalid repair fields do not block or contaminate another service's quote.
@@ -197,6 +220,7 @@ try {
       await need("Aucun", "None"); assert.equal(await request.isDisabled(), false);
       await request.click(); assert.ok(!(await summary.inputValue()).includes("synthetic-secret-only"));
       await need(REPAIR_NEED, "Repair / improve an existing site");
+      await section.locator(".repair-details summary").click();
       await description.fill(problem); await content.getByRole("button").first().click();
       const audit = await page.evaluate(() => window.repairAudit);
       assert.ok(audit.events.some(event => event[1] === "estimator_quote_request"));
@@ -208,6 +232,15 @@ try {
       }
       assert.deepEqual(await page.evaluate(() => [JSON.stringify(localStorage), JSON.stringify(sessionStorage)]), storageBefore);
       assert.deepEqual(writes, []); assert.deepEqual(errors, []);
+      for (const control of await diagnostic.locator("button, summary, input, textarea").all()) {
+        await control.focus(); await page.waitForTimeout(40);
+        const box = await control.boundingBox();
+        const header = await page.locator(".navbar").boundingBox();
+        assert.ok(box.y >= header.y + header.height + 8, "Focused control covered by header");
+        assert.ok(box.height >= 44);
+      }
+      assert.equal(await section.locator(".repair-email").isVisible(), true);
+      results.push({ language, width: viewport.width, before, collapsedHeight, expandedHeight });
       // Hide only the sticky header while capturing long diagnostic elements.
       await page.addStyleTag({ content: "header { visibility: hidden !important; }" });
       // Render evidence, with synthetic text only, in the ignored local review directory.
