@@ -2344,8 +2344,9 @@ const createEstimatorSelection = (variant) => ({
 
 function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, onRequest }) {
   const summaryRef = useRef(null);
+  const summaryDetailsRef = useRef(null);
   // Measure the visible header surface, not its preserved expanded footprint.
-  // Oversized summaries stay in normal flow so every line and action is reachable.
+  // Only the compact surface determines fit; full terms live in an accessible dialog.
   useLayoutEffect(() => {
     const summary = summaryRef.current;
     const header = document.querySelector('.navbar');
@@ -2715,7 +2716,54 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
 
             <aside ref={summaryRef} className="estimator-result unified-result" aria-labelledby={`${idPrefix}-result`}>
               <span id={`${idPrefix}-result`}>{t("Résultat indicatif", "Indicative result")}</span>
-              <div className="estimate-blocks" aria-live="polite">
+              <div className="compact-estimate" aria-live="polite" aria-atomic="true">
+                {!hasSelection && <p className="estimate-empty">{t("Choisissez au moins une prestation pour obtenir une estimation.", "Choose at least one service to get an estimate.")}</p>}
+                {estimate.project && <div className="compact-estimate-block">
+                  <h3>{isRepairProject
+                    ? REPAIR_CATEGORIES[estimate.project.category][isEnglish ? "en" : "fr"]
+                    : isEnglish ? estimatorNeedOptions.find(option => option.value === selection.projectNeed)?.label : selection.projectNeed}</h3>
+                  <strong>{isRepairProject
+                    ? estimate.project.price === null ? t("sur devis", "on quote") : t("dès", "from") + " " + formatTaxedPrice(estimate.project.price, isEnglish)
+                    : t("à partir de", "from") + " " + formatTaxedPrice(estimate.project.budget, isEnglish)}</strong>
+                </div>}
+                {estimate.social && <div className="compact-estimate-block">
+                  <h3>{t("Abonnement", "Subscription")} · {estimate.social.planName}</h3>
+                  {estimate.recurring.launchMonths > 0 && <p>
+                    <small>{t(`Les ${estimate.recurring.launchMonths} premiers mois`, `First ${estimate.recurring.launchMonths} months`)}</small>
+                    <strong>{formatMonthlyPrice(estimate.recurring.launchMonthly, isEnglish)}</strong>
+                  </p>}
+                  <p><small>{estimate.recurring.launchMonths > 0 ? t("Ensuite (prix standard)", "Then (standard price)") : t("Chaque mois", "Each month")}</small>
+                    <strong>{formatMonthlyPrice(estimate.recurring.standardMonthly, isEnglish)}</strong></p>
+                </div>}
+                {estimate.reels?.billing === "monthly" && <div className="compact-estimate-block">
+                  <h3>{t(`Pack ${estimate.reels.quantity} Reels`, `${estimate.reels.quantity} Reels pack`)}</h3>
+                  <strong>{formatMonthlyPrice(estimate.reels.price, isEnglish)}</strong>
+                </div>}
+                {estimate.oneTimeFees.map(fee => <div className="compact-estimate-block" key={fee.key}>
+                  <h3>{fee.key === "setupAudit" ? t("Audit de départ et mise en place", "Initial audit and set-up") : t("1 Reel (prestation ponctuelle)", "1 Reel (one-off service)")}</h3>
+                  <strong>{formatTaxedPrice(fee.amount, isEnglish)}</strong>
+                </div>)}
+                {estimate.onQuote && <div className="compact-estimate-block"><h3>{t("Vidéo complexe", "Complex video")}</h3><strong>{t("sur devis", "on quote")}</strong></div>}
+              </div>
+              <button className="btn btn-primary" type="button" disabled={!hasSelection || repairInvalid} aria-describedby={repairInvalid ? `${idPrefix}-repair-request-error` : undefined} onClick={handleRequest}>
+                {t("Demander ce devis", "Request this quote")}
+              </button>
+              {repairInvalid && <p id={`${idPrefix}-repair-request-error`} className="repair-error">
+                {t("Corrigez les champs signalés avant de demander un devis.", "Correct the marked fields before requesting a quote.")}
+              </p>}
+              {isRepairProject && <a className="btn btn-secondary repair-email" href={`mailto:${businessContact.email}`}>
+                {t("Écrire par email", "Contact by email")}
+              </a>}
+              <button className="btn btn-secondary summary-details-button" type="button"
+                aria-haspopup="dialog" aria-controls={`${idPrefix}-details`}
+                onClick={() => summaryDetailsRef.current?.showModal()}>
+                {t("Voir le détail et les conditions", "View full estimate and terms")}
+              </button>
+              <dialog ref={summaryDetailsRef} className="estimate-details-dialog" role="dialog"
+                id={`${idPrefix}-details`} aria-labelledby={`${idPrefix}-details-title`}>
+                <form method="dialog"><button className="btn btn-secondary" autoFocus>{t("Fermer le détail", "Close details")}</button></form>
+                <h2 id={`${idPrefix}-details-title`}>{t("Détail de l’estimation et conditions", "Full estimate and terms")}</h2>
+              <div className="estimate-blocks">
                 {!hasSelection && (
                   <p className="estimate-empty">
                     {t("Choisissez au moins une prestation pour obtenir une estimation.", "Choose at least one service to get an estimate.")}
@@ -2864,15 +2912,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                   "This estimate is indicative. The final quote will depend on the brief, available content, and exact services.",
                 )}
               </p>}
-              <button className="btn btn-primary" type="button" disabled={!hasSelection || repairInvalid} aria-describedby={repairInvalid ? `${idPrefix}-repair-request-error` : undefined} onClick={handleRequest}>
-                {t("Demander ce devis", "Request this quote")}
-              </button>
-              {repairInvalid && <p id={`${idPrefix}-repair-request-error`} className="repair-error">
-                {t("Corrigez les champs signalés avant de demander un devis.", "Correct the marked fields before requesting a quote.")}
-              </p>}
-              {isRepairProject && <a className="btn btn-secondary repair-email" href={`mailto:${businessContact.email}`}>
-                {t("Écrire par email", "Contact by email")}
-              </a>}
+              </dialog>
             </aside>
           </div>
         </div>

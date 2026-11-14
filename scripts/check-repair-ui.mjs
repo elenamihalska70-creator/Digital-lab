@@ -53,6 +53,8 @@ try {
       };
       const result = section.locator(".repair-result");
       const assertResult = async category => {
+        await section.locator(".summary-details-button").click();
+        assert.equal(await result.isVisible(), true);
         assert.equal(await result.locator("h3").textContent(), REPAIR_CATEGORIES[category][en ? "en" : "fr"]);
         const price = { small: 70, comprehensive: 650, technical: null, urgent: null }[category];
         const text = await result.textContent();
@@ -70,6 +72,7 @@ try {
         assert.doesNotMatch(text, /business days|jours ouvrés|Estimated timeline|Délai indicatif|[0-9]–[0-9]/);
         assert.ok(!(await section.locator(".unified-result").textContent()).includes(en ? "Complex video" : "Vidéo complexe"));
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+        await section.locator(".estimate-details-dialog form button").click();
       };
       const request = section.getByRole("button", { name: en ? "Request this quote" : "Demander ce devis", exact: true });
       const url = section.getByRole("textbox", { name: en ? "Public website URL (optional)" : "URL publique du site (facultatif)", exact: true });
@@ -245,6 +248,7 @@ try {
       await page.addStyleTag({ content: "header { visibility: hidden !important; }" });
       // Render evidence, with synthetic text only, in the ignored local review directory.
       await section.locator(".repair-diagnostic").screenshot({ path: new URL(language + "-" + viewport.width + "-questions.png", artifacts).pathname.replace(/^\/([A-Za-z]:)/, "$1") });
+      await section.locator(".summary-details-button").click();
       await result.screenshot({ path: new URL(language + "-" + viewport.width + "-result.png", artifacts).pathname.replace(/^\/([A-Za-z]:)/, "$1") });
       results.push({ language, width: viewport.width, categories: "70/650/technical/urgent", switching: "PASS", email: "short+long+copy PASS", privacy: "PASS", errors: errors.length, writes: writes.length });
       await context.close();

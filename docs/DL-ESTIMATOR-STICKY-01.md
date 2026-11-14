@@ -1,70 +1,52 @@
-# DL-ESTIMATOR-STICKY-01 — local review
+# DL-ESTIMATOR-STICKY-01 — PR #7 local correction
 
-Base: origin/main = 65ae6ed1af62a07f46e623471f281a9f2e31cf93, fetched and verified as the approved PR #6 merge.
-Branch: feat/dl-estimator-sticky-01.
-Worktree: C:/Users/Lenovo/Projets/DigitalLab-estimator-sticky-01.
-Status: local validation snapshot prepared for an owner-authorized scoped commit, normal push and review PR. No merge, production deployment or database change is authorized.
+Scope: current worktree DigitalLab-estimator-sticky-01, branch feat/dl-estimator-sticky-01, starting HEAD e89700dfc3847b80f33e361d2e4a4bf4ccf0be1a. Validation snapshot for the owner-approved focused corrective commit and normal push to existing PR #7. No merge, production deployment or database change is authorized.
 
-## Smallest implementation
+## Findings from the real page
 
-UnifiedEstimator already renders every category from the shared estimator state. Its existing sticky result was blocked by overflow:hidden on both the panel and section and used fixed offsets (including a separate repair offset).
+The previous fixture allowed data-sticky-fits=false and therefore could pass even when the result disappeared. Its 1000px-tall viewport also missed the reported height sensitivity. The new regression mounts the real page, with actual page content, reveal effects, header and estimator; it does not replace them with a synthetic fixture or override their styles.
 
-Change only presentation: use overflow:clip on these two containers, measure the actual navbar bottom with ResizeObserver and scroll/resize listeners, and apply sticky within the estimator grid. The card stops at the grid boundary, before contact guidance and unrelated content. Preserve the single existing result DOM, live region, wording, focus order and quote actions.
+The reported choices are selected: repair, Other / unsure, Targeted intervention, Custom website. A normal urgency is also selected in the after tests so the quote action can be checked in a complete scenario; routing remains technical/on quote.
 
-At <=960px retain the existing full inline summary. The existing mobile fixed CTA already occupies the bottom safe-area edge. No second bottom overlay is introduced. On any viewport, if the whole summary cannot fit below the header, use normal document flow instead of hiding actions or creating an inner scroll area. This means long combined project/social/Reels summaries and short windows do not remain sticky.
+Measurements of the published source at e89700d, using a guest session and 100% browser scale:
 
-## Files
+| Case, scroll 650px below grid start | Full card | Header bottom / offset | fits / position | Card top | CTA top | Grid bottom |
+| --- | --- | --- | --- | --- | --- | --- |
+| Before, 1686 x 896 | 626.80px | 77px / 93px | true / sticky | -55.47px | 434.33px | 571.33px |
+| Before, 1686 x 700 | 626.80px | 77px / 93px | false / static | -650.28px | -160.48px | 571.30px |
+| After, 1686 x 896 | 332.19px | 77px / 93px | true / sticky | 93px | 230.19px | 571.33px |
+| After, 1686 x 700 | 332.19px | 77px / 93px | true / sticky | 93px | 230.19px | 571.30px |
 
-- src/App.jsx: result ref and geometry observer; no estimate, quote, email, repair or commercial logic changes.
-- src/App.css: scoped overflow/position rules.
-- scripts/check-sticky-ui.mjs: isolated browser fixture, reference captures and geometry checks.
-- docs/DL-ESTIMATOR-STICKY-01.md: this review.
+Two mechanisms matter: a full-height card can hit its grid's bottom boundary early even with fits=true; when usable height is insufficient, fits=false disables sticking entirely. Ancestors were measured: grid/section-inner/main have visible overflow, panel and estimator section use clip, and the body has hidden horizontal / auto vertical overflow. No additional estimator overflow scroll ancestor was found.
 
-No diff in src/utils, src/config, api, package.json or package-lock.json.
+The owner's exact complete-disappearance observation was not reproduced identically at a local 896px viewport: fits remained true there, and the CTA remained visible at the sampled 650px scroll even though the category was already above the header. The 700px usable-height case reproduces complete disappearance while questions remain visible. A direct automated attempt against the protected Preview did not load the estimator, so no claim of exact remote reproduction is made. The correction addresses both measured mechanisms without assuming the owner's browser viewport or session state.
+
+## Implementation
+
+- Keep a compact category/service and live-price overview, the original quote CTA, repair email action and an explicit View full estimate and terms button in the existing result card.
+- Show the complete existing estimate, explanation, commercial terms, launch/standard prices, first-month breakdown, delay and VAT in a labeled native modal dialog. Native modal behavior supplies background inertness, Escape handling and focus restoration. Its own bounded document reader scrolls when needed; the compact price card has no inner scroll area.
+- Preserve the full original estimate/terms JSX exactly after normalizing line endings and relocating aria-live to the visible compact overview. No numerical price, engine, VAT, quote/email, repair routing or privacy code was changed. Display formatting reads the same estimate object; no extra estimator state or calculation is introduced.
+- Measure only the compact card for sticky fit. Long terms cannot disable sticky or shift the document when opened. Keep the existing inline fallback at <=960px and when even the compact card does not fit a genuinely short viewport (tested at 360px height).
+- Leave header/auth components and the mobile fixed CTA unchanged. Existing observer/listener cleanup is preserved.
 
 ## Validation
 
 - npm test: 96/96 PASS.
-- npm run check:release: PASS, including approved pricing lock and VAT/mailto contracts.
-- npm run build: PASS; 14 routes prerendered, including final CSS correction.
-- npm run check:pricing:ui: PASS. Integrated FR/EN at 1440/390; website package prices, extras, summary/copy/mailto/fallback, Social/Reels CTA presets and billing separation.
-- Repair browser regression: PASS. Integrated FR/EN at 1440/390/320; 70/650/technical/urgent classifications, long details, switching, email/copy, focus and no privacy/storage/external-write regressions.
-- node scripts/check-header-ui.mjs: PASS. Six requested widths, both languages, guest and synthetic client/admin; menu, keyboard order, anchors, normal/reduced motion and dynamic header geometry.
-- Sticky fixture: PASS before and after, 216 combinations per phase (6 project categories x 6 widths x 2 languages x 3 account states). Scroll down/up, header clearance during sticking, bottom containment, inline mobile fallback, no nested summary scrolling, no horizontal overflow, no browser errors.
-- Dedicated Social Media/Reels fixture: 24 combinations per phase; live service changes and sticky/inline geometry.
-- Supplemental normal-motion fixture: PASS, 12 language/width combinations. Website package update changes displayed summary immediately; quote button keyboard focus is visible after scrolling settles; combined tall summary becomes inline at 500px window height. Script and measurements are local artifacts.
-- git diff --check: PASS.
+- npm run check:release: PASS, including pricing lock and VAT/mailto contracts.
+- npm run build: PASS, 14 prerendered routes; existing large-bundle advisory remains.
+- npm run check:pricing:ui: pricing portion PASS for integrated FR/EN 1440/390, including packages, extras, mailto/copy/fallback and social-page presets. The initial repair capture expected an always-visible full result and failed after it moved into the dialog. The repair regression was adapted to open the actual dialog, assert visibility, retain every existing commercial/privacy assertion, and capture the visible detail. Standalone node scripts/check-repair-ui.mjs then PASS for FR/EN at 1440/390/320, with zero errors/writes.
+- node scripts/check-sticky-ui.mjs: PASS, 288 fixture category/language/width/account-state combinations. This is supplementary coverage; the real-page suite is the regression for the owner's failure.
+- node scripts/check-sticky-real-ui.mjs: PASS, 126 real-page scroll/combined measurements across 18 language/viewport/motion scenarios. Widths 1686, 1440, 1280, 1180, 390, 320; desktop heights 896/900 and 700; genuinely short height 360. Normal and reduced motion covered. Assertions require desktop sticky=true, service/price and quote CTA in view at each sampled position, no grid movement during scrolling, and inline mobile/short-height fallback.
+- Real-page suite also checks all six project categories, immediate website package updates, Social Media/Reels updates, compact/detail price equality, a combined repair + social + setup-fee result, labeled dialog access, native :modal state, keyboard containment (full Tab and Shift+Tab cycles never reach a background element; a single browser-chrome stop at the cycle edge must return straight into the dialog), inert background CTA/details button for programmatic focus and pointer, Escape and focus restoration, unchanged page scroll on opening/closing, and no horizontal overflow in the page or dialog. Mutation check: forcing a non-modal dialog.show() fails both the :modal assertion and, independently, the focus-containment assertion (focus reached the background contact link).
+- Full estimate/terms source comparison: identical after LF normalization and removal of the old hidden live-region attribute. No diff in src/utils, src/config, api, package.json or package-lock.json.
+- git diff --check: PASS. Corrective diff reviewed against e89700d; publication preflight reruns these checks before committing.
 
-Review-PR preflight reran npm test (96/96), check:release, build (14 routes), pricing/repair browser regressions, and the final sticky suite (288 combinations: 216 project + 72 Social Media/Reels account-state cases). All passed. The four-file index excludes all generated artifacts and has no detected private-key/PAT/AWS-key/live-key/JWT patterns.
+## Files and artifacts
 
-The first concurrent header regression sampled 149.265625px at 1280px and failed its unchanged <=120px compact-height assertion. A dedicated trace showed scrollY fixed at 800, the is-scrolled class applied, and height settling to 116px by the later sample. The unchanged full header regression subsequently passed when rerun alone across all six widths, both languages, guest/client/admin fixtures and normal/reduced motion; no threshold or header implementation changes were made.
+Changed: src/App.jsx, src/App.css, scripts/check-repair-ui.mjs, docs/DL-ESTIMATOR-STICKY-01.md. Added: scripts/check-sticky-real-ui.mjs.
 
-Widths: 1680, 1440, 1280, 1180, 390, 320. Main fixture height: 1000px. Account sessions are synthetic, not real authenticated accounts. Browser routes block external network and non-GET/HEAD requests; WebSockets are closed.
+Ignored local evidence: sticky-real-review.local/before.json, after.json, before-FR-1686x{896,700}-scroll650.png, after-FR-1686x{896,700}-scroll650.png, after-{FR,EN}-{width}x{height}-repair.png and -details.png. The --before suite pins the published PR #7 source; it does not modify files. Reproduce with node scripts/check-sticky-real-ui.mjs --before, then node scripts/check-sticky-real-ui.mjs.
 
-## Review artifacts
+## Limits
 
-Ignored local folders, intentionally not included in the source diff:
-
-- sticky-review.local/before-measurements.json and after-measurements.json
-- sticky-review.local/before-content-measurements.json and after-content-measurements.json
-- sticky-review.local/interactions.json
-- sticky-review.local/{before,after}-{FR,EN}-{width}-category{1..6}.png
-- sticky-review.local/{before,after}-{FR,EN}-{width}-content{1,2}.png
-- header-review.local/after-measurements.json and screenshots
-
-Representative comparison: before-FR-1680-category1.png / after-FR-1680-category1.png. Repair: after-FR-1180-category2.png.
-
-The --before fixture is pinned to approved base 65ae6ed1af62a07f46e623471f281a9f2e31cf93, including after committing this LOT.
-
-Reproduce main matrix: node scripts/check-sticky-ui.mjs --before; node scripts/check-sticky-ui.mjs.
-Content-only matrix: add --content-only (run phases sequentially).
-The supplemental interaction script in sticky-review.local expects the after fixture server on port 4327.
-
-## Limits and risks
-
-- Mobile intentionally uses the allowed inline fallback; no compact bottom bar or expandable overlay was added.
-- Desktop sticky is conditional on fitting the available height. Long combined summaries remain fully accessible inline.
-- No physical iOS/Android keyboard or safe-area device test; a short browser viewport is only a proxy. Native keyboard, actual cookie-banner combinations and real authenticated sessions are not proven.
-- Geometry matrix uses the real components in a synthetic isolated fixture. Integrated pricing/repair/header regressions provide separate page-level coverage, not every possible option combination at every width.
-- Build emits the existing large-chunk advisory. npm ci reported 12 dependency audit findings (4 moderate, 7 high, 1 critical); no dependency or lockfile changes were made in this LOT.
-- Existing dirty main and pricing work remain outside this LOT. No file mutation commands targeted the existing pricing, repair or header worktrees. Fetch/worktree creation necessarily updated shared Git metadata as authorized.
+The owner has authorized publishing this corrective diff to the PR Preview. Functional owner confirmation against that updated Preview remains distinct from exact-SHA build readiness. Real authenticated sessions, physical mobile keyboards/safe areas and assistive-technology devices were not tested. Browser coverage is automated Chromium plus local screenshot inspection. Very short viewports intentionally use normal document flow. The details dialog is an intentional presentation change; long full quotes scroll inside the dialog while the underlying estimator is modal/inert. Existing dependency audit findings and bundle warnings remain outside this fix. No original main or previous feature worktree was changed.
