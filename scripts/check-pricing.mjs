@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
-import { verifyPricingLock } from "./pricing-lock.mjs";
+import { verifyPricingLock, LOCKED_PACKAGE_PATHS } from "./pricing-lock.mjs";
 const root = new URL("../", import.meta.url);
-const lock = JSON.parse(readFileSync(new URL("docs/pricing-v3-lock.json", root), "utf8"));
-verifyPricingLock(lock, path => readFileSync(new URL(path, root), "utf8"));
+const read = path => readFileSync(new URL(path, root), "utf8");
+const lock = JSON.parse(read("docs/pricing-v3-lock.json"));
+verifyPricingLock(lock, read);
 console.log("Approved pricing source/engine and preserved tax/mailto contracts: PASS");
+const packageLock = JSON.parse(read("docs/pricing-v4-packages-lock.json"));
+verifyPricingLock(packageLock, read, LOCKED_PACKAGE_PATHS);
+console.log("Approved V4 SEO/automation/chatbot/prototype package configuration: PASS");

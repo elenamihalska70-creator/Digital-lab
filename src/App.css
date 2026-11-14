@@ -13132,3 +13132,13 @@ html {
 .summary-details-button:focus-visible, .estimate-details-dialog .btn:focus-visible {
   outline: 3px solid #c7a8ff; outline-offset: 3px;
 }
+
+/* DL-ESTIMATOR-PRICING-V4: explicit packages for SEO, automation, chatbot and prototype. */
+.estimator-options.is-packages button { text-align: left; overflow-wrap: anywhere; }
+.package-scope .package-limit { margin: 10px 0 0; color: #ffe3a3; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.compact-estimate-block > strong + small { margin-top: 4px; }
+.package-result p { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .estimator-options.is-packages { display: grid; grid-template-columns: 1fr; }
+  .estimator-options.is-packages button { border-radius: 16px; }
+}

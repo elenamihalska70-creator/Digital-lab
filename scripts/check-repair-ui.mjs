@@ -212,7 +212,9 @@ try {
       for (const [fr, english] of [["Optimiser SEO & visibilité", "Optimize SEO & visibility"], ["Ajouter une automatisation", "Add an automation"], ["Créer un chatbot / assistant IA", "Create an AI chatbot / assistant"], ["Créer un MVP ou prototype web", "Create an MVP or web prototype"]]) {
         await need(fr, english);
         assert.equal(await section.locator(".repair-diagnostic").count(), 0);
-        assert.equal(await section.getByRole("group", { name: en ? "Desired complexity level" : "Niveau de complexité souhaité", exact: true }).count(), 1);
+        // DL-ESTIMATOR-PRICING-V4: these services show their own package selector, not the generic complexity one.
+        assert.equal(await section.getByRole("group", { name: en ? "Desired complexity level" : "Niveau de complexité souhaité", exact: true }).count(), 0);
+        assert.equal(await section.getByRole("group", { name: en ? "Package" : "Forfait", exact: true }).getByRole("button").count(), 3);
       }
       await need(REPAIR_NEED, "Repair / improve an existing site");
       await section.locator(".repair-details summary").click();

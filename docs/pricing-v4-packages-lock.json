@@ -1,0 +1,8 @@
+{
+  "lot": "DL-ESTIMATOR-PRICING-V4",
+  "base": "d515c2984d83e147f9913fcaf612147a9d19ac8c",
+  "status": "owner-approved commercial specification; local implementation only, no publication authorization",
+  "files": {
+    "src/utils/servicePackages.js": "574587eb45c2b01e4b46d04d9ad721acbcf4841cb6f62c802cb2a5c80dff74ff"
+  }
+}

@@ -9,10 +9,14 @@ export const LOCKED_PRICING_PATHS = [
   "src/config/taxMention.js", "scripts/check-release.mjs",
 ];
 
+// DL-ESTIMATOR-PRICING-V4: the four package-based services have their own lock, so the
+// V3 manifest (website, engine, tax, mailto) stays byte-for-byte unchanged.
+export const LOCKED_PACKAGE_PATHS = ["src/utils/servicePackages.js"];
+
 // Detects accidental edits; owner review is enforced outside this checksum.
-export function verifyPricingLock(lock, readSource) {
+export function verifyPricingLock(lock, readSource, paths = LOCKED_PRICING_PATHS) {
   assert.ok(lock.files && Object.keys(lock.files).length > 0, "Empty pricing lock");
-  assert.deepEqual(Object.keys(lock.files).sort(), [...LOCKED_PRICING_PATHS].sort(), "Incomplete pricing lock coverage");
+  assert.deepEqual(Object.keys(lock.files).sort(), [...paths].sort(), "Incomplete pricing lock coverage");
   for (const [path, expected] of Object.entries(lock.files)) {
     assert.equal(pricingSourceHash(readSource(path)), expected,
       "Pricing contract changed: " + path + ". Requires a separate LOT and owner approval.");
