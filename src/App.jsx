@@ -2343,6 +2343,30 @@ const createEstimatorSelection = (variant) => ({
 });
 
 function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, onRequest }) {
+  const summaryRef = useRef(null);
+  // Measure the visible header surface, not its preserved expanded footprint.
+  // Oversized summaries stay in normal flow so every line and action is reachable.
+  useLayoutEffect(() => {
+    const summary = summaryRef.current;
+    const header = document.querySelector('.navbar');
+    if (!summary) return;
+    const sync = () => {
+      const offset = Math.max(0, header?.getBoundingClientRect().bottom ?? 0) + 16;
+      summary.style.setProperty('--summary-top', offset + 'px');
+      summary.dataset.stickyFits = String(summary.getBoundingClientRect().height <= window.innerHeight - offset - 16);
+    };
+    const observer = new ResizeObserver(sync);
+    observer.observe(summary);
+    if (header) observer.observe(header);
+    sync();
+    window.addEventListener('resize', sync);
+    window.addEventListener('scroll', sync, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('scroll', sync);
+    };
+  }, []);
   const [selection, setSelection] = useState(() => createEstimatorSelection(variant));
   const [answers, setAnswers] = useState(initialEstimatorAnswers);
   const [social, setSocial] = useState(initialSocialOptions);
@@ -2689,7 +2713,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               )}
             </div>
 
-            <aside className="estimator-result unified-result" aria-labelledby={`${idPrefix}-result`}>
+            <aside ref={summaryRef} className="estimator-result unified-result" aria-labelledby={`${idPrefix}-result`}>
               <span id={`${idPrefix}-result`}>{t("Résultat indicatif", "Indicative result")}</span>
               <div className="estimate-blocks" aria-live="polite">
                 {!hasSelection && (

@@ -13096,3 +13096,17 @@ html {
   .navbar-menu { visibility: hidden; }
   .navbar.is-menu-open .navbar-menu { visibility: visible; }
 }
+
+/* DL-ESTIMATOR-STICKY-01: containment belongs to the estimator grid.
+   clip preserves rounded decoration without creating a scrolling ancestor. */
+.estimator-section,
+.estimator-panel { overflow: clip; }
+.estimator-grid > .unified-result { position: static; }
+@media (min-width: 961px) {
+  .estimator-grid > .unified-result[data-sticky-fits="true"] {
+    position: sticky;
+    top: var(--summary-top, 170px);
+  }
+}
+/* Narrow layouts retain the full inline summary: the site's fixed mobile CTA
+   already occupies the safe-area bottom edge. No second overlay or scrollport. */
