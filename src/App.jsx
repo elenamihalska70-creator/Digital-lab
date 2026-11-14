@@ -29,7 +29,11 @@ import {
 import { WEBSITE_NEED, WEBSITE_PACKAGES } from "./utils/websitePricing";
 import { getEffectiveProjectAnswers, isFeatureSelectable } from "./utils/estimatorAnswers";
 import { RepairDiagnostic } from "./components/RepairDiagnostic";
-import { getDiagnosticEstimate, getRepairSummary, INITIAL_REPAIR_DIAGNOSTIC, REPAIR_CATEGORIES, REPAIR_NEED, REPAIR_TERMS, validateRepairDetails, needsRepairScope } from "./utils/repairDiagnostic";
+import { getRepairSummary, INITIAL_REPAIR_DIAGNOSTIC, REPAIR_CATEGORIES, REPAIR_NEED, REPAIR_TERMS, validateRepairDetails, needsRepairScope } from "./utils/repairDiagnostic";
+import {
+  SERVICE_PACKAGES, INITIAL_SERVICE_PACKAGE_CHOICES, getCatalogEstimate, getServicePackage, getServicePackageCategory,
+  getServicePackageSummary, getServicePackageTerms, formatPackagePrice, getBillingLabel, SERVICE_PACKAGE_TIMING,
+} from "./utils/servicePackages";
 import { getTaxMention } from "./config/taxMention";
 import { buildQuoteMailto } from "./utils/quoteMailto";
 
@@ -2210,8 +2214,16 @@ const buildEstimateRequest = ({ estimate, answers, repair, reelsChoice, isEnglis
   if (estimate.project) {
     const need = labelFor(estimatorNeedOptions, estimate.project.need);
     const isWebsite = estimate.project.need === WEBSITE_NEED;
-    services.push(need);
-    if (estimate.project.kind === "repair") {
+    const pack = estimate.project.kind === "package" ? getServicePackage(estimate.project.category, estimate.project.packageId) : null;
+    services.push(pack ? `${need} — ${pack.name[isEnglish ? "en" : "fr"]}` : need);
+    if (pack) {
+      lines.push(`${t("Projet ponctuel", "One-off project")} : ${need}`, ...getServicePackageSummary(estimate.project, {
+        isEnglish, formatPrice: amount => formatTaxedPrice(amount, isEnglish),
+        profile: labelFor(estimatorProfileOptions, answers.profile),
+        priority: labelFor(estimatorPriorityOptions, answers.priority),
+        existing: labelFor(estimatorExistingOptions, answers.existing),
+      }), t("Projet facturé selon son devis (acompte et échéances), hors premier mois d’abonnement.", "Project billed according to its own quote (deposit and instalments), separate from the subscription."));
+    } else if (estimate.project.kind === "repair") {
       lines.push(`${t("Projet ponctuel", "One-off project")} : ${need}`, ...getRepairSummary(repair, {
         isEnglish, formatPrice: amount => formatTaxedPrice(amount, isEnglish),
         profile: labelFor(estimatorProfileOptions, answers.profile),
@@ -2373,6 +2385,8 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const [social, setSocial] = useState(initialSocialOptions);
   const [repair, setRepair] = useState({ ...INITIAL_REPAIR_DIAGNOSTIC });
   const [reelsChoice, setReelsChoice] = useState("pack4");
+  // One remembered package per service, so switching services never loses a choice.
+  const [packageChoices, setPackageChoices] = useState(INITIAL_SERVICE_PACKAGE_CHOICES);
   const [appliedPreset, setAppliedPreset] = useState(null);
   const t = (fr, en) => (isEnglish ? en : fr);
   const idPrefix = `estimator-${variant}${isEnglish ? "-en" : ""}`;
@@ -2389,11 +2403,18 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const isRepairProject = selection.projectNeed === REPAIR_NEED;
   const repairErrors = isRepairProject ? validateRepairDetails(repair) : {};
   const repairInvalid = Object.keys(repairErrors).length > 0;
+  // V4: SEO, automation, chatbot and prototype are priced only by their selected package.
+  const packageCategory = getServicePackageCategory(selection.projectNeed);
+  const isPackageProject = Boolean(packageCategory);
+  const selectedPackage = isPackageProject ? getServicePackage(packageCategory, packageChoices[packageCategory]) : null;
+  const lang = isEnglish ? "en" : "fr";
+  const formatPrice = (amount) => formatTaxedPrice(amount, isEnglish);
   // Website mode derives its scope from the page package, so a complexity chosen for
   // another project type stays stored (restored on switch back) but never prices a website.
   const projectAnswers = selection.projectNeed ? getEffectiveProjectAnswers(answers, selection.projectNeed) : null;
-  const estimate = getDiagnosticEstimate({
+  const estimate = getCatalogEstimate({
     project: projectAnswers,
+    packageChoices,
     repair,
     contentService: selection.contentService,
     social,
@@ -2405,6 +2426,8 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   if (isRepairProject) {
     steps.push(answers.profile, repair.issue, repair.intervention, repair.platform, repair.urgency);
     if (needsRepairScope(repair)) steps.push(repair.scope);
+  } else if (isPackageProject) {
+    steps.push(answers.profile, answers.priority, answers.existing, selectedPackage);
   } else if (selection.projectNeed) {
     steps.push(answers.profile, answers.priority, answers.existing, answers.content, isWebsiteProject ? answers.pages : answers.complexity, projectAnswers.features.length > 0, answers.urgency);
   }
@@ -2550,16 +2573,46 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                     <h3 id={`${idPrefix}-priority`}>{t("Votre priorité principale :", "Your main priority:")}</h3>
                     {optionGroup("priority", localized(estimatorPriorityOptions), answers.priority, (value) => updateAnswer("priority", value))}
                   </div>
-                  <div className="estimator-question estimator-question-inline">
+                  <div className={isPackageProject ? "estimator-question" : "estimator-question estimator-question-inline"}>
                     <div>
                       <h3 id={`${idPrefix}-existing`}>{t("Avez-vous déjà un site ou un outil existant ?", "Do you already have a site or tool?")}</h3>
                       {optionGroup("existing", localized(estimatorExistingOptions), answers.existing, (value) => updateAnswer("existing", value))}
                     </div>
-                    <div>
+                    {!isPackageProject && <div>
                       <h3 id={`${idPrefix}-content-ready`}>{t("Avez-vous déjà les contenus ?", "Do you already have the content?")}</h3>
                       {optionGroup("content-ready", localized(estimatorContentOptions), answers.content, (value) => updateAnswer("content", value))}
-                    </div>
+                    </div>}
                   </div>
+                  {isPackageProject ? (
+                    <div className="estimator-question estimator-package">
+                      <h3 id={`${idPrefix}-package`}>{t("Forfait", "Package")}</h3>
+                      {optionGroup(
+                        "package",
+                        SERVICE_PACKAGES[packageCategory].packages.map((pack) => ({
+                          value: pack.id,
+                          label: `${pack.name[lang]} · ${formatPackagePrice(pack, { isEnglish, formatPrice })}`,
+                        })),
+                        selectedPackage.id,
+                        (value) => setPackageChoices((current) => ({ ...current, [packageCategory]: value })),
+                        "is-packages",
+                      )}
+                      <div className="estimator-included package-scope">
+                        <p id={`${idPrefix}-package-included`} className="estimator-included-title">
+                          {t("Inclus dans", "Included in")} {selectedPackage.name[lang]} — {getBillingLabel(selectedPackage.billing, isEnglish)}
+                        </p>
+                        <ul aria-labelledby={`${idPrefix}-package-included`}>
+                          {selectedPackage.includes[lang].map((item) => <li key={item}>{item}</li>)}
+                        </ul>
+                        {selectedPackage.limits[lang].map((limit) => <p className="package-limit" key={limit}>{limit}</p>)}
+                      </div>
+                      <p className="estimator-hint">
+                        {t(
+                          "Un besoin au-delà de ce forfait fait l’objet d’un devis personnalisé : il n’est jamais ajouté automatiquement au prix. Conditions complètes dans le détail de l’estimation.",
+                          "Anything beyond this package requires a personalized quote: it is never added to the price automatically. Full terms are in the estimate details.",
+                        )}
+                      </p>
+                    </div>
+                  ) : (<>
                   {isWebsiteProject && (
                     <div className="estimator-question">
                       <h3 id={`${idPrefix}-pages`}>{t("Pages du site", "Website pages")}</h3>
@@ -2609,6 +2662,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                     <h3 id={`${idPrefix}-urgency`}>{t("Urgence", "Urgency")}</h3>
                     {optionGroup("urgency", localized(estimatorUrgencyOptions), answers.urgency, (value) => updateAnswer("urgency", value))}
                   </div>
+                  </>)}
                     </>
                   )}
                 </>
@@ -2718,7 +2772,12 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               <span id={`${idPrefix}-result`}>{t("Résultat indicatif", "Indicative result")}</span>
               <div className="compact-estimate" aria-live="polite" aria-atomic="true">
                 {!hasSelection && <p className="estimate-empty">{t("Choisissez au moins une prestation pour obtenir une estimation.", "Choose at least one service to get an estimate.")}</p>}
-                {estimate.project && <div className="compact-estimate-block">
+                {estimate.project && estimate.project.kind === "package" && <div className="compact-estimate-block">
+                  <h3>{selectedPackage.name[lang]}</h3>
+                  <strong>{formatPackagePrice(selectedPackage, { isEnglish, formatPrice })}</strong>
+                  <small>{getBillingLabel(selectedPackage.billing, isEnglish)}</small>
+                </div>}
+                {estimate.project && estimate.project.kind !== "package" && <div className="compact-estimate-block">
                   <h3>{isRepairProject
                     ? REPAIR_CATEGORIES[estimate.project.category][isEnglish ? "en" : "fr"]
                     : isEnglish ? estimatorNeedOptions.find(option => option.value === selection.projectNeed)?.label : selection.projectNeed}</h3>
@@ -2781,7 +2840,27 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
                     <p>{REPAIR_TERMS.approval[isEnglish ? "en" : "fr"]}</p>
                   </div>
                 )}
-                {estimate.project && !isRepairProject && (
+                {isPackageProject && estimate.project?.kind === "package" && (
+                  <div className="estimate-block package-result">
+                    <h3>{t("Projet ponctuel", "One-off project")} · {selectedPackage.name[lang]}</h3>
+                    <div className="result-metrics">
+                      <div>
+                        <small>{getBillingLabel(selectedPackage.billing, isEnglish)}</small>
+                        <strong>{formatPackagePrice(selectedPackage, { isEnglish, formatPrice })}</strong>
+                      </div>
+                      <div>
+                        <small>{SERVICE_PACKAGE_TIMING.label[lang]}</small>
+                        <strong>{SERVICE_PACKAGE_TIMING.value[lang]}</strong>
+                      </div>
+                    </div>
+                    <ul className="estimate-lines">
+                      {selectedPackage.includes[lang].map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                    {selectedPackage.limits[lang].map((limit) => <p key={limit}>{limit}</p>)}
+                    {getServicePackageTerms(packageCategory, isEnglish).map((term) => <p key={term}>{term}</p>)}
+                  </div>
+                )}
+                {estimate.project && !isRepairProject && !isPackageProject && (
                   <div className="estimate-block">
                     <h3>
                       {t("Projet ponctuel", "One-off project")} · {projectLevelLabels[estimate.project.type][isEnglish ? "en" : "fr"]}

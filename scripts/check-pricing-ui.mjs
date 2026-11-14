@@ -103,10 +103,19 @@ try {
         await projectGroup().getByRole("button").nth(index).click();
         assert.equal(await projectGroup().getByRole("button").nth(index).getAttribute("aria-pressed"), "true");
       };
-      const automationBudget = getProjectEstimate({
+      // DL-ESTIMATOR-PRICING-V4: automation (index 4) is now priced only by an explicit package.
+      // The generic complexity/feature surcharges it used to carry must no longer exist or apply.
+      const automationGenericBudget = getProjectEstimate({
         need: "Ajouter une automatisation", complexity: "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
-        pages: 1, profile: "Indépendant", priority: "Être visible", existing: "Non", content: "Quelques éléments seulement", features: [], urgency: "Normal",
+        pages: 1, profile: "Indépendant", priority: "Être visible", existing: "Non", content: "Quelques éléments seulement", features: ["SEO"], urgency: "Normal",
       }).budget;
+      const packageGroup = () => group("Forfait", "Package");
+      const expectPackagePrice = async expected => {
+        const normalize = value => value.replaceAll(" ", " ").replaceAll(" ", " ");
+        await page.waitForFunction(({ value }) => document.querySelector(".estimator-home .result-metrics strong")?.textContent.replaceAll(" ", " ").replaceAll(" ", " ") === value, { value: expected });
+        assert.equal(normalize(await price()), expected);
+      };
+      const euroLabel = amount => en ? "€" + amount : amount + " €";
       assert.equal(await complexityGroup().count(), 0);
       await pickNeed(4);
       await checkHelp(false);
@@ -117,32 +126,36 @@ try {
       }
       await pickNeed(4);
       assert.equal(await pages().count(), 0);
-      assert.equal(await complexityGroup().count(), 1);
-      await complexityGroup().getByRole("button").last().click();
-      await expectBudget(automationBudget);
+      assert.equal(await complexityGroup().count(), 0);
+      assert.equal(await group("Fonctionnalités souhaitées", "Desired features").count(), 0);
+      assert.equal(await group("Urgence", "Urgency").count(), 0);
+      assert.equal(await group("Avez-vous déjà les contenus ?", "Do you already have the content?").count(), 0);
+      assert.equal(await packageGroup().getByRole("button").count(), 3);
+      await expectPackagePrice(euroLabel(190));
+      await packageGroup().getByRole("button").nth(1).click();
+      await expectPackagePrice(euroLabel(490));
+      assert.notEqual(490, automationGenericBudget);
       await section.getByRole("button", { name: en ? "Request this quote" : "Demander ce devis", exact: true }).click();
-      assert.ok((await page.locator("#quote-email-summary").inputValue()).includes(en ? "Complexity : Advanced" : "Complexité : Avancé"));
+      const automationSummary = await page.locator("#quote-email-summary").inputValue();
+      assert.ok(automationSummary.includes(en ? "Package : Business Automation" : "Forfait : Automatisation Business"));
+      assert.ok(!automationSummary.includes(en ? "Complexity" : "Complexité"));
       await pickNeed(1);
       assert.equal(await complexityGroup().count(), 0);
       await expectBudget(390);
+      // Switching back restores the chosen package, still at its approved price.
       await pickNeed(4);
-      assert.equal(await complexityGroup().getByRole("button").last().getAttribute("aria-pressed"), "true");
-      await expectBudget(automationBudget);
-      // SEO and contact form stay paid options for other project types...
+      assert.equal(await packageGroup().getByRole("button").nth(1).getAttribute("aria-pressed"), "true");
+      await expectPackagePrice(euroLabel(490));
+      await packageGroup().getByRole("button").nth(0).click();
+      await expectPackagePrice(euroLabel(190));
+      // SEO and contact form are never paid checkboxes for package services...
       const seoBox = () => section.getByRole("checkbox", { name: "SEO" });
       const contactBox = () => section.getByRole("checkbox", { name: en ? "Contact form" : "Formulaire de contact" });
-      assert.equal(await seoBox().count(), 1);
-      assert.equal(await contactBox().count(), 1);
-      await setCheckbox(seoBox());
-      const automationSeoBudget = getProjectEstimate({
-        need: "Ajouter une automatisation", complexity: "Avancé : espace utilisateur, tableau de bord, automatisation ou IA",
-        pages: 1, profile: "Indépendant", priority: "Être visible", existing: "Non", content: "Quelques éléments seulement", features: ["SEO"], urgency: "Normal",
-      }).budget;
-      assert.ok(automationSeoBudget > automationBudget);
-      await expectBudget(automationSeoBudget);
+      assert.equal(await seoBox().count(), 0);
+      assert.equal(await contactBox().count(), 0);
       await pickNeed(1);
       await expectBudget(390);
-      // ...but are included (not selectable) in every website package.
+      // ...and are included (not selectable) in every website package.
       assert.equal(await seoBox().count(), 0);
       assert.equal(await contactBox().count(), 0);
       const included = section.getByRole("list", { name: en ? "Included in your website" : "Inclus dans votre site", exact: true });
@@ -154,13 +167,10 @@ try {
         assert.ok(includedText.includes(item), item);
       }
       await pickNeed(4);
-      assert.equal(await seoBox().isChecked(), true);
-      await expectBudget(automationSeoBudget);
-      await setCheckbox(seoBox(), false);
-      await expectBudget(automationBudget);
+      await expectPackagePrice(euroLabel(190));
       await pickNeed(1);
       await expectBudget(390);
-      console.log("Website complexity hidden, included SEO/contact form, other types preserved, no stale surcharge passed");
+      console.log("Website complexity hidden, included SEO/contact form, automation package-priced, no stale surcharge passed");
       await pickPages(3);
       await group("Urgence", "Urgency").getByRole("button", { name: en ? "Fast" : "Rapide", exact: true }).click();
       await expectBudget(649);
@@ -242,7 +252,7 @@ try {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       assert.deepEqual(forbiddenWrites, []);
       assert.deepEqual(pageErrors, []);
-      results.push({ language: en ? "EN" : "FR", width: viewport.width, packages: "390/590/890/back", extras: "649/890/1240/1540", complexity: "hidden/restored", included: "SEO+contact", summaryAndCopy: "PASS", fallback: "PASS", recurringUnchanged: "PASS", externalWrites: 0 });
+      results.push({ language: en ? "EN" : "FR", width: viewport.width, automation: "190/490 package", packages: "390/590/890/back", extras: "649/890/1240/1540", complexity: "hidden/restored", included: "SEO+contact", summaryAndCopy: "PASS", fallback: "PASS", recurringUnchanged: "PASS", externalWrites: 0 });
       console.log("Case passed", en ? "EN" : "FR", viewport.width);
       await context.close();
     }
