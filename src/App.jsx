@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import "./App.css";
 import { AILabCarousel } from "./components/AILabCarousel";
 import { RequestConversation } from "./components/RequestConversation";
@@ -1212,6 +1212,7 @@ const normalizePathname = (path) => {
   return path.replace(/\/+$/, "");
 };
 
+let cancelHeaderScroll = () => {};
 const scrollToElementWithHeaderOffset = (selectorOrElement) => {
   const element =
     typeof selectorOrElement === "string" ? document.querySelector(selectorOrElement) : selectorOrElement;
@@ -1220,11 +1221,21 @@ const scrollToElementWithHeaderOffset = (selectorOrElement) => {
     return;
   }
 
-  const headerOffset = 104;
-  const elementTop = element.getBoundingClientRect().top + window.scrollY;
-  const targetTop = Math.max(0, elementTop - headerOffset);
-
-  window.scrollTo({ top: targetTop, behavior: "smooth" });
+  cancelHeaderScroll();
+  const targetTop = () => {
+    const header = document.querySelector(".navbar");
+    const inset = header ? (parseFloat(getComputedStyle(header).top) || 0) + header.getBoundingClientRect().height + 16 : 16;
+    return Math.max(0, element.getBoundingClientRect().top + window.scrollY - inset);
+  };
+  // Recheck after scrolling: desktop compaction and closing a dropdown can change the inset.
+  let timer;
+  const cleanup = () => { window.removeEventListener("scrollend", settle); window.clearTimeout(timer); };
+  const settle = () => { cleanup(); if (element.isConnected) window.scrollTo({ top: targetTop(), behavior: "instant" }); };
+  cancelHeaderScroll = cleanup;
+  window.addEventListener("scrollend", settle, { once: true });
+  timer = window.setTimeout(settle, 1000);
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: targetTop(), behavior: reducedMotion ? "instant" : "smooth" });
 };
 
 const setMetaContent = (selector, content) => {
@@ -7496,6 +7507,8 @@ function SiteHeader({
   onLogout,
 }) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const headerRef = useRef(null);
+  const headerFrameRef = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("");
   const isAuditPage = pathname === auditLandingPath;
@@ -7519,6 +7532,47 @@ function SiteHeader({
     adminUnreadMessageCount > 1
       ? `${adminUnreadMessageCount} nouveaux messages client`
       : "1 nouveau message client";
+
+  // Keep the expanded header's document footprint while its sticky surface shrinks.
+  // A hidden expanded clone also handles resizing or account/name changes while scrolled.
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    const frame = headerFrameRef.current;
+    const syncFootprint = () => {
+      const expanded = header.cloneNode(true);
+      expanded.classList.remove("is-scrolled", "is-menu-open");
+      expanded.removeAttribute("id");
+      expanded.querySelectorAll("[id]").forEach(node => node.removeAttribute("id"));
+      expanded.inert = true;
+      expanded.setAttribute("aria-hidden", "true");
+      Object.assign(expanded.style, { position: "absolute", visibility: "hidden", transition: "none", pointerEvents: "none" });
+      header.parentElement.append(expanded);
+      const expandedHeight = expanded.getBoundingClientRect().height;
+      expanded.remove();
+      frame.style.height = expandedHeight + "px";
+    };
+    syncFootprint();
+    const observer = new ResizeObserver(syncFootprint);
+    observer.observe(header);
+    window.addEventListener("resize", syncFootprint);
+    return () => { observer.disconnect(); window.removeEventListener("resize", syncFootprint); };
+  }, [isScrolled, session, isAdmin, pathname]);
+
+  useEffect(() => {
+    const keepFocusVisible = event => {
+      const target = event.target;
+      if (!target.closest("main, .estimator-home") || target.closest('[role="dialog"], .auth-modal')) return;
+      requestAnimationFrame(() => {
+        const bottom = headerRef.current?.getBoundingClientRect().bottom ?? 0;
+        const rect = target.getBoundingClientRect();
+        if (rect.height && rect.top < bottom + 12 && rect.bottom > 0) {
+          window.scrollBy({ top: rect.top - bottom - 16, behavior: "instant" });
+        }
+      });
+    };
+    document.addEventListener("focusin", keepFocusVisible);
+    return () => document.removeEventListener("focusin", keepFocusVisible);
+  }, []);
 
   const handleNavigate = (event, target) => {
     event.preventDefault();
@@ -7588,7 +7642,8 @@ function SiteHeader({
   return (
     <>
       <ScrollProgress />
-      <header className={`navbar${isScrolled ? " is-scrolled" : ""}${isMenuOpen ? " is-menu-open" : ""}`}>
+      <div ref={headerFrameRef} className="navbar-frame">
+      <header ref={headerRef} className={`navbar${isScrolled ? " is-scrolled" : ""}${isMenuOpen ? " is-menu-open" : ""}`}>
         <a className="navbar-brand" href="/#" onClick={(event) => handleNavigate(event, "/#")}>
           <img src="/logo-digital-lab.png" alt="" />
           <span>Digital Lab</span>
@@ -7599,6 +7654,7 @@ function SiteHeader({
           type="button"
           aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
           aria-expanded={isMenuOpen}
+          aria-controls="site-navigation"
           onClick={() => setIsMenuOpen((currentState) => !currentState)}
         >
           <span></span>
@@ -7606,7 +7662,7 @@ function SiteHeader({
           <span></span>
         </button>
 
-        <nav className="navbar-menu" aria-label="Navigation principale">
+        <nav id="site-navigation" className="navbar-menu" aria-label="Navigation principale">
           {navLinks.map((link, index) => (
             <a
               className={`${visibleActiveHref === link.href ? "is-active" : ""}${link.emphasized ? " nav-link-emphasis" : ""}`.trim()}
@@ -7786,6 +7842,7 @@ function SiteHeader({
           </div>
         </nav>
       </header>
+      </div>
     </>
   );
 }

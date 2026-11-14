@@ -13062,3 +13062,37 @@ html {
 @media (max-width: 960px) {
   .has-repair .unified-result { position: static; }
 }
+
+/* DL-HEADER-COMPACT-01: only the scrolled desktop surface changes layout. */
+.navbar-frame { position: sticky; top: 0; z-index: 1000; pointer-events: none; }
+.navbar-frame > .navbar { position: relative; pointer-events: auto; }
+@media (min-width: 1181px) {
+  .navbar { transition: border-color 320ms ease, box-shadow 320ms ease, background 320ms ease; }
+  .navbar.is-scrolled {
+    width: min(1600px, calc(100% - 32px));
+    padding: 8px 16px;
+    gap: 12px;
+    flex-wrap: nowrap;
+    border-radius: 22px;
+  }
+  .navbar.is-scrolled .navbar-menu {
+    flex: 1 1 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    justify-content: flex-end;
+    gap: 8px 12px;
+  }
+  .navbar.is-scrolled .navbar-actions {
+    position: static;
+    gap: 10px;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  .navbar.is-scrolled .navbar-menu > a { flex-shrink: 0; }
+  .navbar.is-scrolled .navbar-menu .navbar-cta { min-height: 44px; padding: 8px 12px; }
+}
+@media (max-width: 1180px) {
+  .navbar-menu { visibility: hidden; }
+  .navbar.is-menu-open .navbar-menu { visibility: visible; }
+}
