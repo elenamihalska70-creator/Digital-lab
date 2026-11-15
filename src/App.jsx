@@ -16,6 +16,7 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
+import { createEstimatorTracker, ESTIMATOR_INTERACTIVE_SELECTOR } from "./utils/estimatorTracking";
 import {
   getPlanMonthlyPrice,
   REELS_OFFERS,
@@ -2422,6 +2423,21 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   });
   const hasSelection = Boolean(estimate.project || estimate.social || estimate.reels);
 
+  // DL-GROWTH-TRACKING-01: one tracker per mounted estimator (stable across re-renders and
+  // StrictMode). Events go through trackEvent(), a no-op outside the production GA4 guard.
+  const [usageTracker] = useState(() =>
+    createEstimatorTracker({ variant: variant === "social" ? "social" : "main", language: isEnglish ? "en" : "fr", send: trackEvent }));
+  const committedPresetRef = useRef(appliedPreset);
+  useEffect(() => {
+    // A preset comes from a CTA outside the estimator (already measured by social_media_offer_select).
+    const fromPreset = committedPresetRef.current !== appliedPreset;
+    committedPresetRef.current = appliedPreset;
+    usageTracker.commit(estimate, { interactive: !fromPreset });
+  });
+  const noteEstimatorInteraction = (event) => {
+    if (event.nativeEvent?.isTrusted && event.target?.closest?.(ESTIMATOR_INTERACTIVE_SELECTOR)) usageTracker.noteInteraction();
+  };
+
   const steps = [hasSelection];
   if (isRepairProject) {
     steps.push(answers.profile, repair.issue, repair.intervention, repair.platform, repair.urgency);
@@ -2501,7 +2517,8 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
   const addonLines = getSocialAddonLines(estimate, isEnglish);
 
   return (
-    <section className={`section estimator-section reveal-on-scroll reveal-section estimator-${variant}`} id={sectionId}>
+    <section className={`section estimator-section reveal-on-scroll reveal-section estimator-${variant}`} id={sectionId}
+      onClickCapture={noteEstimatorInteraction} onChangeCapture={noteEstimatorInteraction}>
       <div className="section-inner">
         <div className="section-heading">
           <span>{variant === "social" ? t("Simulateur", "Estimator") : t("Estimation", "Estimate")}</span>

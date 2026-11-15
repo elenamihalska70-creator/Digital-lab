@@ -22,3 +22,26 @@ test("Local, private, preview and look-alike hosts are never tracked", () => {
 test("Development builds are never tracked, whatever the host", () => {
   assert.equal(isTrackingAllowed({ hostname: "www.digitallab.studio", isProductionBuild: false }), false);
 });
+
+test("DL-GROWTH-TRACKING-01: this project's Vercel Preview and branch hosts are never tracked", () => {
+  for (const hostname of [
+    "digital-5ch2zx7fe-elenamihalska70-creators-projects.vercel.app",
+    "digital-lab-git-feat-dl-growth-tracking-01-elenamihalska70-creators-projects.vercel.app",
+    "digitallab.studio.vercel.app", "www.digitallab.studio.", "preview.www.digitallab.studio",
+  ]) {
+    assert.equal(isTrackingAllowed({ hostname, isProductionBuild: true }), false, hostname);
+  }
+});
+
+test("trackEvent is a no-op when the production guard did not initialize gtag", async () => {
+  const { trackEvent } = await import("./analytics.js");
+  assert.equal(globalThis.window, undefined);
+  assert.doesNotThrow(() => trackEvent("estimator_open", { estimator_variant: "main" }));
+  globalThis.window = {};
+  try {
+    assert.doesNotThrow(() => trackEvent("estimator_open", { estimator_variant: "main" }));
+    assert.equal(globalThis.window.dataLayer, undefined);
+  } finally {
+    delete globalThis.window;
+  }
+});
