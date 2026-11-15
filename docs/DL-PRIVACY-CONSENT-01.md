@@ -124,16 +124,51 @@ In this app, sign-in returns are full page loads (case 1). Case 2 is defence in 
     - vendor-stated default: `_ga` / `_ga_…` cookies 2 years ("selon Google… par défaut"; not overridden in code);
     - account setting: GA detailed data retention is a property setting, capped at 14 months for a standard (non-360) property; aggregated reports unaffected. The actual value (2 or 14 months) is not stated because it was not verified;
   - a link to Google's privacy policy.
-- Section 9 "Droits RGPD" adds:
+- Section 10 "Droits RGPD" (formerly 9) adds:
   - portability;
   - withdrawal of consent via "Gérer les cookies";
   - the one-month answer period (GDPR art. 12.3);
   - the **right to complain to the CNIL** (link to cnil.fr/fr/adresser-une-plainte).
-- Section 10: the date is rendered from `PRIVACY_POLICY_LAST_UPDATED` (see the pre-release warning).
+- Section 11 (formerly 10): the date is rendered from `PRIVACY_POLICY_LAST_UPDATED` (see the pre-release warning).
+- DL-PRIVACY-FINAL-01 additions: see the next section.
 - Preserved unchanged:
   - controller identity (section 1);
-  - e-mail requests, the client area and former form requests (section 2);
-  - the internal Google automation (Sheets, Drive), purposes, access limits, revocation and the Google API Limited Use disclosure (sections 4–8 and 11).
+  - e-mail requests and former form requests (section 2);
+  - the internal Google automation (Sheets, Drive), purposes, access limits, revocation and the Google API Limited Use disclosure (sections 5–9 and 12, formerly 4–8 and 11).
+
+## DL-PRIVACY-FINAL-01: recipients, legal bases and retention
+
+Verified facts (15 November 2026), read-only:
+- **Vercel** hosts the whole site; static pages served from a Paris edge (`cdg1`), API routes run in `iad1` (United States). Both e-mail API routes are disabled (`/api/send-contact-email` returns 410; `/api/send-quote-email` returns 403 in production, probably a firewall rule). Vercel DPA (updated 17 March 2026): Vercel is a processor, primary processing facilities in the United States, EEA transfers under the 2021 SCCs. https://vercel.com/legal/dpa
+- **Supabase** project `gcsqoluyfgkpwhtbpnzj` (from the production bundle) handles authentication, the client-area tables and the private `request-documents` bucket. The project is not in the connected Supabase account, so its **region is unknown**. Public auth settings: e-mail and Google sign-in enabled, sign-up open, `mailer_autoconfirm: true` (no confirmation e-mail). The site has no password-reset flow. Supabase DPA (version 1, 1 August 2026): processor; contracting entity Supabase Pte. Ltd, Singapore; SCCs; customers can direct a processing region. https://supabase.com/legal/dpa
+- **E-mail:** quote and contact requests are mailto drafts sent from the visitor's own mail client; the site's servers never receive them. `digitallab.studio` MX records point to OVHcloud (`mx*.mail.ovh.net`); whether the mailbox is hosted there or forwarded elsewhere is unknown.
+- **Resend:** the domain has Resend DNS records (`resend._domainkey`, `send` subdomain), but no code path uses Resend today: both API routes are disabled, and the `send-quote-email` Supabase function in the repo is never called. Before WEB-CONTACT-SIMPLE-01, contact-form enquiries were sent through Resend. Resend is therefore **not** named on the page.
+- **Retention:** no automatic deletion, scheduled clean-up or self-service account deletion exists. Only database cascades remove data when a parent record or user is deleted.
+
+Applied to the page:
+- Section 2: account data (e-mail and password, or Google sign-in data; role; requests, messages, documents with their limits; quotes and refusal comments) and **legal bases**, separating pre-contractual measures, contract, legitimate interest (accounts without a current service), legal obligation (documents required by law) and consent (analytics).
+  - **Legal review required, not validated:** the legitimate-interest basis (GDPR art. 6.1.f) for accounts with no service in progress and for following up exchanges is a proposal. A lawyer must confirm it, or replace it, before release.
+- Section 8 states retention criteria only ("pendant la durée de la relation", no automatic deletion yet). The periods in the matrix below are proposals and are **not** on the public page.
+- Unresolved provider details stay off the public page and are listed as verification requirements in owner point 6: <ul><li>Supabase region;</li><li>DPA applicability;</li><li>OVH forwarding;</li><li>Resend's current use;</li><li>Vercel log retention.</li></ul>
+- New section 4 "Destinataires et hébergement": Vercel, Supabase (Pte. Ltd, Singapore), OVHcloud (receives mail sent to the contact address), Google sign-in, and transfers attributed to the providers' own statements ("indiquent"). No Supabase region and no Resend mention.
+- Section 6: purpose "account management, documents, quotes and access security".
+- Section 8: retention for the duration of the relationship, **no automatic deletion yet**, deletion on request except documents kept under a legal obligation.
+- Legal notice: the removed contact form is no longer mentioned.
+- Sign-in dialog: a "Politique de confidentialité" link under the form, in both login and sign-up modes. Authentication behaviour is unchanged.
+
+**Retention matrix (owner approval and legal review required; nothing here is implemented):**
+
+| Data | Legal minimum or maximum | Proposed period (owner decision) | Today |
+|---|---|---|---|
+| E-mail requests with no follow-up | No legal minimum | 3 years from the last contact (CNIL commercial-management guidance for prospects) | Kept in the OVH mailbox indefinitely |
+| Account (e-mail, role, sign-in data) | None | Until account deletion, or 3 years after the last activity with no ongoing service | No deletion |
+| Client-area requests, messages, documents | None, unless a document is an accounting record | Duration of the relationship plus 3 years | No deletion |
+| Quotes not accepted | None | Duration of the relationship plus 3 years | No deletion |
+| Accepted quotes, invoices and other accounting records | **10 years** (Code de commerce, art. L123-22), if the document is an accounting record: lawyer to confirm for accepted quotes | 10 years | No deletion |
+| Vercel request logs | Provider-defined | Provider default (check the plan) | Unknown |
+| GA4 | See section 3 | Account setting (2 or 14 months) | Unchanged |
+
+**Proposed deletion procedure (for approval, not implemented):** (1) a deletion request arrives by e-mail; identity is checked against the account address; (2) within one month, the admin deletes the account in the Supabase dashboard. Per the repo SQL, that cascade removes the messages and document records the user created; it does **not** remove the stored files, nor the client's `contact_requests` and their quotes (the `contact_requests` definition is not in the repo). Those files and records are deleted explicitly, except those kept under step 3; (3) records under a legal obligation are kept apart and listed in the reply; (4) once a year, the owner reviews accounts and requests past the approved periods. Any automation (scheduled clean-up, self-service deletion) is a separate LOT.
 
 **Sources (consulted 15 November 2026):**
 - CNIL, cookies: what the law says (information, withdrawal): https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/que-dit-la-loi
@@ -174,8 +209,8 @@ In this app, sign-in returns are full page loads (case 1). Case 2 is defence in 
 | 2 | **GA4 property retention setting** (2 or 14 months). The page calls it an account setting capped at 14 months, which holds for a standard (non-360) property. Confirm the property is standard; once the value is checked, the page can state it. | Owner: Admin › Data retention |
 | 3 | **`_ga` lifetime of 2 years** (Google default). The CNIL's 13-month cap formally applies to consent-exempt tools, but a shorter lifetime (`cookie_expires`) is common good practice. Not changed without owner approval. | Owner / legal |
 | 4 | **GA4 dashboard:** check that Google signals and ads links are off at property level, and that the Data Processing Terms are accepted. | Owner, before production |
-| 5 | **Legal basis and retention periods for e-mail requests and the client area.** The basis is likely pre-contractual measures or contract (GDPR art. 6.1.b); section 7 is generic. Pre-existing gap. | Legal review |
-| 6 | **Recipients and processors for hosting and the client area** (Vercel, Supabase, and Resend if quote e-mails are re-enabled) and their transfer mechanisms. The policy doesn't list them; Vercel appears only in the legal notice. Pre-existing gap. | Owner / legal |
+| 5 | **Legal bases and retention (DL-PRIVACY-FINAL-01).** Bases now stated in section 2. A lawyer should confirm: legitimate interest for accounts with no current service, and whether accepted quotes are accounting records (10 years). Approve the retention matrix and deletion procedure above. | Legal review / owner |
+| 6 | **Recipients (DL-PRIVACY-FINAL-01).** Now in section 4. Still to confirm: <ul><li>the Supabase project region;</li><li>that the Vercel and Supabase DPAs apply to your accounts;</li><li>whether the OVH mailbox forwards to another provider, which would then need naming;</li><li>whether Resend still sends anything, and its retention of past contact-form enquiries;</li><li>Vercel log retention on your plan.</li></ul> | Owner |
 | 7 | **English policy page:** publish the English copy above as a page, or keep the French page with the "(in French)" labels. The English "Legal notice" footer link also leads to a French page. | Owner |
 | 8 | **6-month choice lifetime:** the CNIL calls it good practice; confirm. | Owner |
 | 9 | **Clarity in the Microsoft account:** the project stays configured but receives nothing from this site. Optionally pause or delete it there, and check that existing recordings expire (Microsoft: 30 days; favorites and samples up to 9 months). No account change was made here. | Owner |
@@ -209,7 +244,9 @@ In this app, sign-in returns are full page loads (case 1). Case 2 is defence in 
   - `src/App.jsx`:
     - footer "Gérer les cookies" button, plus the English policy link labelled "(in French)";
     - privacy policy sections 2, 3, 9 and 10;
-    - `PRIVACY_POLICY_LAST_UPDATED`.
+    - `PRIVACY_POLICY_LAST_UPDATED`;
+    - DL-PRIVACY-FINAL-01: policy sections 2, 4 (new), 6 and 8, renumbering, the legal-notice sentence, and the privacy link in the sign-in dialog.
+  - `src/App.css` (DL-PRIVACY-FINAL-01): `.auth-privacy-note` styles.
   - `index.html`: `<body data-clarity-mask="true">`.
   - `scripts/check-repair-ui.mjs`: the assertion above.
   - `package.json`:

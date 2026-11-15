@@ -395,6 +395,11 @@ try {
     current = await s.state();
     const payloads = JSON.stringify(current.dataLayer);
     for (const secret of ["synthetic-", "Synthetic-Pass", "jean.synthetic", "@example.com"]) assert.ok(!payloads.includes(secret), secret);
+    // DL-PRIVACY-FINAL-01: the dialog links to the privacy policy where an account is created or used.
+    const authPolicyLink = modal.getByRole("link", { name: "Politique de confidentialité", exact: true });
+    assert.equal(await authPolicyLink.getAttribute("href"), "/politique-de-confidentialite");
+    await modal.locator(".auth-switch").click();
+    assert.equal(await authPolicyLink.count(), 1, "policy link also shown in sign-up mode");
     assert.deepEqual([s.clarityLoads(), current.clarity, current.clarityScripts], [0, "undefined", 0]);
     assert.deepEqual(s.errors, []);
     rows.push({ case: "GA4 running + credentials in session", optOutFlag: "raised/lifted", queued: 0, loginDialog: "nothing sent", clarity: 0 });
@@ -439,13 +444,18 @@ try {
     await s.go("/politique-de-confidentialite");
     const text = await s.page.locator("main").textContent();
     for (const needle of ["Google Analytics", "Gérer les cookies", "_ga", "désactivée par défaut", "Microsoft Clarity n’est pas chargé", "_clck",
-      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 1er septembre 2026"]) {
+      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 1er septembre 2026",
+      // DL-PRIVACY-FINAL-01: account data, legal bases, recipients, transfers and retention.
+      "Continuer avec Google", "article 6.1.b", "article 6.1.f", "article 6.1.c", "4. Destinataires et hébergement", "Vercel Inc.",
+      "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure"]) {
       assert.ok(text.includes(needle), needle);
     }
     for (const stale of ["Enregistrement de session —", "Microsoft Ireland Operations Limited", "30 jours", "recharge la page", "masqués dans Microsoft Clarity"]) {
       assert.ok(!text.includes(stale), "stale Clarity text: " + stale);
     }
     assert.ok(!text.includes("Le site utilise également Google Analytics afin de mesurer"));
+    assert.ok(!text.includes("Resend"), "Resend has no verified current processing role");
+    assert.ok(!/\[[^\]]*(confirmer|à compléter)[^\]]*\]/i.test(text), "no unresolved placeholder on the public page");
     await s.page.locator("#cookies").screenshot({ path: shotPath("FR-privacy-cookies-section") });
 
     // The banner deep-links to the cookies section (French page, marked with hreflang) and the heading clears the sticky header.
@@ -457,6 +467,13 @@ try {
     const top = await s.page.locator("#cookies").evaluate((node) => node.getBoundingClientRect().top);
     assert.ok(top >= 60 && top < 400, `#cookies top after deep link: ${top}`);
     rows.push({ case: "privacy policy", ga: "documented", clarity: "documented as not used", withdrawal: "documented" });
+
+    // Legal notice: the removed public contact form is no longer mentioned.
+    await s.go("/mentions-legales");
+    const legalText = await s.page.locator("main").textContent();
+    assert.ok(!legalText.includes("via un formulaire"), "legal notice: no removed contact form");
+    assert.ok(legalText.includes("depuis votre espace client"), "legal notice: current channels");
+    rows.push({ case: "legal notice", contactForm: "not mentioned" });
     await s.context.close();
 
     // English footer: the policy destination is labelled as French.

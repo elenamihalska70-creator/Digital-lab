@@ -4268,6 +4268,26 @@
   text-underline-offset: 5px;
 }
 
+/* DL-PRIVACY-FINAL-01: privacy notice at the point where an account is created or used. */
+.auth-modal p.auth-privacy-note {
+  margin: 18px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.auth-privacy-note a {
+  color: #c7a8ff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-privacy-note a:hover,
+.auth-privacy-note a:focus-visible {
+  color: #ffffff;
+}
+
 .auth-toast {
   position: fixed;
   right: 22px;

@@ -3867,8 +3867,8 @@ function LegalNoticePage({ onNavigate }) {
               <article>
                 <h2>Données personnelles</h2>
                 <p>
-                  Les informations envoyées par email ou via un formulaire sont utilisées uniquement pour répondre
-                  aux demandes de contact.
+                  Les informations que vous envoyez par e-mail ou depuis votre espace client sont utilisées uniquement
+                  pour répondre à vos demandes et assurer le suivi de vos projets.
                 </p>
                 <p>
                   Pour plus de détails, consultez la <a href={privacyPolicyPath} onClick={(event) => {
@@ -3917,9 +3917,21 @@ function PrivacyPolicyPage({ onNavigate }) {
                   informations utiles au traitement de votre demande.
                 </p>
                 <p>
-                  Si vous disposez d’un espace client, Digital Lab traite également les informations que vous y échangez
-                  (messages, documents, devis), ainsi que les demandes envoyées auparavant via l’ancien formulaire du site,
-                  qui restent consultables dans votre espace client et par Digital Lab.
+                  Si vous créez un espace client, Digital Lab traite : votre adresse e-mail et votre mot de passe (que Digital
+                  Lab ne peut pas lire) ou, si vous choisissez « Continuer avec Google », les informations transmises par
+                  Google pour la connexion ; le rôle associé à votre compte (client ou administrateur) ; les demandes, messages
+                  et documents échangés dans votre espace client (PDF, images ou fichiers Word, 10 Mo maximum par fichier) ;
+                  les devis et, le cas échéant, le commentaire laissé lors d’un refus de devis. Les demandes envoyées
+                  auparavant via l’ancien formulaire du site restent consultables dans votre espace client et par Digital Lab.
+                </p>
+                <p>
+                  Bases légales : la réponse à vos demandes de devis ou d’information repose sur les mesures précontractuelles
+                  prises à votre demande (article 6.1.b du RGPD) ; les échanges, documents et devis liés à une prestation
+                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion et la sécurité d’un compte client
+                  ouvert sans prestation en cours, ainsi que le suivi des échanges, reposent sur l’intérêt légitime de Digital
+                  Lab à répondre aux personnes qui la contactent et à sécuriser son espace client (article 6.1.f) ; la
+                  conservation des documents exigés par la réglementation, notamment comptable, repose sur une obligation
+                  légale (article 6.1.c). La mesure d’audience repose uniquement sur votre consentement (section 3).
                 </p>
                 <p>
                   Uniquement avec votre accord, le site utilise également un outil de mesure d’audience (Google Analytics),
@@ -3982,7 +3994,38 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>4. Utilisation des services Google</h2>
+                <h2>4. Destinataires et hébergement</h2>
+                <p>
+                  Vos données sont destinées à Digital Lab. Elles ne sont ni vendues ni louées. Les prestataires techniques
+                  suivants les traitent pour le compte de Digital Lab, dans la limite de leur mission :
+                </p>
+                <ul>
+                  <li>
+                    Vercel Inc. (États-Unis) : hébergement du site. Comme tout hébergeur, Vercel traite les données techniques
+                    de connexion nécessaires à l’affichage des pages (adresse IP, pages demandées).
+                  </li>
+                  <li>
+                    Supabase (Supabase Pte. Ltd, Singapour) : authentification, base de données de l’espace client et stockage
+                    privé des documents.
+                  </li>
+                  <li>
+                    OVHcloud (France) : réception des e-mails adressés à {businessContact.email}.
+                  </li>
+                </ul>
+                <p>
+                  Si vous choisissez « Continuer avec Google », Google traite les informations de connexion selon sa propre
+                  politique de confidentialité. Google Analytics n’est utilisé qu’avec votre accord (section 3).
+                </p>
+                <p>
+                  Transferts hors de l’Union européenne : Vercel indique que ses principaux centres de traitement se situent
+                  aux États-Unis, et la société Supabase contractante est établie à Singapour. Ces deux prestataires indiquent
+                  encadrer les transferts de données depuis l’Union européenne par les clauses contractuelles types de la
+                  Commission européenne.
+                </p>
+              </article>
+
+              <article>
+                <h2>5. Utilisation des services Google</h2>
                 <p>
                   Une automatisation privée et interne de Digital Lab peut accéder à certains services Google lorsque cela est
                   nécessaire à l’organisation et à la publication de contenus Digital Lab.
@@ -3994,19 +4037,20 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>5. Finalités</h2>
+                <h2>6. Finalités</h2>
                 <p>Les données sont utilisées pour les finalités suivantes :</p>
                 <ul>
                   <li>planification du contenu Digital Lab ;</li>
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées.</li>
+                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées ;</li>
+                  <li>gestion des comptes de l’espace client, des documents et des devis, et sécurité des accès.</li>
                 </ul>
               </article>
 
               <article>
-                <h2>6. Limitation d’accès</h2>
+                <h2>7. Limitation d’accès</h2>
                 <p>
                   L’automatisation fonctionne uniquement avec les fichiers et tableaux explicitement sélectionnés ou fournis
                   par Digital Lab.
@@ -4018,10 +4062,18 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>7. Conservation et sécurité</h2>
+                <h2>8. Conservation et sécurité</h2>
                 <p>
                   Digital Lab applique un principe de minimisation des données et conserve les informations uniquement pendant
                   la durée nécessaire aux finalités décrites dans cette politique.
+                </p>
+                <p>
+                  Les demandes reçues par e-mail et les données de l’espace client (compte, demandes, messages, documents,
+                  devis) sont conservées pendant la durée de la relation avec Digital Lab. Aucune suppression automatique n’est
+                  en place à ce jour : vous pouvez demander à tout moment la suppression de votre compte et des données
+                  associées en écrivant à {businessContact.email}, sauf pour les documents que Digital Lab doit conserver au
+                  titre d’une obligation légale, notamment comptable. Les durées propres à la mesure d’audience sont indiquées
+                  à la section 3.
                 </p>
                 <p>
                   Des mesures techniques raisonnables sont mises en place pour protéger les accès et limiter les risques.
@@ -4030,7 +4082,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>8. Révocation de l’accès Google</h2>
+                <h2>9. Révocation de l’accès Google</h2>
                 <p>
                   L’accès accordé aux services Google peut être révoqué à tout moment depuis la page de gestion des autorisations
                   Google : <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">
@@ -4040,7 +4092,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>9. Droits RGPD</h2>
+                <h2>10. Droits RGPD</h2>
                 <p>
                   Conformément au RGPD, vous pouvez demander l’accès, la rectification, l’effacement ou la limitation du
                   traitement de vos données, ainsi que leur portabilité. Vous pouvez également vous opposer à certains
@@ -4061,7 +4113,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>10. Mise à jour de la politique</h2>
+                <h2>11. Mise à jour de la politique</h2>
                 <p>Dernière mise à jour : {formatFrenchDate(PRIVACY_POLICY_LAST_UPDATED)}.</p>
                 <p>
                   Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
@@ -4070,7 +4122,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>11. Google API disclosure</h2>
+                <h2>12. Google API disclosure</h2>
                 <p>
                   L’utilisation et le transfert vers toute autre application des informations reçues depuis les APIs Google
                   respectent la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
@@ -7672,6 +7724,11 @@ function AuthModal({ onClose }) {
         >
           {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte email"}
         </button>
+
+        <p className="auth-privacy-note">
+          Vos données de connexion servent uniquement à gérer votre espace client.{" "}
+          <a href={privacyPolicyPath}>Politique de confidentialité</a>
+        </p>
       </section>
     </div>
   );
