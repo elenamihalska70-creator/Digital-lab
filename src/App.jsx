@@ -16,6 +16,7 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
+import { isCurrentConsentUiEnabled, openConsentPreferences } from "./utils/consent";
 import {
   getPlanMonthlyPrice,
   REELS_OFFERS,
@@ -3802,6 +3803,11 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
           }}>
             {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
           </a>
+          {isCurrentConsentUiEnabled() && (
+            <button className="footer-consent-button" type="button" aria-haspopup="dialog" onClick={openConsentPreferences}>
+              {isEnglish ? "Cookie settings" : "Gérer les cookies"}
+            </button>
+          )}
         </nav>
       </div>
     </footer>
@@ -3906,14 +3912,54 @@ function PrivacyPolicyPage({ onNavigate }) {
                   qui restent consultables dans votre espace client et par Digital Lab.
                 </p>
                 <p>
-                  Le site utilise également Google Analytics afin de mesurer l’audience et d’améliorer l’expérience de navigation.
-                  Des données techniques peuvent être traitées à cette occasion, comme les pages consultées, le type d’appareil,
-                  le navigateur, des informations de performance et des identifiants de mesure associés aux cookies analytics.
+                  Uniquement avec votre accord, le site utilise également un outil de mesure d’audience (Google Analytics) et
+                  un outil d’enregistrement de session (Microsoft Clarity), décrits à la section 3.
+                </p>
+              </article>
+
+              <article id="cookies">
+                <h2>3. Cookies, mesure d’audience et enregistrement de session</h2>
+                <p>
+                  Ces outils sont facultatifs et désactivés par défaut. Ils ne sont chargés qu’après votre accord, donné
+                  catégorie par catégorie dans le bandeau « Vos choix sur les cookies ». Sans accord, ou en cas de refus,
+                  aucun d’eux n’est chargé et le site fonctionne normalement.
+                </p>
+                <ul>
+                  <li>
+                    Mesure d’audience — Google Analytics (Google) : pages consultées, provenance de la visite, type d’appareil
+                    et de navigateur, localisation approximative, et utilisation du simulateur de prix (services et formules
+                    choisis, jamais les textes saisis). Cookies déposés : _ga et _ga_… Les signaux publicitaires et la
+                    personnalisation des annonces sont désactivés.
+                  </li>
+                  <li>
+                    Enregistrement de session — Microsoft Clarity (Microsoft) : clics, défilement et mouvements sur les pages,
+                    type d’appareil et de navigateur. Le contenu des pages et les champs saisis sont masqués dans le code du
+                    site. Cookies déposés : _clck et _clsk.
+                  </li>
+                </ul>
+                <p>
+                  Les adresses de site, descriptions de problème, adresses e-mail, noms et messages que vous saisissez ne sont
+                  pas inclus dans les mesures envoyées à Google Analytics et sont masqués dans Microsoft Clarity.
+                </p>
+                <p>
+                  Éléments nécessaires, sans consentement : la mémorisation de votre choix sur votre appareil (stockage local
+                  « dl-consent », renouvelé au plus tard tous les 6 mois) et, si vous vous connectez, la session de votre
+                  espace client.
+                </p>
+                <p>
+                  Vous pouvez modifier ou retirer votre consentement à tout moment avec le bouton « Gérer les cookies » en bas
+                  de page. Le retrait arrête l’outil concerné et supprime ses cookies déposés sur ce site ; le retrait de
+                  Microsoft Clarity recharge la page.
+                </p>
+                <p>
+                  Ces prestataires traitent ces données selon leurs propres politiques :
+                  {" "}<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google</a> et
+                  {" "}<a href="https://privacy.microsoft.com/fr-fr/privacystatement" target="_blank" rel="noopener noreferrer">Microsoft</a>.
                 </p>
               </article>
 
               <article>
-                <h2>3. Utilisation des services Google</h2>
+                <h2>4. Utilisation des services Google</h2>
                 <p>
                   Une automatisation privée et interne de Digital Lab peut accéder à certains services Google lorsque cela est
                   nécessaire à l’organisation et à la publication de contenus Digital Lab.
@@ -3925,7 +3971,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>4. Finalités</h2>
+                <h2>5. Finalités</h2>
                 <p>Les données sont utilisées pour les finalités suivantes :</p>
                 <ul>
                   <li>planification du contenu Digital Lab ;</li>
@@ -3937,7 +3983,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>5. Limitation d’accès</h2>
+                <h2>6. Limitation d’accès</h2>
                 <p>
                   L’automatisation fonctionne uniquement avec les fichiers et tableaux explicitement sélectionnés ou fournis
                   par Digital Lab.
@@ -3949,7 +3995,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>6. Conservation et sécurité</h2>
+                <h2>7. Conservation et sécurité</h2>
                 <p>
                   Digital Lab applique un principe de minimisation des données et conserve les informations uniquement pendant
                   la durée nécessaire aux finalités décrites dans cette politique.
@@ -3961,7 +4007,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>7. Révocation de l’accès Google</h2>
+                <h2>8. Révocation de l’accès Google</h2>
                 <p>
                   L’accès accordé aux services Google peut être révoqué à tout moment depuis la page de gestion des autorisations
                   Google : <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">
@@ -3971,7 +4017,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>8. Droits RGPD</h2>
+                <h2>9. Droits RGPD</h2>
                 <p>
                   Conformément au RGPD, vous pouvez demander l’accès, la rectification, l’effacement ou la limitation du
                   traitement de vos données. Vous pouvez également vous opposer à certains traitements lorsque la réglementation
@@ -3984,7 +4030,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>9. Mise à jour de la politique</h2>
+                <h2>10. Mise à jour de la politique</h2>
                 <p>Dernière mise à jour : 1er septembre 2026.</p>
                 <p>
                   Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
@@ -3993,7 +4039,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>10. Google API disclosure</h2>
+                <h2>11. Google API disclosure</h2>
                 <p>
                   L’utilisation et le transfert vers toute autre application des informations reçues depuis les APIs Google
                   respectent la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
