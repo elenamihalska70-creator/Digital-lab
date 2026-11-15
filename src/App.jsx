@@ -3952,6 +3952,34 @@ function PrivacyPolicyPage({ onNavigate }) {
                   Microsoft Clarity recharge la page.
                 </p>
                 <p>
+                  Base légale : votre consentement (article 82 de la loi Informatique et Libertés pour les cookies, article
+                  6.1.a du RGPD pour les données). Le retrait du consentement ne remet pas en cause les traitements effectués
+                  avant ce retrait.
+                </p>
+                <p>
+                  Rôle des prestataires et transferts hors de l’Union européenne :
+                </p>
+                <ul>
+                  <li>
+                    Google Analytics : Google indique agir en tant que sous-traitant pour Google Analytics. Google indique ne pas enregistrer
+                    ni conserver les adresses IP dans Google Analytics. Les données peuvent être traitées aux États-Unis ;
+                    Google indique s’appuyer sur le Data Privacy Framework UE–États-Unis et, le cas échéant, sur les clauses
+                    contractuelles types de la Commission européenne.
+                  </li>
+                  <li>
+                    Microsoft Clarity : Microsoft indique agir en tant que responsable de traitement pour Clarity. Les données
+                    sont hébergées sur Microsoft Azure ; le contrat est conclu avec Microsoft Ireland Operations Limited, et
+                    les transferts vers Microsoft Corporation (États-Unis) sont encadrés par des clauses contractuelles types.
+                  </li>
+                </ul>
+                <p>
+                  Durées de conservation : selon Google, les cookies _ga et _ga_… expirent par défaut au bout de 2 ans ; la
+                  durée de conservation des données détaillées est un paramètre du compte Google Analytics, qui ne peut pas
+                  dépasser 14 mois (les rapports statistiques agrégés ne sont pas concernés par cette limite). Selon Microsoft,
+                  Clarity conserve les enregistrements 30 jours, et jusqu’à 9 mois pour les enregistrements marqués comme
+                  favoris et un échantillon aléatoire d’enregistrements.
+                </p>
+                <p>
                   Ces prestataires traitent ces données selon leurs propres politiques :
                   {" "}<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google</a> et
                   {" "}<a href="https://privacy.microsoft.com/fr-fr/privacystatement" target="_blank" rel="noopener noreferrer">Microsoft</a>.
@@ -4020,12 +4048,20 @@ function PrivacyPolicyPage({ onNavigate }) {
                 <h2>9. Droits RGPD</h2>
                 <p>
                   Conformément au RGPD, vous pouvez demander l’accès, la rectification, l’effacement ou la limitation du
-                  traitement de vos données. Vous pouvez également vous opposer à certains traitements lorsque la réglementation
-                  le permet.
+                  traitement de vos données, ainsi que leur portabilité. Vous pouvez également vous opposer à certains
+                  traitements lorsque la réglementation le permet, et retirer à tout moment votre consentement aux cookies
+                  facultatifs avec le bouton « Gérer les cookies » en bas de page.
                 </p>
                 <p>
                   Pour exercer vos droits, contactez Digital Lab à l’adresse suivante :
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Une réponse vous est
+                  apportée dans un délai d’un mois.
+                </p>
+                <p>
+                  Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL :
+                  {" "}<a href="https://www.cnil.fr/fr/adresser-une-plainte" target="_blank" rel="noopener noreferrer">
+                    www.cnil.fr/fr/adresser-une-plainte
+                  </a>.
                 </p>
               </article>
 

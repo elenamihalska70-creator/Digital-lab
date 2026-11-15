@@ -3,7 +3,8 @@ import "./ConsentManager.css";
 import { CONSENT_OPEN_EVENT, isCurrentConsentUiEnabled } from "../utils/consent.js";
 import { saveTrackingConsent } from "../utils/trackingConsent.js";
 
-const PRIVACY_PATH = "/politique-de-confidentialite";
+// Deep link to the cookies section; the policy page exists in French only (hrefLang marks it for English readers).
+const PRIVACY_PATH = "/politique-de-confidentialite#cookies";
 
 const COPY = {
   fr: {
@@ -33,7 +34,7 @@ const COPY = {
     region: "Cookies and analytics",
     title: "Your cookie choices",
     text: "With your consent, we use Google Analytics to measure audience and Microsoft Clarity to record interactions with pages (clicks, scrolling), with page content kept masked. The site works without these tools. Nothing is enabled until you choose; you can change your mind at any time via “Cookie settings” at the bottom of the page.",
-    policy: "Privacy policy (in French)",
+    policy: "Privacy policy, cookies section (in French)",
     reject: "Reject all",
     customize: "Customize",
     accept: "Accept all",
@@ -116,7 +117,7 @@ export function ConsentManager({ initialConsent }) {
         <section className="consent-banner" role="region" aria-labelledby={`${id}-title`} lang={lang} data-consent-banner="">
           <h2 id={`${id}-title`}>{copy.title}</h2>
           <p id={`${id}-text`}>
-            {copy.text} <a href={PRIVACY_PATH}>{copy.policy}</a>
+            {copy.text} <a href={PRIVACY_PATH} hrefLang="fr">{copy.policy}</a>
           </p>
           <div className="consent-actions">{buttons}</div>
         </section>
@@ -132,7 +133,7 @@ export function ConsentManager({ initialConsent }) {
           }
         }}>
           <h2 id={`${id}-dialog-title`}>{copy.dialogTitle}</h2>
-          <p>{copy.dialogIntro} <a href={PRIVACY_PATH}>{copy.policy}</a></p>
+          <p>{copy.dialogIntro} <a href={PRIVACY_PATH} hrefLang="fr">{copy.policy}</a></p>
 
           <fieldset className="consent-category">
             <legend>{copy.necessaryTitle}</legend>

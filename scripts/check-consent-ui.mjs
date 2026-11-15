@@ -331,9 +331,21 @@ try {
     const s = await session();
     await s.go("/politique-de-confidentialite");
     const text = await s.page.locator("main").textContent();
-    for (const needle of ["Microsoft Clarity", "Google Analytics", "Gérer les cookies", "_clck", "_ga", "désactivés par défaut"]) assert.ok(text.includes(needle), needle);
+    for (const needle of ["Microsoft Clarity", "Google Analytics", "Gérer les cookies", "_clck", "_ga", "désactivés par défaut",
+      "Base légale : votre consentement", "sous-traitant", "Microsoft Ireland Operations Limited", "30 jours", "réclamation à la CNIL", "portabilité"]) {
+      assert.ok(text.includes(needle), needle);
+    }
     assert.ok(!text.includes("Le site utilise également Google Analytics afin de mesurer"));
     await s.page.locator("#cookies").screenshot({ path: shotPath("FR-privacy-cookies-section") });
+
+    // The banner deep-links to the cookies section (French page, marked with hreflang) and the heading clears the sticky header.
+    const bannerLink = s.page.locator("[data-consent-banner] a");
+    assert.equal(await bannerLink.getAttribute("href"), "/politique-de-confidentialite#cookies");
+    assert.equal(await bannerLink.getAttribute("hreflang"), "fr");
+    await Promise.all([s.page.waitForURL(/#cookies$/), bannerLink.click()]);
+    await s.page.waitForTimeout(400);
+    const top = await s.page.locator("#cookies").evaluate((node) => node.getBoundingClientRect().top);
+    assert.ok(top >= 60 && top < 400, `#cookies top after deep link: ${top}`);
     rows.push({ case: "privacy policy", clarity: "documented", withdrawal: "documented" });
     await s.context.close();
   }

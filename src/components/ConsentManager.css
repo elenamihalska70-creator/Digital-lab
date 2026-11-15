@@ -1,5 +1,10 @@
 /* DL-PRIVACY-CONSENT-01 — consent banner, preferences dialog and footer control.
    Accept and reject share one style: equal prominence, as CNIL guidance requires. */
+/* The banner links to /politique-de-confidentialite#cookies: keep the heading clear of the sticky header. */
+.legal-grid #cookies {
+  scroll-margin-top: 112px;
+}
+
 .consent-banner {
   position: fixed;
   right: 16px;
