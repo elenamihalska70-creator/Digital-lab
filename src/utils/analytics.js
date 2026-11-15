@@ -13,6 +13,47 @@ let analyticsEnabled = false;
 
 const getPagePath = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
 
+// Supabase sign-in, password-reset and confirmation links return with credentials in the query or
+// fragment (implicit flow: #access_token=…&refresh_token=…; PKCE: ?code=…; e-mail links: token_hash;
+// failed callbacks: error_code/error_description). Nothing is sent to GA4 while the address carries one.
+const CREDENTIAL_PARAMETER =
+  /(?:^|[?#&])(?:access_token|refresh_token|provider_token|provider_refresh_token|id_token|token_hash|token|code|error_code|error_description)=/i;
+export const urlContainsCredentials = (href = "") => {
+  const queryStart = String(href).search(/[?#]/);
+  return queryStart !== -1 && CREDENTIAL_PARAMETER.test(String(href).slice(queryStart));
+};
+
+// Address guard for a GA4 instance that is already running. Besides our own helpers, gtag.js can send
+// hits by itself (for example page views on history changes, if enabled in the GA4 property). Google's
+// official opt-out flag is therefore raised whenever the address carries credentials, before the
+// history change happens, and lifted again once the address is clean and consent still holds.
+const syncAddressGuard = (href) => {
+  if (typeof window === "undefined" || !window.__digitalLabGaInitialized) return;
+  window[GA_DISABLE_FLAG] = !analyticsEnabled || urlContainsCredentials(href ?? window.location.href);
+};
+let addressGuardInstalled = false;
+const installAddressGuard = () => {
+  if (addressGuardInstalled) return;
+  addressGuardInstalled = true;
+  for (const method of ["pushState", "replaceState"]) {
+    const original = window.history[method];
+    window.history[method] = function guardedHistoryChange(state, title, url) {
+      if (url !== undefined && url !== null) {
+        try {
+          syncAddressGuard(new URL(String(url), window.location.href).href);
+        } catch {
+          // Invalid URL: the browser rejects the call below.
+        }
+      }
+      const result = original.apply(this, arguments);
+      syncAddressGuard();
+      return result;
+    };
+  }
+  window.addEventListener("popstate", () => syncAddressGuard());
+  window.addEventListener("hashchange", () => syncAddressGuard());
+};
+
 export const isGoogleAnalyticsEnabled = () => analyticsEnabled;
 
 // Returns true when GA4 is active on this page after the call.
@@ -23,9 +64,6 @@ export const initializeGoogleAnalytics = () => {
   ) {
     return false;
   }
-
-  // Re-consent after a withdrawal on the same page: lift Google's official opt-out flag.
-  window[GA_DISABLE_FLAG] = false;
 
   window.dataLayer = window.dataLayer || [];
   window.gtag =
@@ -61,6 +99,10 @@ export const initializeGoogleAnalytics = () => {
     window.__digitalLabGaInitialized = true;
   }
   analyticsEnabled = true;
+  // Re-consent after a withdrawal on the same page lifts Google's opt-out flag, unless the address
+  // carries credentials; from now on the flag follows the address.
+  installAddressGuard();
+  syncAddressGuard();
   return true;
 };
 
@@ -82,6 +124,7 @@ export const trackPageView = () => {
   if (!analyticsEnabled || typeof window === "undefined" || typeof window.gtag !== "function") {
     return;
   }
+  if (urlContainsCredentials(window.location.href)) return;
 
   const pagePath = getPagePath();
 
@@ -101,6 +144,7 @@ export const trackEvent = (eventName, parameters = {}) => {
   if (!analyticsEnabled || typeof window === "undefined" || typeof window.gtag !== "function") {
     return;
   }
+  if (urlContainsCredentials(window.location.href)) return;
 
   window.gtag("event", eventName, parameters);
 };

@@ -1,5 +1,5 @@
-// DL-PRIVACY-CONSENT-01 browser regression: consent-first GA4 and Microsoft Clarity on the built
-// site (run `npm run build` first).
+// DL-PRIVACY-CONSENT-01 browser regression: consent-first GA4 on the built site (run `npm run build`
+// first). Microsoft Clarity is disabled for this release: no scenario may request it or define it.
 //
 // The production hostname and a Vercel Preview hostname are mapped to the local preview server,
 // so the real guard (isTrackingAllowed + import.meta.env.PROD) and the real consent flow decide.
@@ -60,7 +60,7 @@ try {
     const settle = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const go = async (path = "/") => {
       await page.goto(`http://${host}:${PORT}${path}`, { waitUntil: "load" });
-      await page.locator("#root *").first().waitFor();
+      await page.locator("#root header, #root main").first().waitFor();
       await settle();
     };
     const state = async () => {
@@ -94,9 +94,15 @@ try {
     { name: "_clsk", value: "def", domain: ".digitallab.studio", path: "/" },
   ];
   const fr = { reject: "Tout refuser", customize: "Personnaliser", accept: "Accepter tout", save: "Enregistrer mes choix", footer: "Gérer les cookies",
-    analytics: "Autoriser Google Analytics", recording: "Autoriser Microsoft Clarity", close: "Fermer sans changer" };
+    analytics: "Autoriser Google Analytics", close: "Fermer sans changer" };
   const en = { reject: "Reject all", customize: "Customize", accept: "Accept all", save: "Save my choices", footer: "Cookie settings",
-    analytics: "Allow Google Analytics", recording: "Allow Microsoft Clarity", close: "Close without changes" };
+    analytics: "Allow Google Analytics", close: "Close without changes" };
+  // Clarity is disabled: the consent UI must not mention it or offer a toggle for it.
+  const assertNoClarityOption = async (s) => {
+    assert.ok(!/Clarity|session recording|enregistrement de session/i.test(await s.banner().textContent()), "banner mentions no Clarity");
+    assert.equal(await s.dialog().getByRole("checkbox", { includeHidden: true }).count(), 1, "one optional category only");
+    assert.ok(!/Clarity|session recording|enregistrement de session/i.test(await s.dialog().textContent()), "dialog mentions no Clarity");
+  };
 
   // 1. No choice: nothing optional loads, leftover vendor cookies from earlier visits are removed,
   //    and using the site (estimator, navigation) changes nothing.
@@ -107,6 +113,7 @@ try {
     await s.banner().waitFor();
     assert.equal(await s.banner().getAttribute("lang"), lang.toLowerCase());
     for (const label of [copy.reject, copy.customize, copy.accept]) assert.equal(await s.banner().getByRole("button", { name: label, exact: true }).count(), 1);
+    await assertNoClarityOption(s);
     const section = s.page.locator(".estimator-home");
     await section.getByRole("group").first().getByRole("button").nth(2).click();
     await s.page.getByRole("button", { name: copy.footer, exact: true }).waitFor();
@@ -171,8 +178,8 @@ try {
     await s.page.keyboard.press("Enter");
     await s.dialog().waitFor();
     const analytics = s.dialog().getByRole("checkbox", { name: fr.analytics });
-    const recording = s.dialog().getByRole("checkbox", { name: fr.recording });
-    assert.deepEqual([await analytics.isChecked(), await recording.isChecked()], [false, false], "nothing prechecked");
+    assert.equal(await analytics.isChecked(), false, "nothing prechecked");
+    assert.equal(await s.dialog().getByRole("checkbox").count(), 1, "audience measurement is the only optional category");
     assert.ok(await s.dialog().evaluate((dialog) => dialog.contains(document.activeElement)), "focus moved into the dialog");
     await s.shot("FR-1440-preferences");
     // Escape closes without saving anything.
@@ -214,23 +221,35 @@ try {
     await s.context.close();
   }
 
-  // 4. Clarity only: Clarity loads with consent v2 (ads denied) and the page masked; GA4 does not.
+  // 4. A stored opt-in for session recording (from a Preview review or an earlier build) loads nothing:
+  //    Clarity is disabled, its leftover cookies are deleted, and no Clarity toggle is offered (EN).
   {
-    const s = await session();
+    const s = await session({ cookies: leftoverCookies.filter((cookie) => cookie.name.startsWith("_cl")) });
+    await s.context.addInitScript(() => {
+      if (!sessionStorage.getItem("seeded")) {
+        localStorage.setItem("dl-consent", JSON.stringify({ version: 1, analytics: false, recording: true, date: new Date().toISOString().slice(0, 10) }));
+        sessionStorage.setItem("seeded", "1");
+      }
+    });
     await s.go("/en/");
-    await s.page.getByRole("button", { name: en.customize, exact: true }).click();
-    await s.dialog().getByRole("checkbox", { name: en.recording }).check();
-    await s.dialog().getByRole("button", { name: en.save, exact: true }).click();
-    await s.banner().waitFor({ state: "detached" });
     const current = await s.state();
-    assert.deepEqual([s.clarityLoads(), s.gaLoads(), current.clarityScripts, current.gtag, current.mask], [1, 0, 1, "undefined", "true"]);
-    assert.deepEqual(current.clarityQueue, [["consentv2", { ad_Storage: "denied", analytics_Storage: "granted" }]]);
-    rows.push({ case: "Clarity only (EN)", ga: 0, clarity: 1, masked: "body", consentv2: "ads denied" });
+    assert.equal(await s.banner().count(), 0, "valid stored choice: no banner");
+    assert.deepEqual([s.clarityLoads(), s.gaLoads(), current.clarity, current.clarityScripts, current.gtag, current.cookies], [0, 0, "undefined", 0, "undefined", ""]);
+    await s.page.getByRole("button", { name: en.footer, exact: true }).click();
+    await s.dialog().waitFor();
+    assert.equal(await s.dialog().getByRole("checkbox").count(), 1);
+    assert.ok(!/Clarity/.test(await s.dialog().textContent()));
+    await s.dialog().getByRole("button", { name: en.save, exact: true }).click();
+    assert.equal(JSON.parse((await s.state()).stored).recording, false, "a new save never stores a recording opt-in");
+    assert.deepEqual(s.trackerRequests(), []);
+    rows.push({ case: "stored Clarity opt-in (EN)", clarity: 0, clarityCookies: "deleted", toggle: "none" });
     await s.context.close();
   }
 
-  // 5. Accept all: both load exactly once, across SPA navigation and a reload; page views per path.
-  // 6. Then withdrawal through the footer control: GA4 stops in place, Clarity withdrawal reloads.
+  // 5. Accept all: GA4 loads exactly once, across SPA navigation and a reload; page views per path. Clarity never.
+  //    Public-to-private SPA navigation (history + popstate into /dashboard, /admin, /espace-client, /login,
+  //    redirected to /login with the login dialog) and back: still no Clarity script, queue or request.
+  // 6. Then withdrawal through the footer control: GA4 stops in place; re-consent works without a reload.
   {
     const s = await session();
     await s.go("/");
@@ -240,22 +259,33 @@ try {
     await s.page.waitForURL(/mentions-legales/);
     await s.page.goBack();
     let current = await s.state();
-    assert.deepEqual([s.gaLoads(), s.clarityLoads(), current.gaScripts, current.clarityScripts], [1, 1, 1, 1]);
+    assert.deepEqual([s.gaLoads(), s.clarityLoads(), current.gaScripts, current.clarityScripts, current.clarity], [1, 0, 1, 0, "undefined"]);
+    assert.deepEqual({ ...JSON.parse(current.stored), date: "d" }, { version: 1, analytics: true, recording: false, date: "d" });
     assert.deepEqual(s.events(current, "page_view").map((entry) => entry[2].page_path), ["/", "/mentions-legales", "/"]);
+    // Public -> private in-app navigation, exactly as the App's own popstate handler receives it.
+    for (const privatePath of ["/dashboard", "/admin", "/espace-client", "/login"]) {
+      await s.page.evaluate((path) => { history.pushState({}, "", path); dispatchEvent(new PopStateEvent("popstate")); }, privatePath);
+      await s.page.waitForURL(/\/login$/);
+      await s.settle();
+      current = await s.state();
+      assert.deepEqual([s.clarityLoads(), current.clarity, current.clarityScripts], [0, "undefined", 0], privatePath);
+      await s.page.goBack();
+      await s.page.waitForURL((url) => !/^\/(login|dashboard|admin|espace-client)$/.test(url.pathname));
+    }
     await s.page.reload({ waitUntil: "load" });
     await s.settle();
     current = await s.state();
-    assert.deepEqual([s.gaLoads(), s.clarityLoads(), current.gaScripts, current.clarityScripts, s.events(current, "page_view").length], [2, 2, 1, 1, 1]);
-    rows.push({ case: "accept all", ga: "1 per page load", clarity: "1 per page load", spaNavigation: "no reload of vendors" });
+    assert.deepEqual([s.gaLoads(), s.clarityLoads(), current.gaScripts, current.clarityScripts, s.events(current, "page_view").length], [2, 0, 1, 0, 1]);
+    rows.push({ case: "accept all + public→private SPA", ga: "1 per page load", clarity: 0, privateRoutes: "no Clarity" });
 
-    // Withdraw GA4 only: no reload, no further events, GA cookies deleted, Clarity untouched.
+    // Withdraw GA4: no reload, no further events, GA cookies deleted.
     await s.page.evaluate(() => { document.cookie = "_ga=GA1.1.9.9; path=/; domain=.digitallab.studio"; document.cookie = "_ga_DPEYZ4C8BD=GS1; path=/"; });
     const footer = s.page.getByRole("button", { name: fr.footer, exact: true });
     await footer.focus();
     await s.page.keyboard.press("Enter");
     await s.dialog().waitFor();
     const analytics = s.dialog().getByRole("checkbox", { name: fr.analytics });
-    assert.deepEqual([await analytics.isChecked(), await s.dialog().getByRole("checkbox", { name: fr.recording }).isChecked()], [true, true]);
+    assert.equal(await analytics.isChecked(), true);
     await analytics.uncheck();
     let navigated = false;
     s.page.once("framenavigated", () => { navigated = true; });
@@ -271,26 +301,103 @@ try {
     assert.equal((await s.state()).dataLayer.length, before, "no event after withdrawal");
     assert.deepEqual(JSON.parse((await s.state()).stored).analytics, false);
 
-    // Withdraw Clarity: the page reloads without Clarity; its cookies are erased.
-    await s.page.evaluate(() => { document.cookie = "_clck=abc; path=/; domain=.digitallab.studio"; });
-    await s.page.getByRole("button", { name: fr.footer, exact: true }).click();
-    await s.dialog().getByRole("checkbox", { name: fr.recording }).uncheck();
-    const queueBefore = (await s.state()).clarityQueue.length;
-    await Promise.all([s.page.waitForEvent("load"), s.dialog().getByRole("button", { name: fr.save, exact: true }).click()]);
-    await s.settle();
-    current = await s.state();
-    assert.deepEqual([current.clarity, current.clarityScripts, current.gtag, await s.banner().count()], ["undefined", 0, "undefined", 0]);
-    assert.ok(!/_clck|_clsk|_ga/.test(current.cookies), current.cookies);
-    assert.deepEqual({ ...JSON.parse(current.stored), date: "d" }, { version: 1, analytics: false, recording: false, date: "d" });
-    assert.equal(s.clarityLoads(), 2, "no Clarity request after the withdrawal reload");
-    assert.ok(queueBefore >= 1);
-    // Re-consent later works again.
+    // Re-consent later works again, in place.
     await s.page.getByRole("button", { name: fr.footer, exact: true }).click();
     await s.dialog().getByRole("button", { name: fr.accept, exact: true }).click();
     current = await s.state();
-    assert.deepEqual([current.gaScripts, current.clarityScripts, s.events(current, "page_view").length], [1, 1, 1]);
+    assert.deepEqual([current.gaScripts, current.gaDisabled, current.clarityScripts, s.clarityLoads()], [1, false, 0, 0]);
+    assert.deepEqual(current.dataLayer.filter((entry) => entry[0] === "consent").at(-1), ["consent", "update", { analytics_storage: "granted" }]);
+    assert.equal(s.events(current, "page_view").length, 2, "one page view at load, one at re-consent");
     assert.deepEqual(s.errors, []);
-    rows.push({ case: "withdraw GA4 then Clarity", gaStop: "in place, cookies deleted", clarityStop: "reload, cookies deleted", reconsent: "works" });
+    rows.push({ case: "withdraw GA4, re-consent", gaStop: "in place, cookies deleted", reconsent: "in place", clarity: 0 });
+    await s.context.close();
+  }
+
+  // 6b. Sign-in return with Supabase tokens in the address (implicit flow): even with GA4 consent, nothing
+  //     is loaded or sent on that page load, the GA cookies are kept, and GA4 starts on the next clean load.
+  {
+    const s = await session({ cookies: leftoverCookies.filter((cookie) => cookie.name.startsWith("_ga")) });
+    await s.context.addInitScript(() => {
+      if (!sessionStorage.getItem("seeded")) {
+        localStorage.setItem("dl-consent", JSON.stringify({ version: 1, analytics: true, recording: false, date: new Date().toISOString().slice(0, 10) }));
+        sessionStorage.setItem("seeded", "1");
+      }
+    });
+    await s.go("/#access_token=synthetic-access&expires_in=3600&refresh_token=synthetic-refresh&token_type=bearer&type=recovery");
+    let current = await s.state();
+    assert.deepEqual([s.gaLoads(), current.gtag, current.dataLayer.length, s.clarityLoads()], [0, "undefined", 0, 0]);
+    assert.ok(/(^|; )_ga=/.test(current.cookies), "GA cookies kept while deferred");
+    await s.page.locator(".footer-legal-nav").getByRole("link", { name: "Mentions légales" }).click();
+    await s.page.waitForURL(/mentions-legales/);
+    current = await s.state();
+    assert.deepEqual([s.gaLoads(), current.dataLayer.length], [0, 0], "still nothing in the same page lifecycle");
+    assert.deepEqual(s.trackerRequests(), []);
+    await s.go("/");
+    current = await s.state();
+    assert.equal(s.gaLoads(), 1, "GA4 starts on the next clean page load");
+    assert.ok(!JSON.stringify(current.dataLayer).includes("synthetic-"), "no token in any GA4 payload");
+    rows.push({ case: "sign-in tokens in URL", ga: "deferred to next clean load", tokensSent: 0 });
+    await s.context.close();
+  }
+
+  // 6c. GA4 already running when credentials appear in the address during the session (history, hash
+  //     and query formats): Google's opt-out flag is raised before the change, our helpers send nothing,
+  //     and sending resumes only once the address is clean and consent still holds. The login dialog
+  //     on a public page sends nothing typed, and Clarity never appears.
+  {
+    const s = await session();
+    await s.go("/");
+    await s.page.getByRole("button", { name: fr.accept, exact: true }).click();
+    let current = await s.state();
+    assert.deepEqual([s.gaLoads(), current.gaDisabled, s.events(current, "page_view").length], [1, false, 1]);
+    const estimator = s.page.locator(".estimator-home");
+    await estimator.getByRole("group", { name: "Projet ponctuel", exact: true }).getByRole("button", { name: "Réparer / améliorer un site existant", exact: true }).click();
+    // The quote request is the estimator interaction that sends a GA4 event (estimator_quote_request).
+    const estimatorClick = () => estimator.getByRole("button", { name: "Demander ce devis", exact: true }).click();
+    const quoteEvents = async () => s.events(await s.state(), "estimator_quote_request").length;
+    await estimatorClick();
+    assert.equal(await quoteEvents(), 1, "control: the quote request sends an event on a clean address");
+    for (const [label, makeDirty] of [
+      ["pushState fragment", () => history.pushState({}, "", "/#access_token=synthetic-push&refresh_token=synthetic-push&type=recovery")],
+      ["replaceState query", () => history.replaceState({}, "", "/?code=synthetic-code")],
+      ["hash assignment", () => { location.hash = "refresh_token=synthetic-hash&provider_token=synthetic-hash"; }],
+      ["error callback", () => history.pushState({}, "", "/#error=access_denied&error_code=otp_expired&error_description=synthetic-error")],
+    ]) {
+      const before = (await s.state()).dataLayer.length;
+      await s.page.evaluate(makeDirty);
+      await s.page.evaluate(() => dispatchEvent(new PopStateEvent("popstate")));
+      await estimatorClick();
+      current = await s.state();
+      assert.equal(current.gaDisabled, true, `${label}: Google opt-out flag raised`);
+      assert.equal(current.dataLayer.length, before, `${label}: nothing queued while the address carries credentials`);
+      // Clean address again (as Supabase does after reading the session): sending resumes.
+      await s.page.evaluate(() => history.replaceState({}, "", "/"));
+      current = await s.state();
+      assert.equal(current.gaDisabled, false, `${label}: flag lifted on a clean address with consent`);
+    }
+    await estimatorClick();
+    assert.equal(await quoteEvents(), 2, "events resume on a clean address (none were sent while dirty)");
+    // Withdrawn consent keeps the flag raised even on a clean address.
+    await s.page.getByRole("button", { name: fr.footer, exact: true }).click();
+    await s.dialog().getByRole("button", { name: fr.reject, exact: true }).click();
+    await s.page.evaluate(() => history.replaceState({}, "", "/"));
+    assert.equal((await s.state()).gaDisabled, true, "withdrawn: flag stays raised");
+    await s.page.getByRole("button", { name: fr.footer, exact: true }).click();
+    await s.dialog().getByRole("button", { name: fr.accept, exact: true }).click();
+    assert.equal((await s.state()).gaDisabled, false, "re-consent on a clean address lifts the flag");
+
+    // Login dialog opened from a public page: typed e-mail and password never reach GA4; no Clarity.
+    await s.page.locator("header").getByRole("button", { name: "Connexion", exact: true }).first().click();
+    const modal = s.page.locator("[aria-labelledby='auth-modal-title']").first();
+    await modal.waitFor();
+    await modal.locator("input[type='email']").fill("jean.synthetic@example.com");
+    await modal.locator("input[type='password']").fill("Synthetic-Pass-123");
+    current = await s.state();
+    const payloads = JSON.stringify(current.dataLayer);
+    for (const secret of ["synthetic-", "Synthetic-Pass", "jean.synthetic", "@example.com"]) assert.ok(!payloads.includes(secret), secret);
+    assert.deepEqual([s.clarityLoads(), current.clarity, current.clarityScripts], [0, "undefined", 0]);
+    assert.deepEqual(s.errors, []);
+    rows.push({ case: "GA4 running + credentials in session", optOutFlag: "raised/lifted", queued: 0, loginDialog: "nothing sent", clarity: 0 });
     await s.context.close();
   }
 
@@ -326,14 +433,17 @@ try {
     rows.push({ case: "Vercel Preview + localhost", vendorRequests: 0, previewUi: "shown for review", localhostUi: "none" });
   }
 
-  // 9. Privacy policy page documents both tools and withdrawal.
+  // 9. Privacy policy page documents GA4, withdrawal, rights, and that Clarity is not used.
   {
     const s = await session();
     await s.go("/politique-de-confidentialite");
     const text = await s.page.locator("main").textContent();
-    for (const needle of ["Microsoft Clarity", "Google Analytics", "Gérer les cookies", "_clck", "_ga", "désactivés par défaut",
-      "Base légale : votre consentement", "sous-traitant", "Microsoft Ireland Operations Limited", "30 jours", "réclamation à la CNIL", "portabilité"]) {
+    for (const needle of ["Google Analytics", "Gérer les cookies", "_ga", "désactivée par défaut", "Microsoft Clarity n’est pas chargé", "_clck",
+      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 1er septembre 2026"]) {
       assert.ok(text.includes(needle), needle);
+    }
+    for (const stale of ["Enregistrement de session —", "Microsoft Ireland Operations Limited", "30 jours", "recharge la page", "masqués dans Microsoft Clarity"]) {
+      assert.ok(!text.includes(stale), "stale Clarity text: " + stale);
     }
     assert.ok(!text.includes("Le site utilise également Google Analytics afin de mesurer"));
     await s.page.locator("#cookies").screenshot({ path: shotPath("FR-privacy-cookies-section") });
@@ -346,14 +456,25 @@ try {
     await s.page.waitForTimeout(400);
     const top = await s.page.locator("#cookies").evaluate((node) => node.getBoundingClientRect().top);
     assert.ok(top >= 60 && top < 400, `#cookies top after deep link: ${top}`);
-    rows.push({ case: "privacy policy", clarity: "documented", withdrawal: "documented" });
+    rows.push({ case: "privacy policy", ga: "documented", clarity: "documented as not used", withdrawal: "documented" });
     await s.context.close();
+
+    // English footer: the policy destination is labelled as French.
+    const e = await session();
+    await e.go("/en/");
+    const footerLink = e.page.locator(".footer-legal-nav a[href='/politique-de-confidentialite']");
+    assert.equal((await footerLink.textContent()).trim(), "Privacy policy (in French)");
+    assert.equal(await footerLink.getAttribute("hreflang"), "fr");
+    rows.push({ case: "EN footer policy link", label: "Privacy policy (in French)", hreflang: "fr" });
+    await e.context.close();
   }
+
+  assert.ok(![...externalSeen].some((hostname) => /clarity\.ms/.test(hostname)), "no Clarity request in any scenario");
 
   console.table(rows);
   const external = [...externalSeen].filter((hostname) => !TRACKER.test(hostname));
   console.log("Other external hosts requested (aborted):", external.length ? external.join(", ") : "none");
-  console.log("Consent UI: no choice/refusal = zero GA4/Clarity, GA4-only, Clarity-only, accept all once, withdrawal (GA in place, Clarity reload), invalid/expired choices, FR/EN 1440/390/320, keyboard, equal prominence, Preview/localhost excluded, privacy policy: PASS");
+  console.log("Consent UI: no choice/refusal = zero GA4, GA4 via keyboard, accept all once, Clarity disabled (no option, stored opt-in ignored, zero requests incl. public→private SPA), sign-in tokens never sent, GA withdrawal/re-consent in place, invalid/expired choices, FR/EN 1440/390/320, equal prominence, Preview/localhost excluded, privacy policy + EN footer label: PASS");
 } finally {
   await browser?.close();
   await new Promise((resolve) => server.httpServer.close(resolve));

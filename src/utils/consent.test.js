@@ -4,7 +4,8 @@ import {
   CONSENT_MAX_AGE_MONTHS, CONSENT_POLICY_VERSION, deleteCookies, isConsentUiEnabled, parseConsent, serializeConsent,
 } from "./consent.js";
 import { applyTrackingConsent } from "./trackingConsent.js";
-import { trackEvent, trackPageView, isGoogleAnalyticsEnabled } from "./analytics.js";
+import { trackEvent, trackPageView, isGoogleAnalyticsEnabled, urlContainsCredentials } from "./analytics.js";
+import { CLARITY_ENABLED, initializeMicrosoftClarity } from "./clarity.js";
 
 const NOW = new Date("2026-11-15T12:00:00Z");
 const record = (overrides = {}) => JSON.stringify({ version: CONSENT_POLICY_VERSION, analytics: true, recording: false, date: "2026-11-15", ...overrides });
@@ -70,4 +71,25 @@ test("Outside a browser nothing loads, and tracking helpers stay no-ops without 
   assert.deepEqual(applyTrackingConsent(null), { reloadRequired: false });
   assert.equal(isGoogleAnalyticsEnabled(), false);
   assert.doesNotThrow(() => { trackPageView(); trackEvent("estimator_quote_request", { offer: "x" }); });
+});
+
+test("Sign-in credentials in the address are detected, ordinary addresses are not", () => {
+  for (const href of [
+    "https://www.digitallab.studio/#access_token=eyJ.x.y&expires_in=3600&refresh_token=abc&token_type=bearer&type=recovery",
+    "https://www.digitallab.studio/#refresh_token=abc", "https://www.digitallab.studio/?code=1234-abcd",
+    "https://www.digitallab.studio/dashboard?token_hash=x&type=signup", "https://www.digitallab.studio/?a=1&provider_token=z",
+    "https://www.digitallab.studio/#id_token=z", "https://www.digitallab.studio/?TOKEN=x",
+    "https://www.digitallab.studio/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid",
+  ]) assert.equal(urlContainsCredentials(href), true, href);
+  for (const href of [
+    "https://www.digitallab.studio/", "https://www.digitallab.studio/politique-de-confidentialite#cookies",
+    "https://www.digitallab.studio/?utm_source=newsletter&utm_campaign=autumn", "https://www.digitallab.studio/barcode-reader",
+    "https://www.digitallab.studio/access_token=page", "https://www.digitallab.studio/#services", "", undefined,
+  ]) assert.equal(urlContainsCredentials(href), false, String(href));
+});
+
+test("Microsoft Clarity is disabled for this release: it never loads, even with a stored opt-in", () => {
+  assert.equal(CLARITY_ENABLED, false);
+  assert.equal(initializeMicrosoftClarity(), false);
+  assert.deepEqual(applyTrackingConsent({ analytics: false, recording: true }), { reloadRequired: false });
 });

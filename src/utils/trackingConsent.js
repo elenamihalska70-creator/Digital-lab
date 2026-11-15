@@ -1,21 +1,28 @@
 // DL-PRIVACY-CONSENT-01 — applies a consent choice to the optional vendors.
-// GA4 and Clarity load only for a granted category, and still only where isTrackingAllowed()
+// GA4 loads only for a granted category (Clarity is disabled for this release), and only where isTrackingAllowed()
 // (production build on an allowed domain): localhost, Vercel Preview and the prerender never load them.
-import { disableGoogleAnalytics, initializeGoogleAnalytics, trackPageView } from "./analytics.js";
-import { initializeMicrosoftClarity, withdrawMicrosoftClarity } from "./clarity.js";
+import { disableGoogleAnalytics, initializeGoogleAnalytics, trackPageView, urlContainsCredentials } from "./analytics.js";
+import { CLARITY_ENABLED, initializeMicrosoftClarity, withdrawMicrosoftClarity } from "./clarity.js";
 import { CONSENT_CHANGE_EVENT, readStoredConsent, storeConsent } from "./consent.js";
 
 // `sendPageView`: when consent is given during a visit, the page being viewed at that moment is
 // recorded once. Earlier pages and interactions are never replayed. At startup the App's route
 // effect sends the page view itself, after the page metadata is applied.
+//
+// Sign-in links (Google sign-in, password reset, e-mail confirmation) return to the site with Supabase
+// tokens in the address (#access_token=…). GA4 is not started while the address carries such
+// credentials, so they can never be sent with a page view; it starts on the next page load. The
+// stored consent and existing GA cookies are kept.
 export function applyTrackingConsent(consent, { sendPageView = false } = {}) {
   let reloadRequired = false;
   if (consent?.analytics === true) {
-    if (initializeGoogleAnalytics() && sendPageView) trackPageView();
+    const deferred = typeof window !== "undefined" && urlContainsCredentials(window.location.href);
+    if (!deferred && initializeGoogleAnalytics() && sendPageView) trackPageView();
   } else {
     disableGoogleAnalytics();
   }
-  if (consent?.recording === true) initializeMicrosoftClarity();
+  // Clarity is disabled for this release (CLARITY_ENABLED): it never loads, whatever is stored.
+  if (CLARITY_ENABLED && consent?.recording === true) initializeMicrosoftClarity();
   else reloadRequired = withdrawMicrosoftClarity();
   return { reloadRequired };
 }

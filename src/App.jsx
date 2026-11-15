@@ -41,6 +41,15 @@ import { buildQuoteMailto } from "./utils/quoteMailto";
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
+// "Dernière mise à jour" of the privacy policy (ISO date). PRE-RELEASE: still the date of the notice
+// that predates DL-PRIVACY-CONSENT-01. Set it to the actual publication day just before the production
+// deployment; `npm run check:privacy-date` fails until then (docs/DL-PRIVACY-CONSENT-01.md).
+const PRIVACY_POLICY_LAST_UPDATED = "2026-09-01";
+const frenchMonths = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const formatFrenchDate = (isoDate) => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return `${day === 1 ? "1er" : day} ${frenchMonths[month - 1]} ${year}`;
+};
 const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
 // Tax mention for every public price (one-off projects, subscriptions, Reels,
 // meta description, request summary). Configured only in config/taxMention.js;
@@ -3797,11 +3806,12 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
           }}>
             {isEnglish ? "Legal notice" : "Mentions légales"}
           </a>
-          <a href={privacyPolicyPath} onClick={(event) => {
+          {/* The policy exists in French only: the English label and hreflang say so. */}
+          <a href={privacyPolicyPath} hrefLang={isEnglish ? "fr" : undefined} onClick={(event) => {
             event.preventDefault();
             onNavigate(privacyPolicyPath);
           }}>
-            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
+            {isEnglish ? "Privacy policy (in French)" : "Politique de confidentialité"}
           </a>
           {isCurrentConsentUiEnabled() && (
             <button className="footer-consent-button" type="button" aria-haspopup="dialog" onClick={openConsentPreferences}>
@@ -3912,34 +3922,33 @@ function PrivacyPolicyPage({ onNavigate }) {
                   qui restent consultables dans votre espace client et par Digital Lab.
                 </p>
                 <p>
-                  Uniquement avec votre accord, le site utilise également un outil de mesure d’audience (Google Analytics) et
-                  un outil d’enregistrement de session (Microsoft Clarity), décrits à la section 3.
+                  Uniquement avec votre accord, le site utilise également un outil de mesure d’audience (Google Analytics),
+                  décrit à la section 3.
                 </p>
               </article>
 
               <article id="cookies">
-                <h2>3. Cookies, mesure d’audience et enregistrement de session</h2>
+                <h2>3. Cookies et mesure d’audience</h2>
                 <p>
-                  Ces outils sont facultatifs et désactivés par défaut. Ils ne sont chargés qu’après votre accord, donné
-                  catégorie par catégorie dans le bandeau « Vos choix sur les cookies ». Sans accord, ou en cas de refus,
-                  aucun d’eux n’est chargé et le site fonctionne normalement.
+                  La mesure d’audience est facultative et désactivée par défaut. Elle n’est chargée qu’après votre accord,
+                  donné dans le bandeau « Vos choix sur les cookies ». Sans accord, ou en cas de refus, elle n’est pas chargée
+                  et le site fonctionne normalement.
                 </p>
-                <ul>
-                  <li>
-                    Mesure d’audience — Google Analytics (Google) : pages consultées, provenance de la visite, type d’appareil
-                    et de navigateur, localisation approximative, et utilisation du simulateur de prix (services et formules
-                    choisis, jamais les textes saisis). Cookies déposés : _ga et _ga_… Les signaux publicitaires et la
-                    personnalisation des annonces sont désactivés.
-                  </li>
-                  <li>
-                    Enregistrement de session — Microsoft Clarity (Microsoft) : clics, défilement et mouvements sur les pages,
-                    type d’appareil et de navigateur. Le contenu des pages et les champs saisis sont masqués dans le code du
-                    site. Cookies déposés : _clck et _clsk.
-                  </li>
-                </ul>
+                <p>
+                  Mesure d’audience — Google Analytics (Google) : pages consultées, provenance de la visite, type d’appareil
+                  et de navigateur, localisation approximative, et utilisation du simulateur de prix (services et formules
+                  choisis, jamais les textes saisis). Cookies déposés : _ga et _ga_… Les signaux publicitaires et la
+                  personnalisation des annonces sont désactivés.
+                </p>
                 <p>
                   Les adresses de site, descriptions de problème, adresses e-mail, noms et messages que vous saisissez ne sont
-                  pas inclus dans les mesures envoyées à Google Analytics et sont masqués dans Microsoft Clarity.
+                  pas inclus dans les mesures envoyées à Google Analytics. La mesure n’est pas activée lorsque l’adresse de
+                  la page contient des éléments de connexion (par exemple au retour d’une connexion avec Google ou d’un lien
+                  de réinitialisation du mot de passe).
+                </p>
+                <p>
+                  Le site n’utilise pas d’outil d’enregistrement de session : Microsoft Clarity n’est pas chargé. Les cookies
+                  Clarity (_clck, _clsk) déposés sur ce site lors de visites antérieures sont supprimés.
                 </p>
                 <p>
                   Éléments nécessaires, sans consentement : la mémorisation de votre choix sur votre appareil (stockage local
@@ -3948,8 +3957,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                 </p>
                 <p>
                   Vous pouvez modifier ou retirer votre consentement à tout moment avec le bouton « Gérer les cookies » en bas
-                  de page. Le retrait arrête l’outil concerné et supprime ses cookies déposés sur ce site ; le retrait de
-                  Microsoft Clarity recharge la page.
+                  de page. Le retrait arrête la mesure d’audience et supprime les cookies Google Analytics déposés sur ce site.
                 </p>
                 <p>
                   Base légale : votre consentement (article 82 de la loi Informatique et Libertés pour les cookies, article
@@ -3957,32 +3965,19 @@ function PrivacyPolicyPage({ onNavigate }) {
                   avant ce retrait.
                 </p>
                 <p>
-                  Rôle des prestataires et transferts hors de l’Union européenne :
+                  Rôle du prestataire et transferts hors de l’Union européenne : Google indique agir en tant que sous-traitant
+                  pour Google Analytics, et ne pas enregistrer ni conserver les adresses IP dans Google Analytics. Les données
+                  peuvent être traitées aux États-Unis ; Google indique s’appuyer sur le Data Privacy Framework UE–États-Unis
+                  et, le cas échéant, sur les clauses contractuelles types de la Commission européenne.
                 </p>
-                <ul>
-                  <li>
-                    Google Analytics : Google indique agir en tant que sous-traitant pour Google Analytics. Google indique ne pas enregistrer
-                    ni conserver les adresses IP dans Google Analytics. Les données peuvent être traitées aux États-Unis ;
-                    Google indique s’appuyer sur le Data Privacy Framework UE–États-Unis et, le cas échéant, sur les clauses
-                    contractuelles types de la Commission européenne.
-                  </li>
-                  <li>
-                    Microsoft Clarity : Microsoft indique agir en tant que responsable de traitement pour Clarity. Les données
-                    sont hébergées sur Microsoft Azure ; le contrat est conclu avec Microsoft Ireland Operations Limited, et
-                    les transferts vers Microsoft Corporation (États-Unis) sont encadrés par des clauses contractuelles types.
-                  </li>
-                </ul>
                 <p>
                   Durées de conservation : selon Google, les cookies _ga et _ga_… expirent par défaut au bout de 2 ans ; la
                   durée de conservation des données détaillées est un paramètre du compte Google Analytics, qui ne peut pas
-                  dépasser 14 mois (les rapports statistiques agrégés ne sont pas concernés par cette limite). Selon Microsoft,
-                  Clarity conserve les enregistrements 30 jours, et jusqu’à 9 mois pour les enregistrements marqués comme
-                  favoris et un échantillon aléatoire d’enregistrements.
+                  dépasser 14 mois (les rapports statistiques agrégés ne sont pas concernés par cette limite).
                 </p>
                 <p>
-                  Ces prestataires traitent ces données selon leurs propres politiques :
-                  {" "}<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google</a> et
-                  {" "}<a href="https://privacy.microsoft.com/fr-fr/privacystatement" target="_blank" rel="noopener noreferrer">Microsoft</a>.
+                  Google traite ces données selon sa propre politique de confidentialité :
+                  {" "}<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">policies.google.com/privacy</a>.
                 </p>
               </article>
 
@@ -4067,7 +4062,7 @@ function PrivacyPolicyPage({ onNavigate }) {
 
               <article>
                 <h2>10. Mise à jour de la politique</h2>
-                <p>Dernière mise à jour : 1er septembre 2026.</p>
+                <p>Dernière mise à jour : {formatFrenchDate(PRIVACY_POLICY_LAST_UPDATED)}.</p>
                 <p>
                   Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
                   internes de Digital Lab.
