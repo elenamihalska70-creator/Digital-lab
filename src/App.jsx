@@ -4006,21 +4006,30 @@ function PrivacyPolicyPage({ onNavigate }) {
                   </li>
                   <li>
                     Supabase (Supabase Pte. Ltd, Singapour) : authentification, base de données de l’espace client et stockage
-                    privé des documents.
+                    privé des documents. Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande).
                   </li>
                   <li>
-                    OVHcloud (France) : réception des e-mails adressés à {businessContact.email}.
+                    OVHcloud (France) : fournisseur de la boîte de messagerie professionnelle {businessContact.email}.
                   </li>
                 </ul>
                 <p>
+                  Google (Gmail) : les e-mails adressés à {businessContact.email} peuvent également être acheminés ou copiés
+                  vers une messagerie Gmail utilisée par Digital Lab pour traiter sa correspondance professionnelle. Google
+                  reçoit alors ces messages en tant que destinataire supplémentaire et les traite selon ses propres conditions
+                  et sa politique de confidentialité.
+                </p>
+                <p>
                   Si vous choisissez « Continuer avec Google », Google traite les informations de connexion selon sa propre
-                  politique de confidentialité. Google Analytics n’est utilisé qu’avec votre accord (section 3).
+                  politique de confidentialité. Google Analytics n’est utilisé qu’avec votre accord (section 3). Ces
+                  utilisations des services Google (messagerie, connexion, mesure d’audience) sont distinctes.
                 </p>
                 <p>
                   Transferts hors de l’Union européenne : Vercel indique que ses principaux centres de traitement se situent
-                  aux États-Unis, et la société Supabase contractante est établie à Singapour. Ces deux prestataires indiquent
-                  encadrer les transferts de données depuis l’Union européenne par les clauses contractuelles types de la
-                  Commission européenne.
+                  aux États-Unis, et la société Supabase contractante est établie à Singapour ; le déploiement du projet
+                  Supabase en Irlande n’exclut pas que certaines données soient traitées ou consultées hors de l’Union
+                  européenne. Ces deux prestataires indiquent encadrer les transferts de données depuis l’Union européenne
+                  par les clauses contractuelles types de la Commission européenne. Les e-mails acheminés vers Gmail peuvent
+                  également être traités par Google hors de l’Union européenne.
                 </p>
               </article>
 

@@ -447,9 +447,14 @@ try {
       "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 1er septembre 2026",
       // DL-PRIVACY-FINAL-01: account data, legal bases, recipients, transfers and retention.
       "Continuer avec Google", "article 6.1.b", "article 6.1.f", "article 6.1.c", "4. Destinataires et hébergement", "Vercel Inc.",
-      "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure"]) {
+      "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure",
+      // DL-PRIVACY-FINAL-02: verified Supabase region, OVHcloud mailbox, Gmail as an additional recipient.
+      "région eu-west-1 (Irlande)", "n’exclut pas que certaines données soient traitées", "boîte de messagerie professionnelle",
+      "Google (Gmail)", "peuvent également être acheminés ou copiés"]) {
       assert.ok(text.includes(needle), needle);
     }
+    // No overclaim: the region is where the project is deployed, not a guarantee that all processing stays there.
+    assert.ok(!/(uniquement|exclusivement) en Irlande/.test(text), "no Ireland-only processing claim");
     for (const stale of ["Enregistrement de session —", "Microsoft Ireland Operations Limited", "30 jours", "recharge la page", "masqués dans Microsoft Clarity"]) {
       assert.ok(!text.includes(stale), "stale Clarity text: " + stale);
     }

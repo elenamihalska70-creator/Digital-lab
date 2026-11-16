@@ -160,13 +160,13 @@ Applied to the page:
 
 | Data | Legal minimum or maximum | Proposed period (owner decision) | Today |
 |---|---|---|---|
-| E-mail requests with no follow-up | No legal minimum | 3 years from the last contact (CNIL commercial-management guidance for prospects) | Kept in the OVH mailbox indefinitely |
+| E-mail requests with no follow-up | No legal minimum | 3 years from the last contact (CNIL commercial-management guidance for prospects) | Kept in the OVHcloud mailbox and, where routed or copied there, in Gmail; no deletion in either |
 | Account (e-mail, role, sign-in data) | None | Until account deletion, or 3 years after the last activity with no ongoing service | No deletion |
 | Client-area requests, messages, documents | None, unless a document is an accounting record | Duration of the relationship plus 3 years | No deletion |
 | Quotes not accepted | None | Duration of the relationship plus 3 years | No deletion |
 | Accepted quotes, invoices and other accounting records | **10 years** (Code de commerce, art. L123-22), if the document is an accounting record: lawyer to confirm for accepted quotes | 10 years | No deletion |
 | Vercel request logs | Provider-defined | Provider default (check the plan) | Unknown |
-| GA4 | See section 3 | Account setting (2 or 14 months) | Unchanged |
+| GA4 | See section 3 | Property settings (owner-verified): event data 2 months, user data 14 months | Set in GA4; `_ga` cookie lifetime separate (Google default, 2 years) |
 
 **Proposed deletion procedure (for approval, not implemented):** (1) a deletion request arrives by e-mail; identity is checked against the account address; (2) within one month, the admin deletes the account in the Supabase dashboard. Per the repo SQL, that cascade removes the messages and document records the user created; it does **not** remove the stored files, nor the client's `contact_requests` and their quotes (the `contact_requests` definition is not in the repo). Those files and records are deleted explicitly, except those kept under step 3; (3) records under a legal obligation are kept apart and listed in the reply; (4) once a year, the owner reviews accounts and requests past the approved periods. Any automation (scheduled clean-up, self-service deletion) is a separate LOT.
 
@@ -201,16 +201,42 @@ Applied to the page:
 >
 > **Your rights.** Under the GDPR you may request access to, rectification, erasure or restriction of your data, and its portability. You may object to certain processing where the law allows, and withdraw your consent to optional cookies at any time with "Cookie settings" at the bottom of the page. To exercise your rights, contact Digital Lab by e-mail; you will receive an answer within one month. If you believe your rights are not respected, you may lodge a complaint with the CNIL: www.cnil.fr/fr/adresser-une-plainte.
 
+## DL-PRIVACY-FINAL-02: verified infrastructure facts
+
+Facts supplied by the owner (16 November 2026). Read-only: no database, provider or analytics configuration was changed in this LOT.
+
+| Area | Status | Fact |
+|---|---|---|
+| Supabase | **Verified** (owner's connected Supabase account) | Project `digital-lab-prod`, ref `gcsqoluyfgkpwhtbpnzj`, region **`eu-west-1` (Ireland)**, status `ACTIVE_HEALTHY`. Supersedes "region is unknown" in DL-PRIVACY-FINAL-01. |
+| Supabase | Inferred | Auth, database and Storage of a Supabase project run in the project region. |
+| Supabase | Unknown | Whether Supabase or its sub-processors access or process data outside the EU (support, backups, logs). The page therefore does not claim Ireland-only processing. |
+| GA4 | **Owner-verified** | Property "Digital Lab Website", `G-DPEYZ4C8BD`: event data retention **2 months**; user data retention **14 months**; Google signals **disabled**; **no** Google Ads links; GA Data Processing Terms **accepted 31 July 2026**; all four optional account-level data-sharing settings **switched off** and saved. |
+| GA4 | Note | These are property data-retention settings, not cookie lifetimes. The `_ga` / `_ga_…` cookie lifetime is still Google's default (2 years) and unchanged in code. |
+| GA4 | Unknown | Whether the property is standard or 360 (only matters if the 14-month cap ever changes). |
+| E-mail | **Verified** | `contact@digitallab.studio` is an active OVHcloud **Zimbra Starter** mailbox; the Zimbra redirection list and filter list are empty; Gmail has no external POP mailbox configured. |
+| E-mail | **Verified (one message)** | A test message of 20 October 2026, addressed to `contact@digitallab.studio`, appeared in Gmail; its headers show OVHcloud mail-out infrastructure delivering to Gmail. |
+| E-mail | Inferred | OVHcloud and Google both handled that message, so business correspondence can reach Gmail. |
+| E-mail | Unknown | The exact rule that routes mail to Gmail (it is not a Zimbra redirection, Zimbra filter or Gmail POP import, so it may be an OVH-level redirection/alias or another mechanism); whether **all** messages are copied; whether the Zimbra mailbox is the routing origin; whether the Gmail account is a consumer account or Google Workspace (this affects Google's role: processor vs. independent controller). |
+
+Applied to the page (section 4 only):
+- Supabase: "Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande)." The transfer paragraph adds that this deployment does not exclude processing or access outside the EU.
+- OVHcloud: now described as the provider of the business mailbox (was "réception des e-mails").
+- Google (Gmail): a separate paragraph, deliberately **outside** the list of providers acting "pour le compte de Digital Lab", so the page does not claim Google is a processor for a possibly personal Gmail account. Worded as "peuvent également être acheminés ou copiés" (no forwarding mechanism and no "all messages" asserted), Google processes them "selon ses propres conditions", plus a sentence that Gmail mail may be processed by Google outside the EU.
+- A sentence keeps the three Google uses distinct: mail, sign-in, audience measurement.
+- Section 3 (GA4) **unchanged**: its text ("Google signals and ad personalization disabled"; detailed-data retention is an account setting capped at 14 months; `_ga` cookies 2 years by Google's default) is consistent with the verified settings. Stating the exact 2-month / 14-month values on the page is optional, owner's choice (see point 2).
+
+Not changed: analytics scripts, consent behaviour, events, pricing, estimator, social media packages, authentication, mail routing, database, production configuration, PR #9. Clarity stays disabled.
+
 ## Points needing owner or legal confirmation (not decided here)
 
 | # | Item | Who / when |
 |---|------|------------|
 | 1 | **Policy date (pre-release, blocking):** set `PRIVACY_POLICY_LAST_UPDATED` to the publication day, then `npm run check:privacy-date` must pass. | Owner, at release |
-| 2 | **GA4 property retention setting** (2 or 14 months). The page calls it an account setting capped at 14 months, which holds for a standard (non-360) property. Confirm the property is standard; once the value is checked, the page can state it. | Owner: Admin › Data retention |
+| 2 | **GA4 property retention setting:** owner-verified (event data 2 months, user data 14 months; DL-PRIVACY-FINAL-02). The page text (account setting, at most 14 months) stays consistent. Optional: state the exact values on the page. | Owner (optional wording) |
 | 3 | **`_ga` lifetime of 2 years** (Google default). The CNIL's 13-month cap formally applies to consent-exempt tools, but a shorter lifetime (`cookie_expires`) is common good practice. Not changed without owner approval. | Owner / legal |
-| 4 | **GA4 dashboard:** check that Google signals and ads links are off at property level, and that the Data Processing Terms are accepted. | Owner, before production |
-| 5 | **Legal bases and retention (DL-PRIVACY-FINAL-01).** Bases now stated in section 2. A lawyer should confirm: legitimate interest for accounts with no current service, and whether accepted quotes are accounting records (10 years). Approve the retention matrix and deletion procedure above. | Legal review / owner |
-| 6 | **Recipients (DL-PRIVACY-FINAL-01).** Now in section 4. Still to confirm: <ul><li>the Supabase project region;</li><li>that the Vercel and Supabase DPAs apply to your accounts;</li><li>whether the OVH mailbox forwards to another provider, which would then need naming;</li><li>whether Resend still sends anything, and its retention of past contact-form enquiries;</li><li>Vercel log retention on your plan.</li></ul> | Owner |
+| 4 | **GA4 dashboard:** done (DL-PRIVACY-FINAL-02, owner-verified): Google signals off, no Google Ads links, Data Processing Terms accepted 31 July 2026, optional data sharing off. | Closed |
+| 5 | **Legal bases, transfers and retention (DL-PRIVACY-FINAL-01/02).** Bases now stated in section 2. A lawyer should confirm: legitimate interest for accounts with no current service; whether accepted quotes are accounting records (10 years); the transfer wording for Vercel, Supabase (Singapore entity, Ireland region) and Gmail, including Google&#39;s role for Gmail; and the retention criteria. Approve the retention matrix and deletion procedure above. | Legal review / owner |
+| 6 | **Recipients (DL-PRIVACY-FINAL-01).** Now in section 4. Still to confirm: <ul><li>~~the Supabase project region~~: verified `eu-west-1` (Ireland), DL-PRIVACY-FINAL-02;</li><li>that the Vercel and Supabase DPAs apply to your accounts;</li><li>the mechanism that routes or copies mail to Gmail (not a Zimbra redirection, filter or Gmail POP import), whether all messages are copied, and whether the Gmail account is consumer or Workspace (Google&#39;s role). Gmail is now named as an additional recipient;</li><li>whether Resend still sends anything, and its retention of past contact-form enquiries;</li><li>Vercel log retention on your plan.</li></ul> | Owner |
 | 7 | **English policy page:** publish the English copy above as a page, or keep the French page with the "(in French)" labels. The English "Legal notice" footer link also leads to a French page. | Owner |
 | 8 | **6-month choice lifetime:** the CNIL calls it good practice; confirm. | Owner |
 | 9 | **Clarity in the Microsoft account:** the project stays configured but receives nothing from this site. Optionally pause or delete it there, and check that existing recordings expire (Microsoft: 30 days; favorites and samples up to 9 months). No account change was made here. | Owner |
@@ -246,6 +272,8 @@ Applied to the page:
     - privacy policy sections 2, 3, 9 and 10;
     - `PRIVACY_POLICY_LAST_UPDATED`;
     - DL-PRIVACY-FINAL-01: policy sections 2, 4 (new), 6 and 8, renumbering, the legal-notice sentence, and the privacy link in the sign-in dialog.
+    - DL-PRIVACY-FINAL-02: policy section 4 only (Supabase region, OVHcloud mailbox, Gmail recipient, transfer sentences).
+  - `scripts/check-consent-ui.mjs` (DL-PRIVACY-FINAL-02): section 4 needles and a no "Ireland-only" overclaim check.
   - `src/App.css` (DL-PRIVACY-FINAL-01): `.auth-privacy-note` styles.
   - `index.html`: `<body data-clarity-mask="true">`.
   - `scripts/check-repair-ui.mjs`: the assertion above.
@@ -299,7 +327,8 @@ Applied to the page:
     - documents GA4, the legal basis, rights and the CNIL, and that Clarity is not used;
     - no stale Clarity text remains;
     - the banner deep link lands below the sticky header;
-    - the English footer link reads "Privacy policy (in French)" with `hreflang="fr"`.
+    - the English footer link reads "Privacy policy (in French)" with `hreflang="fr"`;
+    - section 4 names the Supabase region, the OVHcloud mailbox and Gmail as an additional recipient, with no Ireland-only claim.
   - **Globally:** no request to `clarity.ms` in any scenario; no other third-party host requested.
 - Mutation checks (run locally, not committed): with `CLARITY_ENABLED = true`, or with the credential guard removed, the suite fails.
 - **Header suite (`check-header-ui.mjs`):** one failure in a long sequential local run on 15 November 2026 was not reproduced in 6 further runs (3 alone, 3 right after both sticky suites). It is recorded as the known timing flake of its compact-height and scroll-state samples taken just after scrolling (also seen in DL-ESTIMATOR-STICKY-01: 149 px sampled, settling to 116 px). This LOT changes no header code or CSS, and the header implementation was not touched.
