@@ -232,7 +232,7 @@ Not changed: analytics scripts, consent behaviour, events, pricing, estimator, s
 
 | # | Item | Who / when |
 |---|------|------------|
-| 1 | **Policy date (pre-release, blocking):** set `PRIVACY_POLICY_LAST_UPDATED` to the publication day, then `npm run check:privacy-date` must pass. | Owner, at release |
+| 1 | **Policy date:** set to `2026-11-17` for a planned publication on 17 November 2026 (DL-PRIVACY-RELEASE-03); `npm run check:privacy-date` passes. If publication slips, set it again to the actual publication day before deploying. | Owner, at release |
 | 2 | **GA4 property retention setting:** owner-verified (event data 2 months, user data 14 months; DL-PRIVACY-FINAL-02). The page text (account setting, at most 14 months) stays consistent. Optional: state the exact values on the page. | Owner (optional wording) |
 | 3 | **`_ga` lifetime of 2 years** (Google default). The CNIL's 13-month cap formally applies to consent-exempt tools, but a shorter lifetime (`cookie_expires`) is common good practice. Not changed without owner approval. | Owner / legal |
 | 4 | **GA4 dashboard:** done (DL-PRIVACY-FINAL-02, owner-verified): Google signals off, no Google Ads links, Data Processing Terms accepted 31 July 2026, optional data sharing off. | Closed |

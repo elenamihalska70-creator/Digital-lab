@@ -444,7 +444,7 @@ try {
     await s.go("/politique-de-confidentialite");
     const text = await s.page.locator("main").textContent();
     for (const needle of ["Google Analytics", "Gérer les cookies", "_ga", "désactivée par défaut", "Microsoft Clarity n’est pas chargé", "_clck",
-      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 1er septembre 2026",
+      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 17 novembre 2026",
       // DL-PRIVACY-FINAL-01: account data, legal bases, recipients, transfers and retention.
       "Continuer avec Google", "article 6.1.b", "article 6.1.f", "article 6.1.c", "4. Destinataires et hébergement", "Vercel Inc.",
       "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure",

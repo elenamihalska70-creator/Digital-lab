@@ -44,7 +44,7 @@ const privacyPolicyPath = "/politique-de-confidentialite";
 // "Dernière mise à jour" of the privacy policy (ISO date). PRE-RELEASE: still the date of the notice
 // that predates DL-PRIVACY-CONSENT-01. Set it to the actual publication day just before the production
 // deployment; `npm run check:privacy-date` fails until then (docs/DL-PRIVACY-CONSENT-01.md).
-const PRIVACY_POLICY_LAST_UPDATED = "2026-09-01";
+const PRIVACY_POLICY_LAST_UPDATED = "2026-11-17";
 const frenchMonths = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const formatFrenchDate = (isoDate) => {
   const [year, month, day] = isoDate.split("-").map(Number);
