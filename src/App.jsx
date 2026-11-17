@@ -16,6 +16,7 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { trackEvent, trackPageView } from "./utils/analytics";
+import { isCurrentConsentUiEnabled, openConsentPreferences } from "./utils/consent";
 import {
   getPlanMonthlyPrice,
   REELS_OFFERS,
@@ -40,6 +41,15 @@ import { buildQuoteMailto } from "./utils/quoteMailto";
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
+// "Dernière mise à jour" of the privacy policy (ISO date). PRE-RELEASE: still the date of the notice
+// that predates DL-PRIVACY-CONSENT-01. Set it to the actual publication day just before the production
+// deployment; `npm run check:privacy-date` fails until then (docs/DL-PRIVACY-CONSENT-01.md).
+const PRIVACY_POLICY_LAST_UPDATED = "2026-11-17";
+const frenchMonths = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const formatFrenchDate = (isoDate) => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return `${day === 1 ? "1er" : day} ${frenchMonths[month - 1]} ${year}`;
+};
 const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
 // Tax mention for every public price (one-off projects, subscriptions, Reels,
 // meta description, request summary). Configured only in config/taxMention.js;
@@ -3796,12 +3806,18 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
           }}>
             {isEnglish ? "Legal notice" : "Mentions légales"}
           </a>
-          <a href={privacyPolicyPath} onClick={(event) => {
+          {/* The policy exists in French only: the English label and hreflang say so. */}
+          <a href={privacyPolicyPath} hrefLang={isEnglish ? "fr" : undefined} onClick={(event) => {
             event.preventDefault();
             onNavigate(privacyPolicyPath);
           }}>
-            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
+            {isEnglish ? "Privacy policy (in French)" : "Politique de confidentialité"}
           </a>
+          {isCurrentConsentUiEnabled() && (
+            <button className="footer-consent-button" type="button" aria-haspopup="dialog" onClick={openConsentPreferences}>
+              {isEnglish ? "Cookie settings" : "Gérer les cookies"}
+            </button>
+          )}
         </nav>
       </div>
     </footer>
@@ -3851,8 +3867,8 @@ function LegalNoticePage({ onNavigate }) {
               <article>
                 <h2>Données personnelles</h2>
                 <p>
-                  Les informations envoyées par email ou via un formulaire sont utilisées uniquement pour répondre
-                  aux demandes de contact.
+                  Les informations que vous envoyez par e-mail ou depuis votre espace client sont utilisées uniquement
+                  pour répondre à vos demandes et assurer le suivi de vos projets.
                 </p>
                 <p>
                   Pour plus de détails, consultez la <a href={privacyPolicyPath} onClick={(event) => {
@@ -3901,19 +3917,125 @@ function PrivacyPolicyPage({ onNavigate }) {
                   informations utiles au traitement de votre demande.
                 </p>
                 <p>
-                  Si vous disposez d’un espace client, Digital Lab traite également les informations que vous y échangez
-                  (messages, documents, devis), ainsi que les demandes envoyées auparavant via l’ancien formulaire du site,
-                  qui restent consultables dans votre espace client et par Digital Lab.
+                  Si vous créez un espace client, Digital Lab traite : votre adresse e-mail et votre mot de passe (que Digital
+                  Lab ne peut pas lire) ou, si vous choisissez « Continuer avec Google », les informations transmises par
+                  Google pour la connexion ; le rôle associé à votre compte (client ou administrateur) ; les demandes, messages
+                  et documents échangés dans votre espace client (PDF, images ou fichiers Word, 10 Mo maximum par fichier) ;
+                  les devis et, le cas échéant, le commentaire laissé lors d’un refus de devis. Les demandes envoyées
+                  auparavant via l’ancien formulaire du site restent consultables dans votre espace client et par Digital Lab.
                 </p>
                 <p>
-                  Le site utilise également Google Analytics afin de mesurer l’audience et d’améliorer l’expérience de navigation.
-                  Des données techniques peuvent être traitées à cette occasion, comme les pages consultées, le type d’appareil,
-                  le navigateur, des informations de performance et des identifiants de mesure associés aux cookies analytics.
+                  Bases légales : la réponse à vos demandes de devis ou d’information repose sur les mesures précontractuelles
+                  prises à votre demande (article 6.1.b du RGPD) ; les échanges, documents et devis liés à une prestation
+                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion de l’espace client que vous
+                  ouvrez pour suivre vos demandes relève de ces mêmes mesures précontractuelles ou du contrat (article 6.1.b) ;
+                  la sécurité de l’espace client et le suivi des échanges avec les personnes qui ont contacté Digital Lab
+                  reposent sur l’intérêt légitime de Digital Lab (article 6.1.f) ; la
+                  conservation des documents exigés par la réglementation, notamment comptable, repose sur une obligation
+                  légale (article 6.1.c). La mesure d’audience repose uniquement sur votre consentement (section 3).
+                </p>
+                <p>
+                  Uniquement avec votre accord, le site utilise également un outil de mesure d’audience (Google Analytics),
+                  décrit à la section 3.
+                </p>
+              </article>
+
+              <article id="cookies">
+                <h2>3. Cookies et mesure d’audience</h2>
+                <p>
+                  La mesure d’audience est facultative et désactivée par défaut. Elle n’est chargée qu’après votre accord,
+                  donné dans le bandeau « Vos choix sur les cookies ». Sans accord, ou en cas de refus, elle n’est pas chargée
+                  et le site fonctionne normalement.
+                </p>
+                <p>
+                  Mesure d’audience — Google Analytics (Google) : pages consultées, provenance de la visite, type d’appareil
+                  et de navigateur, localisation approximative, et utilisation du simulateur de prix (services et formules
+                  choisis, jamais les textes saisis). Cookies déposés : _ga et _ga_… Les signaux publicitaires et la
+                  personnalisation des annonces sont désactivés.
+                </p>
+                <p>
+                  Les adresses de site, descriptions de problème, adresses e-mail, noms et messages que vous saisissez ne sont
+                  pas inclus dans les mesures envoyées à Google Analytics. La mesure n’est pas activée lorsque l’adresse de
+                  la page contient des éléments de connexion (par exemple au retour d’une connexion avec Google ou d’un lien
+                  de réinitialisation du mot de passe).
+                </p>
+                <p>
+                  Le site n’utilise pas d’outil d’enregistrement de session : Microsoft Clarity n’est pas chargé. Les cookies
+                  Clarity (_clck, _clsk) déposés sur ce site lors de visites antérieures sont supprimés.
+                </p>
+                <p>
+                  Éléments nécessaires, sans consentement : la mémorisation de votre choix sur votre appareil (stockage local
+                  « dl-consent », renouvelé au plus tard tous les 6 mois) et, si vous vous connectez, la session de votre
+                  espace client.
+                </p>
+                <p>
+                  Vous pouvez modifier ou retirer votre consentement à tout moment avec le bouton « Gérer les cookies » en bas
+                  de page. Le retrait arrête la mesure d’audience et supprime les cookies Google Analytics déposés sur ce site.
+                </p>
+                <p>
+                  Base légale : votre consentement (article 82 de la loi Informatique et Libertés pour les cookies, article
+                  6.1.a du RGPD pour les données). Le retrait du consentement ne remet pas en cause les traitements effectués
+                  avant ce retrait.
+                </p>
+                <p>
+                  Rôle du prestataire et transferts hors de l’Union européenne : Google indique agir en tant que sous-traitant
+                  pour Google Analytics, et ne pas enregistrer ni conserver les adresses IP dans Google Analytics. Les données
+                  peuvent être traitées aux États-Unis ; Google indique s’appuyer sur le Data Privacy Framework UE–États-Unis
+                  et, le cas échéant, sur les clauses contractuelles types de la Commission européenne.
+                </p>
+                <p>
+                  Durées de conservation : selon Google, les cookies _ga et _ga_… expirent par défaut au bout de 2 ans ; la
+                  durée de conservation des données détaillées est un paramètre du compte Google Analytics, qui ne peut pas
+                  dépasser 14 mois (les rapports statistiques agrégés ne sont pas concernés par cette limite).
+                </p>
+                <p>
+                  Google traite ces données selon sa propre politique de confidentialité :
+                  {" "}<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">policies.google.com/privacy</a>.
                 </p>
               </article>
 
               <article>
-                <h2>3. Utilisation des services Google</h2>
+                <h2>4. Destinataires et hébergement</h2>
+                <p>
+                  Vos données sont destinées à Digital Lab. Elles ne sont ni vendues ni louées. Les prestataires techniques
+                  suivants les traitent pour le compte de Digital Lab, dans la limite de leur mission :
+                </p>
+                <ul>
+                  <li>
+                    Vercel Inc. (États-Unis) : hébergement du site. Comme tout hébergeur, Vercel traite les données techniques
+                    de connexion nécessaires à l’affichage des pages (adresse IP, pages demandées).
+                  </li>
+                  <li>
+                    Supabase (Supabase Pte. Ltd, Singapour) : authentification, base de données de l’espace client et stockage
+                    privé des documents. Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande).
+                  </li>
+                  <li>
+                    OVHcloud (France) : fournisseur de la boîte de messagerie professionnelle {businessContact.email}.
+                  </li>
+                </ul>
+                <p>
+                  Google (Gmail) : les e-mails adressés à {businessContact.email} peuvent également être acheminés ou copiés
+                  vers une messagerie Gmail utilisée par Digital Lab pour traiter sa correspondance professionnelle. Google
+                  reçoit alors ces messages en tant que destinataire supplémentaire et les traite selon ses propres conditions
+                  et sa politique de confidentialité.
+                </p>
+                <p>
+                  Si vous choisissez « Continuer avec Google », Google traite les informations de connexion selon sa propre
+                  politique de confidentialité. Google Analytics n’est utilisé qu’avec votre accord (section 3). Ces
+                  utilisations des services Google (messagerie, connexion, mesure d’audience) sont distinctes.
+                </p>
+                <p>
+                  Transferts hors de l’Union européenne : Vercel indique que ses principaux centres de traitement se situent
+                  aux États-Unis, et la société Supabase contractante est établie à Singapour ; le déploiement du projet
+                  Supabase en Irlande n’exclut pas que certaines données soient traitées ou consultées hors de l’Union
+                  européenne. Ces deux prestataires indiquent encadrer les transferts de données depuis l’Union européenne
+                  par les clauses contractuelles types de la Commission européenne. Les e-mails acheminés vers Gmail peuvent
+                  également être traités par Google hors de l’Union européenne.
+                </p>
+              </article>
+
+              <article>
+                <h2>5. Utilisation des services Google</h2>
                 <p>
                   Une automatisation privée et interne de Digital Lab peut accéder à certains services Google lorsque cela est
                   nécessaire à l’organisation et à la publication de contenus Digital Lab.
@@ -3925,19 +4047,20 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>4. Finalités</h2>
+                <h2>6. Finalités</h2>
                 <p>Les données sont utilisées pour les finalités suivantes :</p>
                 <ul>
                   <li>planification du contenu Digital Lab ;</li>
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées.</li>
+                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées ;</li>
+                  <li>gestion des comptes de l’espace client, des documents et des devis, et sécurité des accès.</li>
                 </ul>
               </article>
 
               <article>
-                <h2>5. Limitation d’accès</h2>
+                <h2>7. Limitation d’accès</h2>
                 <p>
                   L’automatisation fonctionne uniquement avec les fichiers et tableaux explicitement sélectionnés ou fournis
                   par Digital Lab.
@@ -3949,10 +4072,17 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>6. Conservation et sécurité</h2>
+                <h2>8. Conservation et sécurité</h2>
+                <p>Digital Lab applique un principe de minimisation des données personnelles.</p>
                 <p>
-                  Digital Lab applique un principe de minimisation des données et conserve les informations uniquement pendant
-                  la durée nécessaire aux finalités décrites dans cette politique.
+                  Les informations relatives aux demandes, aux échanges et aux espaces clients sont conservées pendant la
+                  relation avec Digital Lab et, à ce jour, jusqu’à leur suppression. Aucune suppression automatique n’est
+                  actuellement en place.
+                </p>
+                <p>
+                  Vous pouvez demander la suppression de vos données personnelles à
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>, sous réserve des
+                  obligations légales de conservation. Les durées propres à la mesure d’audience sont indiquées à la section 3.
                 </p>
                 <p>
                   Des mesures techniques raisonnables sont mises en place pour protéger les accès et limiter les risques.
@@ -3961,7 +4091,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>7. Révocation de l’accès Google</h2>
+                <h2>9. Révocation de l’accès Google</h2>
                 <p>
                   L’accès accordé aux services Google peut être révoqué à tout moment depuis la page de gestion des autorisations
                   Google : <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">
@@ -3971,21 +4101,29 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>8. Droits RGPD</h2>
+                <h2>10. Droits RGPD</h2>
                 <p>
                   Conformément au RGPD, vous pouvez demander l’accès, la rectification, l’effacement ou la limitation du
-                  traitement de vos données. Vous pouvez également vous opposer à certains traitements lorsque la réglementation
-                  le permet.
+                  traitement de vos données, ainsi que leur portabilité. Vous pouvez également vous opposer à certains
+                  traitements lorsque la réglementation le permet, et retirer à tout moment votre consentement aux cookies
+                  facultatifs avec le bouton « Gérer les cookies » en bas de page.
                 </p>
                 <p>
                   Pour exercer vos droits, contactez Digital Lab à l’adresse suivante :
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Une réponse vous est
+                  apportée dans un délai d’un mois.
+                </p>
+                <p>
+                  Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL :
+                  {" "}<a href="https://www.cnil.fr/fr/adresser-une-plainte" target="_blank" rel="noopener noreferrer">
+                    www.cnil.fr/fr/adresser-une-plainte
+                  </a>.
                 </p>
               </article>
 
               <article>
-                <h2>9. Mise à jour de la politique</h2>
-                <p>Dernière mise à jour : 1er septembre 2026.</p>
+                <h2>11. Mise à jour de la politique</h2>
+                <p>Dernière mise à jour : {formatFrenchDate(PRIVACY_POLICY_LAST_UPDATED)}.</p>
                 <p>
                   Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
                   internes de Digital Lab.
@@ -3993,7 +4131,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>10. Google API disclosure</h2>
+                <h2>12. Google API disclosure</h2>
                 <p>
                   L’utilisation et le transfert vers toute autre application des informations reçues depuis les APIs Google
                   respectent la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
@@ -7595,6 +7733,11 @@ function AuthModal({ onClose }) {
         >
           {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte email"}
         </button>
+
+        <p className="auth-privacy-note">
+          Vos données de connexion servent uniquement à gérer votre espace client.{" "}
+          <a href={privacyPolicyPath}>Politique de confidentialité</a>
+        </p>
       </section>
     </div>
   );
