@@ -453,9 +453,12 @@ try {
       "Google (Gmail)", "peuvent également être acheminés ou copiés",
       // DL-PRIVACY-RELEASE-02: section 8 states the actual retention (kept until deletion, no automatic deletion).
       "à ce jour, jusqu’à leur suppression", "Aucune suppression automatique n’est actuellement en place",
-      "sous réserve des obligations légales de conservation"]) {
+      "sous réserve des obligations légales de conservation",
+      // DL-PRIVACY-SIMPLIFY-01: account management under 6.1.b; legitimate interest only for security and follow-up.
+      "relève de ces mêmes mesures précontractuelles ou du contrat", "la sécurité de l’espace client et le suivi des échanges"]) {
       assert.ok(text.includes(needle), needle);
     }
+    assert.ok(!text.includes("compte client ouvert sans prestation en cours"), "no legitimate interest for account management");
     // No retention promise that is not implemented.
     for (const promise of ["uniquement pendant la durée nécessaire", "conservées pendant la durée de la relation", "3 ans", "10 ans"]) {
       assert.ok(!text.includes(promise), "unimplemented retention promise: " + promise);

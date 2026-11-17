@@ -3927,9 +3927,10 @@ function PrivacyPolicyPage({ onNavigate }) {
                 <p>
                   Bases légales : la réponse à vos demandes de devis ou d’information repose sur les mesures précontractuelles
                   prises à votre demande (article 6.1.b du RGPD) ; les échanges, documents et devis liés à une prestation
-                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion et la sécurité d’un compte client
-                  ouvert sans prestation en cours, ainsi que le suivi des échanges, reposent sur l’intérêt légitime de Digital
-                  Lab à répondre aux personnes qui la contactent et à sécuriser son espace client (article 6.1.f) ; la
+                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion de l’espace client que vous
+                  ouvrez pour suivre vos demandes relève de ces mêmes mesures précontractuelles ou du contrat (article 6.1.b) ;
+                  la sécurité de l’espace client et le suivi des échanges avec les personnes qui ont contacté Digital Lab
+                  reposent sur l’intérêt légitime de Digital Lab (article 6.1.f) ; la
                   conservation des documents exigés par la réglementation, notamment comptable, repose sur une obligation
                   légale (article 6.1.c). La mesure d’audience repose uniquement sur votre consentement (section 3).
                 </p>

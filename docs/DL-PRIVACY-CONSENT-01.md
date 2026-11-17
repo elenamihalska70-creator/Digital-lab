@@ -157,19 +157,47 @@ Applied to the page:
 - Legal notice: the removed contact form is no longer mentioned.
 - Sign-in dialog: a "Politique de confidentialité" link under the form, in both login and sign-up modes. Authentication behaviour is unchanged.
 
-**Retention matrix: owner-approved DRAFTS for legal review (DL-PRIVACY-RELEASE-02). Not operational policy: nothing here is implemented or stated on the public page.**
+**Retention rules: internal policy DRAFTS pending legal validation (DL-PRIVACY-RELEASE-02, made practical in DL-PRIVACY-SIMPLIFY-01). Internal only: not stated on the public page until the owner runs the manual review below. Nothing is automated.**
 
 | Data | Legal minimum or maximum | Proposed period (owner decision) | Today |
 |---|---|---|---|
-| E-mail requests with no follow-up | No legal minimum | 3 years from the last contact (CNIL commercial-management guidance for prospects) | Kept in the OVHcloud mailbox and, where routed or copied there, in Gmail; no deletion in either |
-| Account (e-mail, role, sign-in data) | None | Until account deletion, or 3 years after the last activity with no ongoing service | No deletion |
-| Client-area requests, messages, documents | None, unless a document is an accounting record | Duration of the relationship plus 3 years | No deletion |
-| Quotes not accepted | None | Duration of the relationship plus 3 years | No deletion |
-| Accepted quotes, invoices and other accounting records | **10 years** (Code de commerce, art. L123-22), if the document is an accounting record: lawyer to confirm for accepted quotes | 10 years | No deletion |
+| Prospects: e-mail requests and accounts with no order | No legal minimum | Up to 3 years from the last contact initiated by the person (CNIL guidance on prospect data) | Kept in the OVHcloud mailbox and, where routed or copied there, in Gmail; no deletion in either |
+| Inactive accounts (e-mail, role, sign-in data) | None | Reviewed at each annual manual review; deletion assessed once there is no service, quote or request in progress and no contact for about 3 years | No deletion |
+| Active clients: client-area requests, messages, documents | None, unless a document is an accounting record | Duration of the relationship; afterwards kept only with a documented reason (e.g. warranty or dispute, generally up to 5 years: civil limitation period, art. 2224 Code civil), otherwise handled as a prospect | No deletion |
+| Quotes not accepted | None | Same as prospects: up to 3 years from the last contact | No deletion |
+| Accepted quotes, invoices and other accounting records | **10 years** (Code de commerce, art. L123-22), if the document is an accounting record: lawyer to confirm for accepted quotes | Applicable statutory period: 10 years for accounting records | No deletion |
 | Vercel request logs | Provider-defined | Provider default (check the plan) | Unknown |
 | GA4 | See section 3 | Property settings (owner-verified): event data 2 months, user data 14 months | Set in GA4; `_ga` cookie lifetime separate (Google default, 2 years) |
 
-**Proposed deletion procedure (for approval, not implemented):** (1) a deletion request arrives by e-mail; identity is checked against the account address; (2) within one month, the admin deletes the account in the Supabase dashboard. Per the repo SQL, that cascade removes the messages and document records the user created; it does **not** remove the stored files, nor the client's `contact_requests` and their quotes (the `contact_requests` definition is not in the repo). Those files and records are deleted explicitly, except those kept under step 3; (3) records under a legal obligation are kept apart and listed in the reply; (4) once a year, the owner reviews accounts and requests past the approved periods. Any automation (scheduled clean-up, self-service deletion) is a separate LOT.
+**Manual review and deletion procedure (internal draft, DL-PRIVACY-SIMPLIFY-01; not an implemented process yet, not run, no automation):**
+
+*On request (within one month):*
+1. Check that the request comes from the account's e-mail address (or ask for a reply from it). Verify identity **proportionately**: ask for more only when there is a reasonable doubt about who is asking, and never collect or keep identity documents that are not needed (CNIL guidance). Log the date in a private register: date, request, action, date answered. Do not copy the data itself.
+2. **Before deleting anything**, check the applicable retention obligations (invoices, accounting records, a dispute in progress) and find every linked record: account, files, requests, quotes, e-mails. A request does **not** mean deleting everything automatically on receipt.
+3. Delete or anonymise what is not under an obligation:
+   - the user in the Supabase dashboard (Authentication > Users). Per the repo SQL, the cascade removes the messages and document records the user created;
+   - explicitly, what the cascade does **not** remove: the stored files in the `request-documents` bucket, and the person's `contact_requests` and quotes (the `contact_requests` definition is not in the repo);
+   - the related e-mails in the OVHcloud mailbox **and** in Gmail.
+4. Keep apart only the documents with a legal retention obligation (invoices, accounting records), and name them in the reply.
+5. Reply to the person confirming what was deleted and what is kept, and why.
+
+*Once a year (suggested: January; proposed, not yet an implemented process):*
+1. List the accounts and requests with no service, quote or request in progress and no contact for about 3 years. Delete them by the steps above, or record a reason to keep them (dispute, warranty, ongoing discussion).
+2. Delete the matching e-mail threads in OVHcloud and Gmail.
+3. Check that invoices and accounting records past their statutory period can go.
+4. Note the review date and counts in the register.
+
+*Public page:* once the owner has run this review at least once and commits to running it every year, section 8 may say: "les demandes et comptes sans relation en cours sont réexaminés chaque année et supprimés au plus tard 3 ans après le dernier contact, sauf obligation légale de conservation." Until then, the page keeps the current factual wording (kept until deletion, no automatic deletion).
+
+**Legitimate interest (art. 6.1.f), reasoning (DL-PRIVACY-SIMPLIFY-01):**
+- **Kept for:**
+  - the *security of the client area* (access control, abuse prevention), which GDPR recital 49 names as a legitimate interest;
+  - the *follow-up of exchanges with people who contacted Digital Lab*, which the CNIL accepts for prospect management within a limited period.
+- **Removed for:** *managing an account opened without a service in progress*. A visitor opens the client area to send and follow requests, so managing it is a pre-contractual measure taken at their request (art. 6.1.b), or the contract once a service is ordered. Keeping an account *after* the relationship has ended is a retention question, handled by the annual review, not a separate legitimate interest.
+- **Remaining uncertainty (legal review):**
+  - whether an account kept long after the last request still falls under 6.1.b;
+  - whether the 3-year prospect period and the 5-year post-contract justification suit this business;
+  - whether accepted quotes count as accounting records (10 years).
 
 **Sources (consulted 15 November 2026):**
 - CNIL, cookies: what the law says (information, withdrawal): https://www.cnil.fr/fr/cookies-et-autres-traceurs/regles/cookies/que-dit-la-loi
@@ -236,7 +264,7 @@ Not changed: analytics scripts, consent behaviour, events, pricing, estimator, s
 | 2 | **GA4 property retention setting:** owner-verified (event data 2 months, user data 14 months; DL-PRIVACY-FINAL-02). The page text (account setting, at most 14 months) stays consistent. Optional: state the exact values on the page. | Owner (optional wording) |
 | 3 | **`_ga` lifetime of 2 years** (Google default). The CNIL's 13-month cap formally applies to consent-exempt tools, but a shorter lifetime (`cookie_expires`) is common good practice. Not changed without owner approval. | Owner / legal |
 | 4 | **GA4 dashboard:** done (DL-PRIVACY-FINAL-02, owner-verified): Google signals off, no Google Ads links, Data Processing Terms accepted 31 July 2026, optional data sharing off. | Closed |
-| 5 | **Legal bases, transfers and retention (DL-PRIVACY-FINAL-01/02).** Bases now stated in section 2. A lawyer should confirm: legitimate interest for accounts with no current service; whether accepted quotes are accounting records (10 years); the transfer wording for Vercel, Supabase (Singapore entity, Ireland region) and Gmail, including Google&#39;s role for Gmail; and the retention criteria. The retention matrix is owner-approved as a draft (DL-PRIVACY-RELEASE-02) and still needs legal review; the deletion procedure still needs approval. | Legal review / owner |
+| 5 | **Legal bases, transfers and retention (DL-PRIVACY-FINAL-01/02).** Bases now stated in section 2. A lawyer should confirm: legitimate interest for accounts with no current service; whether accepted quotes are accounting records (10 years); the transfer wording for Vercel, Supabase (Singapore entity, Ireland region) and Gmail, including Google&#39;s role for Gmail; and the retention criteria. The retention rules are owner-approved drafts (DL-PRIVACY-RELEASE-02 / SIMPLIFY-01) and need legal review. The manual procedure needs the owner to adopt it and run it once before section 8 states any period. Legitimate interest is now limited to security and the follow-up of exchanges (reasoning above). | Legal review / owner |
 | 6 | **Recipients (DL-PRIVACY-FINAL-01).** Now in section 4. Still to confirm: <ul><li>~~the Supabase project region~~: verified `eu-west-1` (Ireland), DL-PRIVACY-FINAL-02;</li><li>that the Vercel and Supabase DPAs apply to your accounts;</li><li>the mechanism that routes or copies mail to Gmail (not a Zimbra redirection, filter or Gmail POP import), whether all messages are copied, and whether the Gmail account is consumer or Workspace (Google&#39;s role). Gmail is now named as an additional recipient;</li><li>whether Resend still sends anything, and its retention of past contact-form enquiries;</li><li>Vercel log retention on your plan.</li></ul> | Owner |
 | 7 | **English policy page:** publish the English copy above as a page, or keep the French page with the "(in French)" labels. The English "Legal notice" footer link also leads to a French page. | Owner |
 | 8 | **6-month choice lifetime:** the CNIL calls it good practice; confirm. | Owner |
