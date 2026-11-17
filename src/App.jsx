@@ -4072,17 +4072,16 @@ function PrivacyPolicyPage({ onNavigate }) {
 
               <article>
                 <h2>8. Conservation et sécurité</h2>
+                <p>Digital Lab applique un principe de minimisation des données personnelles.</p>
                 <p>
-                  Digital Lab applique un principe de minimisation des données et conserve les informations uniquement pendant
-                  la durée nécessaire aux finalités décrites dans cette politique.
+                  Les informations relatives aux demandes, aux échanges et aux espaces clients sont conservées pendant la
+                  relation avec Digital Lab et, à ce jour, jusqu’à leur suppression. Aucune suppression automatique n’est
+                  actuellement en place.
                 </p>
                 <p>
-                  Les demandes reçues par e-mail et les données de l’espace client (compte, demandes, messages, documents,
-                  devis) sont conservées pendant la durée de la relation avec Digital Lab. Aucune suppression automatique n’est
-                  en place à ce jour : vous pouvez demander à tout moment la suppression de votre compte et des données
-                  associées en écrivant à {businessContact.email}, sauf pour les documents que Digital Lab doit conserver au
-                  titre d’une obligation légale, notamment comptable. Les durées propres à la mesure d’audience sont indiquées
-                  à la section 3.
+                  Vous pouvez demander la suppression de vos données personnelles à
+                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>, sous réserve des
+                  obligations légales de conservation. Les durées propres à la mesure d’audience sont indiquées à la section 3.
                 </p>
                 <p>
                   Des mesures techniques raisonnables sont mises en place pour protéger les accès et limiter les risques.

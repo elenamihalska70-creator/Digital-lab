@@ -450,8 +450,15 @@ try {
       "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure",
       // DL-PRIVACY-FINAL-02: verified Supabase region, OVHcloud mailbox, Gmail as an additional recipient.
       "région eu-west-1 (Irlande)", "n’exclut pas que certaines données soient traitées", "boîte de messagerie professionnelle",
-      "Google (Gmail)", "peuvent également être acheminés ou copiés"]) {
+      "Google (Gmail)", "peuvent également être acheminés ou copiés",
+      // DL-PRIVACY-RELEASE-02: section 8 states the actual retention (kept until deletion, no automatic deletion).
+      "à ce jour, jusqu’à leur suppression", "Aucune suppression automatique n’est actuellement en place",
+      "sous réserve des obligations légales de conservation"]) {
       assert.ok(text.includes(needle), needle);
+    }
+    // No retention promise that is not implemented.
+    for (const promise of ["uniquement pendant la durée nécessaire", "conservées pendant la durée de la relation", "3 ans", "10 ans"]) {
+      assert.ok(!text.includes(promise), "unimplemented retention promise: " + promise);
     }
     // No overclaim: the region is where the project is deployed, not a guarantee that all processing stays there.
     assert.ok(!/(uniquement|exclusivement) en Irlande/.test(text), "no Ireland-only processing claim");
