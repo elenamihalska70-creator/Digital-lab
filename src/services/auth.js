@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
+import { portalEnabled } from "../config/portal";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.DL_LOCAL_PORTAL_DEV_SERVER ? import.meta.env.VITE_SUPABASE_URL : undefined;
+const supabaseAnonKey = import.meta.env.DL_LOCAL_PORTAL_DEV_SERVER ? import.meta.env.VITE_SUPABASE_ANON_KEY : undefined;
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = portalEnabled && Boolean(supabaseUrl && supabaseAnonKey);
 
 export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
 

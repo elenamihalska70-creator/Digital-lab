@@ -7,7 +7,10 @@ const siteUrl = 'https://www.digitallab.studio'
 const pages = seoRoutes
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command, isPreview }) => ({
+  define: {
+    'import.meta.env.DL_LOCAL_PORTAL_DEV_SERVER': JSON.stringify(command === 'serve' && !isPreview),
+  },
   plugins: [
     react(),
     Sitemap({
@@ -53,4 +56,4 @@ export default defineConfig({
       readable: true,
     }),
   ],
-})
+}))
