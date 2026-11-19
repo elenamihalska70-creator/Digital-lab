@@ -15,6 +15,7 @@ import {
 } from "./services/contactRequests";
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
+import { auditFunnelHref } from "./config/auditFunnel";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import { isCurrentConsentUiEnabled, openConsentPreferences } from "./utils/consent";
 import {
@@ -62,9 +63,7 @@ const withTaxMention = (price, isEnglish = false) => {
 };
 const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
-const auditAppUrl = configuredAuditUrl;
-const auditLaunchHref = auditAppUrl || auditLandingPath;
-const isAuditAppUrlConfigured = Boolean(configuredAuditUrl);
+const auditAppUrl = configuredAuditUrl || "https://audit.digitallab.studio";
 
 const services = [
   {
@@ -332,7 +331,7 @@ const services = [
 ];
 
 const navLinks = [
-  { label: "Audit gratuit", href: auditLaunchHref, emphasized: true },
+  { label: "Audit gratuit", href: auditFunnelHref("global_nav"), auditFunnel: true, emphasized: true },
   { label: "Services", href: "/#services" },
   { label: "Réseaux sociaux", href: socialMediaServicePath },
   { label: "Projets", href: "/#projets" },
@@ -602,12 +601,9 @@ const auditDeliverables = [
 ];
 
 const auditEvents = {
-  navClick: "audit_nav_click",
-  homeCta: "audit_home_cta_click",
-  landingCta: "audit_landing_cta_click",
+  funnelClick: "audit_funnel_cta_click",
   externalLaunch: "audit_external_app_click",
   videoPlay: "audit_video_play",
-  footerCta: "audit_footer_cta_click",
   assistanceClick: "audit_assistance_click",
 };
 
@@ -1031,8 +1027,8 @@ const servicePages = [
     cta: {
       title: "Un site clair, qui reflète votre activité",
       text: "Parlons de votre projet de site ou de refonte : je vous propose une première piste concrète, adaptée à votre activité.",
-      primaryLabel: "Faire un diagnostic gratuit",
-      primaryHref: auditLandingPath,
+      primaryLabel: "Demander mon audit gratuit",
+      auditLocation: "creation",
       secondaryLabel: "Me contacter directement",
       secondaryHref: "/#contact",
     },
@@ -1099,8 +1095,8 @@ const servicePages = [
     cta: {
       title: "Un site clair, construit à distance avec vous",
       text: "Parlons de votre projet de site ou de refonte à Besançon : je vous propose une première piste concrète, adaptée à votre activité.",
-      primaryLabel: "Faire un diagnostic gratuit",
-      primaryHref: auditLandingPath,
+      primaryLabel: "Demander mon audit gratuit",
+      auditLocation: "besancon",
       secondaryLabel: "Me contacter directement",
       secondaryHref: "/#contact",
     },
@@ -1488,21 +1484,21 @@ const applyPageMetadata = (pathname) => {
 const trackAuditCta = (eventName, location) => {
   trackEvent(eventName, {
     cta_location: location,
-    destination_type: isAuditAppUrlConfigured ? "external_audit_app" : "configuration_fallback",
+    destination_type: configuredAuditUrl ? "external_audit_app" : "configuration_fallback",
   });
 };
 
-const handleAuditLaunchClick = (event, { eventName, location, onNavigate }) => {
-  trackAuditCta(eventName, location);
+const trackAuditFunnelClick = (location) => trackEvent(auditEvents.funnelClick, {
+  cta_location: location,
+  destination_type: "systeme_io_funnel",
+});
 
-  if (isAuditAppUrlConfigured) {
-    trackAuditCta(auditEvents.externalLaunch, location);
-    return;
-  }
-
-  event.preventDefault();
-  onNavigate(auditLandingPath);
-};
+const auditFunnelLinkProps = (location) => ({
+  href: auditFunnelHref(location),
+  target: "_blank",
+  rel: "noreferrer",
+  onClick: () => trackAuditFunnelClick(location),
+});
 
 function DeferredVideo({
   ariaLabel,
@@ -3411,13 +3407,6 @@ function AuditVideoCard({ compact = false, isEnglish = false }) {
 }
 
 function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
-  const handleLandingClick = (event) => {
-    handleAuditLaunchClick(event, {
-      eventName: auditEvents.homeCta,
-      location: "homepage_spotlight",
-      onNavigate,
-    });
-  };
   const displayedAuditBenefits = isEnglish ? englishAuditBenefits : auditBenefits;
 
   return (
@@ -3426,11 +3415,11 @@ function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
         <div className="audit-spotlight-copy">
           <div className="section-heading">
             <span>{isEnglish ? "Free diagnostic" : "Diagnostic gratuit"}</span>
-            <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site inspire-t-il vraiment confiance ?"}</h2>
+            <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site attire des visiteurs, mais pas assez de clients ?"}</h2>
             <p>
               {isEnglish
                 ? "Identify the main obstacles related to visibility, trust, security, and conversion, then discover the actions to prioritize."
-                : "Identifiez les principaux freins liés à la visibilité, à la confiance, à la sécurité et à la conversion, puis découvrez les actions à traiter en priorité."}
+                : "Découvrez gratuitement les points à améliorer : SEO, performance, expérience utilisateur et conversion."}
             </p>
           </div>
 
@@ -3446,28 +3435,23 @@ function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
           <div className="audit-actions">
             <a
               className="btn btn-primary"
-              href={auditLaunchHref}
-              target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-              rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-              onClick={handleLandingClick}
+              {...auditFunnelLinkProps("homepage_spotlight")}
             >
-              {isEnglish ? "Start my free audit" : "Lancer mon audit gratuit"} <strong>→</strong>
+              {isEnglish ? "Request my free audit" : "Demander mon audit gratuit"} <strong>→</strong>
             </a>
           </div>
 
-          {isAuditAppUrlConfigured && (
-            <p className="audit-secondary-link">
-              <a
-                href={auditLandingPath}
-                onClick={(event) => {
-                  event.preventDefault();
-                  onNavigate(auditLandingPath);
-                }}
-              >
-                {isEnglish ? "See how the audit works →" : "Découvrir comment fonctionne l’audit →"}
-              </a>
-            </p>
-          )}
+          <p className="audit-secondary-link">
+            <a
+              href={auditLandingPath}
+              onClick={(event) => {
+                event.preventDefault();
+                onNavigate(auditLandingPath);
+              }}
+            >
+              {isEnglish ? "See how the audit works →" : "Découvrir comment fonctionne l’audit →"}
+            </a>
+          </p>
         </div>
 
         <AuditVideoCard isEnglish={isEnglish} />
@@ -3477,20 +3461,6 @@ function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
 }
 
 function AuditLandingPage({ onNavigate }) {
-  useEffect(() => {
-    if (!isAuditAppUrlConfigured) {
-      console.warn("Digital Lab Audit launch URL is not configured.");
-    }
-  }, []);
-
-  const handleLaunchClick = () => {
-    trackAuditCta(auditEvents.landingCta, "audit_landing_primary");
-
-    if (isAuditAppUrlConfigured) {
-      trackAuditCta(auditEvents.externalLaunch, "audit_landing_primary");
-    }
-  };
-
   return (
     <main className="audit-page fade-in-page">
       <section className="audit-landing-hero">
@@ -3513,23 +3483,18 @@ function AuditLandingPage({ onNavigate }) {
 
             <div className="audit-offer-row">
               <span className="audit-offer-badge">Diagnostic gratuit offert par Digital Lab</span>
-              <span className="audit-beta-badge">Version bêta</span>
             </div>
 
-            <h1>Découvrez gratuitement ce qui freine votre site</h1>
+            <h1>Votre site attire des visiteurs, mais pas assez de clients ?</h1>
             <p>
-              Un diagnostic Digital Lab pour comprendre ce qui limite la confiance, la visibilité et les demandes
-              clients, avec des priorités expliquées simplement.
+              Découvrez gratuitement les points à améliorer : SEO, performance, expérience utilisateur et conversion.
             </p>
             <div className="audit-landing-actions" id="audit-launch">
               <a
                 className="btn btn-primary"
-                href={auditLaunchHref}
-                target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-                rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-                onClick={handleLaunchClick}
+                {...auditFunnelLinkProps("audit_landing_primary")}
               >
-                Lancer mon audit gratuit <strong>→</strong>
+                Demander mon audit gratuit <strong>→</strong>
               </a>
             </div>
 
@@ -3546,24 +3511,20 @@ function AuditLandingPage({ onNavigate }) {
               ))}
             </ul>
 
-            <p className="audit-beta-note">
-              Version bêta gratuite — capacité quotidienne limitée pendant la phase de test.
+            <p className="audit-beta-note">L’équipe Digital Lab traite votre demande et vous recontacte.</p>
+            <p className="audit-secondary-link">
+              <a
+                href={auditAppUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackEvent(auditEvents.externalLaunch, {
+                  cta_location: "audit_landing_direct_app",
+                  destination_type: "external_audit_app",
+                })}
+              >
+                Ouvrir l’application Digital Lab Audit (bêta) →
+              </a>
             </p>
-            {!isAuditAppUrlConfigured && (
-              <div className="audit-availability-note" role="status">
-                <p>L’audit gratuit sera bientôt rouvert aux nouveaux tests bêta.</p>
-                <a
-                  href="/#contact"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    trackAuditCta(auditEvents.assistanceClick, "audit_landing_beta_contact");
-                    onNavigate("/#contact");
-                  }}
-                >
-                  Demander un accès testeur
-                </a>
-              </div>
-            )}
           </div>
 
           <AuditVideoCard compact />
@@ -3659,25 +3620,16 @@ function AuditLandingPage({ onNavigate }) {
   );
 }
 
-function AuditFooterReminder({ onNavigate, isEnglish = false }) {
+function AuditFooterReminder({ isEnglish = false }) {
   return (
     <section className="audit-footer-reminder" aria-label={isEnglish ? "Free audit reminder" : "Rappel audit gratuit"}>
       <div className="section-inner audit-footer-reminder-inner">
-        <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site inspire-t-il vraiment confiance ?"}</h2>
+        <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site attire des visiteurs, mais pas assez de clients ?"}</h2>
         <a
           className="btn btn-primary"
-          href={auditLaunchHref}
-          target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-          rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-          onClick={(event) => {
-            handleAuditLaunchClick(event, {
-              eventName: auditEvents.footerCta,
-              location: "footer_reminder",
-              onNavigate,
-            });
-          }}
+          {...auditFunnelLinkProps("footer_reminder")}
         >
-          {isEnglish ? "Start my free audit" : "Lancer mon audit gratuit"}
+          {isEnglish ? "Request my free audit" : "Demander mon audit gratuit"}
         </a>
       </div>
     </section>
@@ -4318,18 +4270,18 @@ const portfolioShowcaseCards = {
     title: "Digital Lab Audit",
     image: "/projects/digitallab-audit-site-poster.webp",
     video: auditVideoSrc,
-    href: auditLaunchHref,
+    href: auditFunnelHref("homepage_portfolio"),
     fr: {
       description:
         "Diagnostic gratuit de site web pour petites structures : visibilité, confiance, sécurité, RGPD, performance et conversion, avec un score et un plan d’action priorisé.",
       tags: ["Audit", "SEO", "RGPD", "Bêta"],
-      cta: "Lancer mon audit gratuit",
+      cta: "Demander mon audit gratuit",
     },
     en: {
       description:
         "A free website diagnostic for small businesses: visibility, trust, security, GDPR, performance, and conversion, with a score and a prioritized action plan.",
       tags: ["Audit", "SEO", "GDPR", "Beta"],
-      cta: "Start my free audit",
+      cta: "Request my free audit",
     },
   },
   automation: {
@@ -4353,18 +4305,13 @@ const portfolioShowcaseCards = {
   },
 };
 
-function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDelay }) {
+function PortfolioShowcaseCard({ card, isEnglish = false, revealDelay }) {
   const copy = isEnglish ? card.en : card.fr;
   const title = copy.title || card.title;
   const isExternal = isExternalLink(card.href);
   const revealClassName = revealDelay === undefined ? "" : " reveal-on-scroll reveal-card";
 
   const handleClick = (event) => {
-    if (card === portfolioShowcaseCards.audit) {
-      handleAuditLaunchClick(event, { eventName: auditEvents.homeCta, location: "homepage_portfolio", onNavigate });
-      return;
-    }
-
     if (card.video) return;
 
     const target = document.querySelector(card.href);
@@ -4418,6 +4365,7 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
             target={isExternal || card.video ? "_blank" : undefined}
             rel={isExternal || card.video ? "noreferrer" : undefined}
             onClick={handleClick}
+            {...(card === portfolioShowcaseCards.audit ? auditFunnelLinkProps("homepage_portfolio") : {})}
           >
             {copy.cta}
           </a>
@@ -4789,14 +4737,6 @@ function EnglishHomePage({ onNavigate }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [quoteRequest, setQuoteRequest] = useState(null);
 
-  const handleAuditClick = (event) => {
-    handleAuditLaunchClick(event, {
-      eventName: auditEvents.homeCta,
-      location: "en_homepage_hero",
-      onNavigate,
-    });
-  };
-
   return (
     <main>
       <section className="hero">
@@ -4837,13 +4777,10 @@ function EnglishHomePage({ onNavigate }) {
 
           <div className="hero-buttons">
             <a
-              href={auditLaunchHref}
               className="btn btn-primary"
-              target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-              rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-              onClick={handleAuditClick}
+              {...auditFunnelLinkProps("en_homepage_hero")}
             >
-              Start my free audit <strong>→</strong>
+              Request my free audit <strong>→</strong>
             </a>
 
             <a href="#en-services" className="btn btn-secondary">
@@ -4917,7 +4854,7 @@ function EnglishHomePage({ onNavigate }) {
           </div>
 
           <div className="cards-grid project-grid">
-            <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} isEnglish onNavigate={onNavigate} />
+            <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} isEnglish />
             {englishProjects.map((project) => (
               <article
                 className="glass-card project-card premium-card gradient-border soft-hover"
@@ -4977,7 +4914,7 @@ function EnglishHomePage({ onNavigate }) {
                 </div>
               </article>
             ))}
-            <PortfolioShowcaseCard card={portfolioShowcaseCards.automation} isEnglish onNavigate={onNavigate} />
+            <PortfolioShowcaseCard card={portfolioShowcaseCards.automation} isEnglish />
           </div>
 
           <div className="ai-roadmap glass-section premium-card premium-card-subtle gradient-border soft-hover">
@@ -5508,8 +5445,9 @@ function ServicePage({ servicePage, onNavigate }) {
             <div className="case-actions">
               <a
                 className="btn btn-primary"
-                href={servicePage.cta.primaryHref}
-                onClick={handleNavigateTo(servicePage.cta.primaryHref)}
+                {...(servicePage.cta.auditLocation
+                  ? auditFunnelLinkProps(`${servicePage.cta.auditLocation}_hero`)
+                  : { href: servicePage.cta.primaryHref, onClick: handleNavigateTo(servicePage.cta.primaryHref) })}
               >
                 {servicePage.cta.primaryLabel}
               </a>
@@ -5670,8 +5608,9 @@ function ServicePage({ servicePage, onNavigate }) {
             <p>{servicePage.cta.text}</p>
             <a
               className="btn btn-primary"
-              href={servicePage.cta.primaryHref}
-              onClick={handleNavigateTo(servicePage.cta.primaryHref)}
+              {...(servicePage.cta.auditLocation
+                ? auditFunnelLinkProps(`${servicePage.cta.auditLocation}_footer`)
+                : { href: servicePage.cta.primaryHref, onClick: handleNavigateTo(servicePage.cta.primaryHref) })}
             >
               {servicePage.cta.primaryLabel}
             </a>
@@ -7952,7 +7891,7 @@ function SiteHeader({
           {navLinks.map((link, index) => (
             <a
               className={`${visibleActiveHref === link.href ? "is-active" : ""}${link.emphasized ? " nav-link-emphasis" : ""}`.trim()}
-              href={link.href}
+              href={link.auditFunnel && isAuditPage ? auditFunnelHref("audit_page_nav") : link.href}
               target={isExternalLink(link.href) ? "_blank" : undefined}
               rel={isExternalLink(link.href) ? "noreferrer" : undefined}
               key={link.href}
@@ -7964,8 +7903,8 @@ function SiteHeader({
                   : undefined
               }
               onClick={(event) => {
-                if (link.label === "Audit gratuit") {
-                  trackAuditCta(auditEvents.navClick, isAuditPage ? "audit_page_nav" : "global_nav");
+                if (link.auditFunnel) {
+                  trackAuditFunnelClick(isAuditPage ? "audit_page_nav" : "global_nav");
                 }
 
                 if (isExternalLink(link.href)) {
@@ -8808,7 +8747,7 @@ function App() {
 
         <AuditLandingPage onNavigate={navigate} />
 
-        <AuditFooterReminder onNavigate={navigate} />
+        <AuditFooterReminder />
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
         <AuthToast message={authToast} onClose={clearAuthToast} />
@@ -8834,7 +8773,7 @@ function App() {
 
         <EnglishHomePage onNavigate={navigate} />
 
-        <AuditFooterReminder onNavigate={navigate} isEnglish />
+        <AuditFooterReminder isEnglish />
         <SiteFooter onNavigate={navigate} isEnglish />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
         <AuthToast message={authToast} onClose={clearAuthToast} />
@@ -8895,19 +8834,10 @@ function App() {
 
             <div className="hero-buttons">
               <a
-                href={auditLaunchHref}
                 className="btn btn-primary"
-                target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-                rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-                onClick={(event) => {
-                  handleAuditLaunchClick(event, {
-                    eventName: auditEvents.homeCta,
-                    location: "homepage_hero",
-                    onNavigate: navigate,
-                  });
-                }}
+                {...auditFunnelLinkProps("homepage_hero")}
               >
-                Lancer mon audit gratuit <strong>→</strong>
+                Demander mon audit gratuit <strong>→</strong>
               </a>
 
               <a href="#services" className="btn btn-secondary">
@@ -8992,7 +8922,7 @@ function App() {
             </div>
 
             <div className="cards-grid project-grid">
-              <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} onNavigate={navigate} revealDelay="0ms" />
+              <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} revealDelay="0ms" />
               {projects.map((project, index) => (
                 <article
                   className="glass-card project-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
@@ -9067,7 +8997,6 @@ function App() {
               ))}
               <PortfolioShowcaseCard
                 card={portfolioShowcaseCards.automation}
-                onNavigate={navigate}
                 revealDelay={`${(projects.length + 1) * 90}ms`}
               />
             </div>
@@ -9528,21 +9457,12 @@ function App() {
 
       <a
         className={`mobile-sticky-cta${isMobileCtaVisible ? " is-visible" : ""}`}
-        href={auditLaunchHref}
-        target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-        rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-        onClick={(event) => {
-          handleAuditLaunchClick(event, {
-            eventName: auditEvents.homeCta,
-            location: "homepage_mobile_sticky",
-            onNavigate: navigate,
-          });
-        }}
+        {...auditFunnelLinkProps("homepage_mobile_sticky")}
       >
         Audit gratuit
       </a>
 
-      <AuditFooterReminder onNavigate={navigate} />
+      <AuditFooterReminder />
       <SiteFooter onNavigate={navigate} />
       {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
       <AuthToast message={authToast} onClose={clearAuthToast} />
