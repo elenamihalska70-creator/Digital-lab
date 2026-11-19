@@ -3863,10 +3863,16 @@ function PrivacyPolicyPage({ onNavigate }) {
               <article>
                 <h2>2. Données collectées sur le site</h2>
                 <p>
-                  Le site ne propose plus de formulaire de contact public : pour toute demande, vous écrivez directement à
+                  Pour contacter Digital Lab directement, vous pouvez écrire à
                   {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Digital Lab traite alors les
                   données que vous envoyez volontairement par e-mail, notamment vos coordonnées, votre message et les
                   informations utiles au traitement de votre demande.
+                </p>
+                <p>
+                  Pour demander un Audit Gratuit, vous pouvez utiliser le formulaire hébergé sur Systeme.io. Il recueille
+                  votre adresse e-mail et l’adresse du site à auditer. Des données techniques liées à l’accès au
+                  formulaire ou à son utilisation peuvent également être traitées. Une demande d’audit ne vaut pas
+                  consentement à recevoir des e-mails de prospection ou une newsletter.
                 </p>
                 <p>
                   L’ancien espace client a été retiré du site public. Les données déjà enregistrées restent conservées :
@@ -3962,6 +3968,13 @@ function PrivacyPolicyPage({ onNavigate }) {
                   <li>
                     OVHcloud (France) : fournisseur de la boîte de messagerie professionnelle {businessContact.email}.
                   </li>
+                  <li>
+                    Systeme.io (ITACWT Limited, Irlande) : service technique utilisé pour héberger le formulaire Audit
+                    Gratuit, enregistrer les demandes et gérer les contacts associés, envoyer un e-mail de confirmation
+                    à la personne qui fait la demande et notifier Digital Lab par e-mail. Digital Lab reste responsable
+                    du traitement des demandes d’audit de ses prospects.
+                    {" "}<a href="https://systeme.io/fr/privacy-policy" target="_blank" rel="noopener noreferrer">Politique de confidentialité de Systeme.io</a>.
+                  </li>
                 </ul>
                 <p>
                   Google (Gmail) : les e-mails adressés à {businessContact.email} peuvent également être acheminés ou copiés
@@ -4004,7 +4017,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes reçues par e-mail et suivi des demandes déjà enregistrées ;</li>
+                  <li>réponse aux demandes reçues par e-mail ou via le formulaire Audit Gratuit et suivi des demandes déjà enregistrées ;</li>
                   <li>gestion des comptes, des documents et des devis conservés, et sécurité des accès.</li>
                 </ul>
               </article>

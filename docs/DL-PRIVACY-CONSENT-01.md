@@ -271,6 +271,18 @@ Not changed: analytics scripts, consent behaviour, events, pricing, estimator, s
 | 9 | **Clarity in the Microsoft account:** the project stays configured but receives nothing from this site. Optionally pause or delete it there, and check that existing recordings expire (Microsoft: 30 days; favorites and samples up to 9 months). No account change was made here. | Owner |
 | 10 | **Clarity re-enablement:** separate LOT; see the requirements above. | Owner, later |
 
+### DL-PRIVACY-SYSTEME-01 release gates
+
+The owner verified that the [Audit Gratuit funnel](https://a59f-contact.systeme.io/audit-gratuit) collects the site URL and email, stores the request and contact in Systeme.io, sends the requester a confirmation and notifies Digital Lab. The funnel displays a data-processing notice and links to the Digital Lab policy. No separate marketing opt-in has been verified or authorized. The [provider’s privacy policy](https://systeme.io/fr/privacy-policy) identifies ITACWT Limited in Ireland and describes AWS Ireland hosting. Confirm the account-specific terms separately.
+
+Before production release, the owner should close these gates:
+
+- **DPA and data flows:** confirm account-level DPA applicability and acceptance, provider roles, subprocessors, processing locations and any applicable transfer safeguards.
+- **Retention and deletion:** confirm retention criteria and deletion procedures for funnel requests, contact records and transactional email records.
+- **Funnel cookies and third-party scripts:** inspect the live funnel before any choice and after acceptance or refusal. Document scripts, storage and requests, then verify the appropriate disclosure and any required consent. The Digital Lab banner only governs the Digital Lab site.
+- **UTM attribution:** verify whether landing UTMs are stored, used for tracking, associated with a contact, or forwarded to third parties. Apply the corresponding disclosure and consent requirements.
+- **Publication:** set `PRIVACY_POLICY_LAST_UPDATED` to the actual publication date on release day, align the browser assertion and verify that the funnel link serves the updated notice. The date script cannot verify the actual date of publication.
+
 ## Integration safety
 
 - Unchanged: prices, package and billing rules, locks, the estimator, website, repair, Social Media, Reels, `quoteMailto` and the copy fallback; event names and parameters; `trackingEnvironment.js`; the prerender block list; `api/` and `supabase/`.
