@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { createServer } from 'vite';
-import react from '@vitejs/plugin-react';
 import { chromium } from 'playwright';
 const phase = process.argv.includes('--before') ? 'before' : 'after';
 const artifacts = new URL('../header-review.local/', import.meta.url);
 await mkdir(artifacts, { recursive: true });
-const server = await createServer({ configFile:false, server: { host: '127.0.0.1', port: 4325, strictPort: true }, plugins: [react(), {
+// This legacy header regression exercises the preserved local portal controls.
+process.env.VITE_ENABLE_LOCAL_PORTAL = 'true';
+const server = await createServer({ server: { host: '127.0.0.1', port: 4325, strictPort: true }, plugins: [{
   name: 'header-review-only', enforce: 'pre',
   transform(code, id) { if (id.replaceAll('\\', '/').endsWith('/src/App.jsx')) return code + '\nexport { SiteHeader, scrollToElementWithHeaderOffset };'; },
   configureServer(s) { s.middlewares.use('/header-fixture', async (_req, res) => {
@@ -63,7 +64,13 @@ try {
       if(width<=1180) await page.locator('.navbar-burger').click();
       await page.locator('.navbar-client-button').click();await page.waitForURL('**/login');await page.locator('.auth-modal-close').click();await page.waitForURL(url=>url.pathname!=='/login');await pause(page);
       if(width<=1180) await page.locator('.navbar-burger').click();
-      await page.locator('.navbar-auth-button').click();await page.waitForURL('**/login');await page.locator('.auth-modal-close').click();
+      await page.locator('.navbar-auth-button').click();await page.waitForURL('**/login');
+      const modal=page.locator('.auth-modal');await modal.waitFor();
+      const policy=modal.getByRole('link',{name:'Politique de confidentialité',exact:true});
+      assert.equal(await policy.getAttribute('href'),'/politique-de-confidentialite');
+      await modal.locator('.auth-switch').click();
+      assert.equal(await policy.count(),1);
+      await page.locator('.auth-modal-close').click();
       assert.equal(await page.locator('.navbar-burger').getAttribute('aria-expanded'),'false');
       await page.waitForURL(url=>url.pathname!=='/login');await pause(page);
       for(const y of [0,23,25,26,23,0]) {await page.evaluate(y=>scrollTo({top:y,behavior:'instant'}),y);await pause(page);assert.equal((await measure(page)).scrolled,y>24, `Scroll state at ${width}px, requested ${y}, actual ${await page.evaluate(()=>scrollY)}`);}

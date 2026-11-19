@@ -16,6 +16,7 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { auditFunnelHref } from "./config/auditFunnel";
+import { isPortalPath, portalEnabled } from "./config/portal";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import { isCurrentConsentUiEnabled, openConsentPreferences } from "./utils/consent";
 import {
@@ -61,7 +62,6 @@ const withTaxMention = (price, isEnglish = false) => {
   const mention = isEnglish ? priceTax.shortEn : priceTax.short;
   return mention ? `${price} ${mention}` : price;
 };
-const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
 const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl || "https://audit.digitallab.studio";
 
@@ -1363,7 +1363,7 @@ const applyPageMetadata = (pathname) => {
 
   const isUnknownProjectPath = isProjectPath && !project;
   const isUnknownServicePath = isServicePath && !servicePage;
-  const isPrivatePath = privatePaths.includes(pathname);
+  const isPrivatePath = isPortalPath(pathname) || pathname === "/design-system";
   setMetaContent(
     'meta[name="robots"]',
     isPrivatePath || isUnknownProjectPath || isUnknownServicePath ? "noindex, nofollow" : "index, follow",
@@ -3819,7 +3819,7 @@ function LegalNoticePage({ onNavigate }) {
               <article>
                 <h2>Données personnelles</h2>
                 <p>
-                  Les informations que vous envoyez par e-mail ou depuis votre espace client sont utilisées uniquement
+                  Les informations envoyées par e-mail ou précédemment transmises via l’ancien espace client sont utilisées uniquement
                   pour répondre à vos demandes et assurer le suivi de vos projets.
                 </p>
                 <p>
@@ -3869,19 +3869,18 @@ function PrivacyPolicyPage({ onNavigate }) {
                   informations utiles au traitement de votre demande.
                 </p>
                 <p>
-                  Si vous créez un espace client, Digital Lab traite : votre adresse e-mail et votre mot de passe (que Digital
-                  Lab ne peut pas lire) ou, si vous choisissez « Continuer avec Google », les informations transmises par
-                  Google pour la connexion ; le rôle associé à votre compte (client ou administrateur) ; les demandes, messages
-                  et documents échangés dans votre espace client (PDF, images ou fichiers Word, 10 Mo maximum par fichier) ;
-                  les devis et, le cas échéant, le commentaire laissé lors d’un refus de devis. Les demandes envoyées
-                  auparavant via l’ancien formulaire du site restent consultables dans votre espace client et par Digital Lab.
+                  L’ancien espace client a été retiré du site public. Les données déjà enregistrées restent conservées :
+                  adresse e-mail, données d’authentification (mot de passe non lisible par Digital Lab ou informations
+                  transmises par Google pour la connexion), profil et rôle associé (client ou administrateur), demandes
+                  (y compris celles de l’ancien formulaire), messages, documents, devis et éventuels commentaires de refus.
+                  Pour demander l’accès à ces données, contactez Digital Lab par e-mail (section 10).
                 </p>
                 <p>
                   Bases légales : la réponse à vos demandes de devis ou d’information repose sur les mesures précontractuelles
                   prises à votre demande (article 6.1.b du RGPD) ; les échanges, documents et devis liés à une prestation
-                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion de l’espace client que vous
-                  ouvrez pour suivre vos demandes relève de ces mêmes mesures précontractuelles ou du contrat (article 6.1.b) ;
-                  la sécurité de l’espace client et le suivi des échanges avec les personnes qui ont contacté Digital Lab
+                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion des comptes existants liés
+                  à ces demandes relève de ces mêmes mesures précontractuelles ou du contrat (article 6.1.b) ;
+                  la sécurité des accès et le suivi des échanges avec les personnes qui ont contacté Digital Lab
                   reposent sur l’intérêt légitime de Digital Lab (article 6.1.f) ; la
                   conservation des documents exigés par la réglementation, notamment comptable, repose sur une obligation
                   légale (article 6.1.c). La mesure d’audience repose uniquement sur votre consentement (section 3).
@@ -3917,8 +3916,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                 </p>
                 <p>
                   Éléments nécessaires, sans consentement : la mémorisation de votre choix sur votre appareil (stockage local
-                  « dl-consent », renouvelé au plus tard tous les 6 mois) et, si vous vous connectez, la session de votre
-                  espace client.
+                  « dl-consent », renouvelé au plus tard tous les 6 mois).
                 </p>
                 <p>
                   Vous pouvez modifier ou retirer votre consentement à tout moment avec le bouton « Gérer les cookies » en bas
@@ -3958,8 +3956,8 @@ function PrivacyPolicyPage({ onNavigate }) {
                     de connexion nécessaires à l’affichage des pages (adresse IP, pages demandées).
                   </li>
                   <li>
-                    Supabase (Supabase Pte. Ltd, Singapour) : authentification, base de données de l’espace client et stockage
-                    privé des documents. Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande).
+                    Supabase (Supabase Pte. Ltd, Singapour) : comptes existants, base de données de l’ancien espace client et
+                    stockage privé des documents. Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande).
                   </li>
                   <li>
                     OVHcloud (France) : fournisseur de la boîte de messagerie professionnelle {businessContact.email}.
@@ -3972,7 +3970,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                   et sa politique de confidentialité.
                 </p>
                 <p>
-                  Si vous choisissez « Continuer avec Google », Google traite les informations de connexion selon sa propre
+                  Pour les connexions précédemment effectuées avec « Continuer avec Google », Google traite les informations de connexion selon sa propre
                   politique de confidentialité. Google Analytics n’est utilisé qu’avec votre accord (section 3). Ces
                   utilisations des services Google (messagerie, connexion, mesure d’audience) sont distinctes.
                 </p>
@@ -4006,8 +4004,8 @@ function PrivacyPolicyPage({ onNavigate }) {
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées ;</li>
-                  <li>gestion des comptes de l’espace client, des documents et des devis, et sécurité des accès.</li>
+                  <li>réponse aux demandes reçues par e-mail et suivi des demandes déjà enregistrées ;</li>
+                  <li>gestion des comptes, des documents et des devis conservés, et sécurité des accès.</li>
                 </ul>
               </article>
 
@@ -7918,12 +7916,7 @@ function SiteHeader({
               {isEnglishPath ? englishNavLabels[index] : link.label}
             </a>
           ))}
-          {/* LOT DL 2.5.4.4 — groups the CTA/auth/switcher cluster so desktop
-              CSS can place it on the header's top row next to the brand,
-              while .navbar-menu's nav links form their own row below. On
-              mobile this wrapper is display:contents (see App.css), so it's
-              invisible to layout and the dropdown list is byte-identical to
-              before: same flat children, same order, same behavior. */}
+          {/* Desktop places these actions next to the brand. Mobile flattens the wrapper. */}
           <div className="navbar-actions">
           <a
             className="navbar-cta"
@@ -7938,7 +7931,7 @@ function SiteHeader({
           >
             {isEnglishPath ? "Discuss my project" : isAuditPage ? "Besoin d’aide ?" : "Parler de mon projet"}
           </a>
-          {session ? (
+          {portalEnabled && (session ? (
             <div className="navbar-auth-state">
               <span title={userEmail}>{userDisplayName}</span>
               <button
@@ -8027,7 +8020,7 @@ function SiteHeader({
                 {isEnglishPath ? "Sign in" : "Connexion"}
               </button>
             </div>
-          )}
+          ))}
 
           <div className="lang-switcher" role="group" aria-label="Choisir la langue du site / Choose site language">
             <a
@@ -8236,9 +8229,9 @@ function App() {
     }
   };
 
-  const isDashboardPath = pathname === "/dashboard" || pathname === "/espace-client";
-  const isLoginPath = pathname === "/login";
-  const isAdminPath = pathname === "/admin";
+  const isDashboardPath = portalEnabled && (pathname === "/dashboard" || pathname === "/espace-client");
+  const isLoginPath = portalEnabled && pathname === "/login";
+  const isAdminPath = portalEnabled && pathname === "/admin";
   const isDesignSystemPath = pathname === "/design-system";
   const isAuditLandingPath = pathname === auditLandingPath;
 
@@ -8504,6 +8497,26 @@ function App() {
       window.removeEventListener("resize", updateMobileCta);
     };
   }, [pathname]);
+
+  if (!portalEnabled && isPortalPath(pathname)) {
+    return (
+      <>
+        <SiteHeader onNavigate={navigate} pathname={pathname} />
+        <main className="client-page">
+          <section className="client-hero">
+            <div className="case-shell">
+              <div className="client-panel">
+                <h1>L’espace client n’est plus accessible en ligne</h1>
+                <p>Pour toute question sur votre projet, contactez Digital Lab par e-mail.</p>
+                <a className="btn btn-primary" href={getContactMailLinks().secondary}>Contacter Digital Lab</a>
+              </div>
+            </div>
+          </section>
+        </main>
+        <SiteFooter onNavigate={navigate} />
+      </>
+    );
+  }
 
   if (pathname.startsWith("/projects/")) {
     return (

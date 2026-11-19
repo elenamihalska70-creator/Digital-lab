@@ -29,12 +29,15 @@ let browser;
 const rows = [];
 const externalSeen = new Set();
 try {
-  browser = await chromium.launch({ headless: true, args: [`--host-resolver-rules=MAP ${PROD} 127.0.0.1, MAP ${PREVIEW} 127.0.0.1`] });
+  browser = await chromium.launch({
+    headless: true,
+    args: ["--no-proxy-server", `--host-resolver-rules=MAP ${PROD} 127.0.0.1, MAP ${PREVIEW} 127.0.0.1`],
+  });
 
   const session = async ({ host = PROD, mobile = false, width = mobile ? 390 : 1440, height = mobile ? 844 : 900, cookies = [] } = {}) => {
     const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce", isMobile: mobile, hasTouch: mobile });
     const requests = [], writes = [], errors = [];
-    await context.route("**/*", (route) => {
+    await context.route("**/*", async (route) => {
       const request = route.request(), url = new URL(request.url());
       if (!["GET", "HEAD"].includes(request.method())) writes.push(request.method() + " " + url.hostname);
       if (!LOCAL_HOSTS.includes(url.hostname)) {
@@ -43,6 +46,13 @@ try {
         return route.abort();
       }
       if (!["GET", "HEAD"].includes(request.method()) || ["image", "media", "font"].includes(request.resourceType())) return route.abort();
+      if (url.hostname === PREVIEW) {
+        // .app is HSTS-preloaded. Keep the browser's HTTPS origin and fulfill
+        // it from the local HTTP Vite server without contacting Vercel.
+        const localUrl = `http://127.0.0.1:${PORT}${url.pathname}${url.search}`;
+        const response = await route.fetch({ url: localUrl, maxRedirects: 0 });
+        return route.fulfill({ response });
+      }
       return route.continue();
     });
     await context.routeWebSocket("**/*", (socket) => socket.close());
@@ -59,7 +69,8 @@ try {
     page.on("pageerror", (error) => errors.push(error.message));
     const settle = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const go = async (path = "/") => {
-      await page.goto(`http://${host}:${PORT}${path}`, { waitUntil: "load" });
+      const origin = host === PREVIEW ? `https://${host}:${PORT}` : `http://${host}:${PORT}`;
+      await page.goto(origin + path, { waitUntil: "load" });
       await page.locator("#root header, #root main").first().waitFor();
       await settle();
     };
@@ -247,8 +258,7 @@ try {
   }
 
   // 5. Accept all: GA4 loads exactly once, across SPA navigation and a reload; page views per path. Clarity never.
-  //    Public-to-private SPA navigation (history + popstate into /dashboard, /admin, /espace-client, /login,
-  //    redirected to /login with the login dialog) and back: still no Clarity script, queue or request.
+  //    SPA navigation to retired portal addresses and back: no auth dialog or Clarity.
   // 6. Then withdrawal through the footer control: GA4 stops in place; re-consent works without a reload.
   {
     const s = await session();
@@ -265,7 +275,8 @@ try {
     // Public -> private in-app navigation, exactly as the App's own popstate handler receives it.
     for (const privatePath of ["/dashboard", "/admin", "/espace-client", "/login"]) {
       await s.page.evaluate((path) => { history.pushState({}, "", path); dispatchEvent(new PopStateEvent("popstate")); }, privatePath);
-      await s.page.waitForURL(/\/login$/);
+      await s.page.getByRole("heading", { name: "L’espace client n’est plus accessible en ligne" }).waitFor();
+      assert.equal(await s.page.locator(".auth-modal").count(), 0, privatePath);
       await s.settle();
       current = await s.state();
       assert.deepEqual([s.clarityLoads(), current.clarity, current.clarityScripts], [0, "undefined", 0], privatePath);
@@ -276,7 +287,7 @@ try {
     await s.settle();
     current = await s.state();
     assert.deepEqual([s.gaLoads(), s.clarityLoads(), current.gaScripts, current.clarityScripts, s.events(current, "page_view").length], [2, 0, 1, 0, 1]);
-    rows.push({ case: "accept all + public→private SPA", ga: "1 per page load", clarity: 0, privateRoutes: "no Clarity" });
+    rows.push({ case: "accept all + retired portal SPA routes", ga: "1 per page load", clarity: 0 });
 
     // Withdraw GA4: no reload, no further events, GA cookies deleted.
     await s.page.evaluate(() => { document.cookie = "_ga=GA1.1.9.9; path=/; domain=.digitallab.studio"; document.cookie = "_ga_DPEYZ4C8BD=GS1; path=/"; });
@@ -342,8 +353,7 @@ try {
 
   // 6c. GA4 already running when credentials appear in the address during the session (history, hash
   //     and query formats): Google's opt-out flag is raised before the change, our helpers send nothing,
-  //     and sending resumes only once the address is clean and consent still holds. The login dialog
-  //     on a public page sends nothing typed, and Clarity never appears.
+  //     and sending resumes only once the address is clean and consent still holds.
   {
     const s = await session();
     await s.go("/");
@@ -386,23 +396,13 @@ try {
     await s.dialog().getByRole("button", { name: fr.accept, exact: true }).click();
     assert.equal((await s.state()).gaDisabled, false, "re-consent on a clean address lifts the flag");
 
-    // Login dialog opened from a public page: typed e-mail and password never reach GA4; no Clarity.
-    await s.page.locator("header").getByRole("button", { name: "Connexion", exact: true }).first().click();
-    const modal = s.page.locator("[aria-labelledby='auth-modal-title']").first();
-    await modal.waitFor();
-    await modal.locator("input[type='email']").fill("jean.synthetic@example.com");
-    await modal.locator("input[type='password']").fill("Synthetic-Pass-123");
+    // The public build no longer offers an auth form. Callback credentials still stay out of GA4.
+    assert.equal(await s.page.locator(".navbar-auth-state, .auth-modal").count(), 0);
     current = await s.state();
-    const payloads = JSON.stringify(current.dataLayer);
-    for (const secret of ["synthetic-", "Synthetic-Pass", "jean.synthetic", "@example.com"]) assert.ok(!payloads.includes(secret), secret);
-    // DL-PRIVACY-FINAL-01: the dialog links to the privacy policy where an account is created or used.
-    const authPolicyLink = modal.getByRole("link", { name: "Politique de confidentialité", exact: true });
-    assert.equal(await authPolicyLink.getAttribute("href"), "/politique-de-confidentialite");
-    await modal.locator(".auth-switch").click();
-    assert.equal(await authPolicyLink.count(), 1, "policy link also shown in sign-up mode");
+    assert.ok(!JSON.stringify(current.dataLayer).includes("synthetic-"));
     assert.deepEqual([s.clarityLoads(), current.clarity, current.clarityScripts], [0, "undefined", 0]);
     assert.deepEqual(s.errors, []);
-    rows.push({ case: "GA4 running + credentials in session", optOutFlag: "raised/lifted", queued: 0, loginDialog: "nothing sent", clarity: 0 });
+    rows.push({ case: "GA4 running + credentials in address", optOutFlag: "raised/lifted", queued: 0, clarity: 0 });
     await s.context.close();
   }
 
@@ -427,6 +427,15 @@ try {
     await s.page.getByRole("button", { name: fr.accept, exact: true }).click();
     const current = await s.state();
     assert.deepEqual([current.gtag, current.clarity, s.gaLoads(), s.clarityLoads()], ["undefined", "undefined", 0, 0]);
+    assert.deepEqual(s.trackerRequests(), []);
+    await s.context.addInitScript(() => {
+      localStorage.setItem("VITE_ENABLE_LOCAL_PORTAL", "true");
+      window.VITE_ENABLE_LOCAL_PORTAL = "true";
+    });
+    await s.go("/admin?VITE_ENABLE_LOCAL_PORTAL=true");
+    await s.page.getByRole("heading", { name: "L’espace client n’est plus accessible en ligne" }).waitFor();
+    assert.equal(await s.page.locator(".navbar-auth-state, .auth-modal, main form").count(), 0);
+    assert.deepEqual(s.writes, []);
     assert.deepEqual(s.trackerRequests(), []);
     await s.context.close();
     const local = await session({ host: "127.0.0.1" });
@@ -455,7 +464,10 @@ try {
       "à ce jour, jusqu’à leur suppression", "Aucune suppression automatique n’est actuellement en place",
       "sous réserve des obligations légales de conservation",
       // DL-PRIVACY-SIMPLIFY-01: account management under 6.1.b; legitimate interest only for security and follow-up.
-      "relève de ces mêmes mesures précontractuelles ou du contrat", "la sécurité de l’espace client et le suivi des échanges"]) {
+      "relève de ces mêmes mesures précontractuelles ou du contrat", "la sécurité des accès et le suivi des échanges",
+      "L’ancien espace client a été retiré du site public", "Les données déjà enregistrées restent conservées",
+      "données d’authentification", "profil et rôle associé", "messages, documents, devis",
+      "Pour demander l’accès à ces données, contactez Digital Lab par e-mail"]) {
       assert.ok(text.includes(needle), needle);
     }
     assert.ok(!text.includes("compte client ouvert sans prestation en cours"), "no legitimate interest for account management");
@@ -465,7 +477,8 @@ try {
     }
     // No overclaim: the region is where the project is deployed, not a guarantee that all processing stays there.
     assert.ok(!/(uniquement|exclusivement) en Irlande/.test(text), "no Ireland-only processing claim");
-    for (const stale of ["Enregistrement de session —", "Microsoft Ireland Operations Limited", "30 jours", "recharge la page", "masqués dans Microsoft Clarity"]) {
+    for (const stale of ["Enregistrement de session —", "Microsoft Ireland Operations Limited", "30 jours", "recharge la page", "masqués dans Microsoft Clarity",
+      "Si vous créez un espace client", "restent consultables dans votre espace client", "la session de votre"]) {
       assert.ok(!text.includes(stale), "stale Clarity text: " + stale);
     }
     assert.ok(!text.includes("Le site utilise également Google Analytics afin de mesurer"));
@@ -487,7 +500,7 @@ try {
     await s.go("/mentions-legales");
     const legalText = await s.page.locator("main").textContent();
     assert.ok(!legalText.includes("via un formulaire"), "legal notice: no removed contact form");
-    assert.ok(legalText.includes("depuis votre espace client"), "legal notice: current channels");
+    assert.ok(legalText.includes("précédemment transmises via l’ancien espace client"), "legal notice: historical portal records");
     rows.push({ case: "legal notice", contactForm: "not mentioned" });
     await s.context.close();
 
