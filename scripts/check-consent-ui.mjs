@@ -483,6 +483,17 @@ try {
     }
     assert.ok(!text.includes("Le site utilise également Google Analytics afin de mesurer"));
     assert.ok(!text.includes("Resend"), "Resend has no verified current processing role");
+    const auditDisclosure = s.page.locator("main article").filter({ has: s.page.getByRole("heading", { name: "2. Données collectées sur le site" }) });
+    const auditText = (await auditDisclosure.textContent()).replace(/\s+/g, " ");
+    for (const phrase of ["formulaire hébergé sur Systeme.io", "votre adresse e-mail et l’adresse du site à auditer", "peuvent également être traitées"]) {
+      assert.ok(auditText.includes(phrase), phrase);
+    }
+    assert.match(auditText, /ne vaut pas consentement à recevoir des e-mails de prospection ou une newsletter/);
+    const providerPolicy = s.page.getByRole("link", { name: "Politique de confidentialité de Systeme.io", exact: true });
+    assert.equal(await providerPolicy.getAttribute("href"), "https://systeme.io/fr/privacy-policy");
+    const providerText = (await providerPolicy.locator("..").textContent()).replace(/\s+/g, " ");
+    assert.match(providerText, /e-mail de confirmation.*notifier Digital Lab par e-mail/);
+    assert.match(providerText, /Digital Lab reste responsable du traitement des demandes d’audit de ses prospects/);
     assert.ok(!/\[[^\]]*(confirmer|à compléter)[^\]]*\]/i.test(text), "no unresolved placeholder on the public page");
     await s.page.locator("#cookies").screenshot({ path: shotPath("FR-privacy-cookies-section") });
 
