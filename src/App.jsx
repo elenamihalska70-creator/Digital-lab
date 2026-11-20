@@ -16,6 +16,7 @@ import {
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
 import { auditFunnelHref } from "./config/auditFunnel";
+import { publicActionHref, standbyActionsDisabled } from "./config/standby";
 import { isPortalPath, portalEnabled } from "./config/portal";
 import { trackEvent, trackPageView } from "./utils/analytics";
 import { isCurrentConsentUiEnabled, openConsentPreferences } from "./utils/consent";
@@ -62,7 +63,7 @@ const withTaxMention = (price, isEnglish = false) => {
   const mention = isEnglish ? priceTax.shortEn : priceTax.short;
   return mention ? `${price} ${mention}` : price;
 };
-const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
+const configuredAuditUrl = import.meta.env.MODE.startsWith("cloudflare-") ? "" : import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
 const auditAppUrl = configuredAuditUrl || "https://audit.digitallab.studio";
 
 const services = [
@@ -562,12 +563,12 @@ const businessContact = {
   positioning: "Solutions digitales pour PME",
   expertise: "WordPress • IA • SEO • Automatisation",
   founderLabel: "Fondatrice",
-  email: "contact@digitallab.studio",
-  phoneDisplay: "+33 7 66 78 43 31",
-  phoneHref: "tel:+33766784331",
-  telephone: "+33766784331",
+  email: standbyActionsDisabled ? "standby@example.invalid" : "contact@digitallab.studio",
+  phoneDisplay: standbyActionsDisabled ? "—" : "+33 7 66 78 43 31",
+  phoneHref: publicActionHref("tel:+33766784331"),
+  telephone: standbyActionsDisabled ? undefined : "+33766784331",
   siteDisplay: "www.digitallab.studio",
-  url: "https://www.digitallab.studio",
+  url: publicActionHref("https://www.digitallab.studio"),
   linkedin: "https://www.linkedin.com/in/olena-mykhalska/",
   github: "https://github.com/ElenaMihalska70-Creator",
   instagram: "https://www.instagram.com/digital.lab.fr/",
@@ -1188,30 +1189,6 @@ const getServiceFromPath = (pathname) => {
   return servicePages.find((servicePage) => servicePage.slug === match[1]) ?? null;
 };
 
-const handleProjectEnter = (event) => {
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-
-  if (reducedMotion || !canHover) {
-    return;
-  }
-
-  const video = event.currentTarget.querySelector("video");
-
-  if (video) {
-    video.play().catch(() => {});
-  }
-};
-
-const handleProjectLeave = (event) => {
-  const video = event.currentTarget.querySelector("video");
-
-  if (video) {
-    video.pause();
-    video.currentTime = 0;
-  }
-};
-
 const isExternalLink = (href) => href.startsWith("http");
 
 const normalizePathname = (path) => {
@@ -1495,103 +1472,23 @@ const trackAuditFunnelClick = (location) => trackEvent(auditEvents.funnelClick, 
 
 const auditFunnelLinkProps = (location) => ({
   href: auditFunnelHref(location),
-  target: "_blank",
+  target: standbyActionsDisabled ? undefined : "_blank",
   rel: "noreferrer",
   onClick: () => trackAuditFunnelClick(location),
 });
 
-function DeferredVideo({
-  ariaLabel,
-  autoPlay = false,
-  className,
-  loop = false,
-  muted = true,
-  onPlay,
-  playWhenVisible = false,
-  playsInline = true,
-  poster,
-  src,
-}) {
-  const videoRef = useRef(null);
-  const [isSourceAttached, setIsSourceAttached] = useState(false);
-  const [hasVideoError, setHasVideoError] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setReduceMotion(mediaQuery.matches);
-
-    updatePreference();
-    mediaQuery.addEventListener("change", updatePreference);
-
-    return () => mediaQuery.removeEventListener("change", updatePreference);
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-
-    if (!video || isSourceAttached || hasVideoError) {
-      return undefined;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setIsSourceAttached(true);
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsSourceAttached(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "420px 0px", threshold: 0.01 },
-    );
-
-    observer.observe(video);
-
-    return () => observer.disconnect();
-  }, [hasVideoError, isSourceAttached]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-
-    if (!video || !playWhenVisible || !isSourceAttached || reduceMotion || hasVideoError) {
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { rootMargin: "160px 0px", threshold: 0.28 },
-    );
-
-    observer.observe(video);
-
-    return () => observer.disconnect();
-  }, [hasVideoError, isSourceAttached, playWhenVisible, reduceMotion]);
-
+function VideoPreview({ ariaLabel, controls = true, muted = true, onPlay, playsInline = true, poster, src }) {
   return (
     <video
-      ref={videoRef}
       aria-label={ariaLabel}
-      autoPlay={!reduceMotion && autoPlay ? true : undefined}
-      className={className}
-      loop={loop}
+      controls={controls}
       muted={muted}
-      onError={() => setHasVideoError(true)}
       onPlay={onPlay}
       playsInline={playsInline}
       poster={poster}
-      preload={isSourceAttached ? "metadata" : "none"}
-      src={isSourceAttached && !hasVideoError ? src : undefined}
-    ></video>
+      preload="none"
+      src={src}
+    />
   );
 }
 
@@ -2341,6 +2238,7 @@ const trackQuoteEmailOpened = (request) => {
 
 // Opens a mailto: link from a user gesture without leaving the page.
 const openMailtoLink = (href, privateDetails = false) => {
+  if (standbyActionsDisabled) return;
   if (privateDetails) {
     // No mailto anchor with private details for automatic outbound-link analytics to inspect.
     window.open(href, "_self", "noopener");
@@ -2816,7 +2714,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               {repairInvalid && <p id={`${idPrefix}-repair-request-error`} className="repair-error">
                 {t("Corrigez les champs signalés avant de demander un devis.", "Correct the marked fields before requesting a quote.")}
               </p>}
-              {isRepairProject && <a className="btn btn-secondary repair-email" href={`mailto:${businessContact.email}`}>
+              {isRepairProject && <a className="btn btn-secondary repair-email" href={publicActionHref(`mailto:${businessContact.email}`)}>
                 {t("Écrire par email", "Contact by email")}
               </a>}
               <button className="btn btn-secondary summary-details-button" type="button"
@@ -3012,7 +2910,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               "Can't find exactly what you need? Describe your project in your own words, even if it's still unclear.",
             )}
           </p>
-          <a href={`mailto:${businessContact.email}`} aria-label={t(`Écrire à ${businessContact.email}`, `Email ${businessContact.email}`)}>
+          <a href={publicActionHref(`mailto:${businessContact.email}`)} aria-label={t(`Écrire à ${businessContact.email}`, `Email ${businessContact.email}`)}>
             {businessContact.email}
           </a>
         </div>
@@ -3035,19 +2933,9 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
     event.preventDefault();
     scrollToElementWithHeaderOffset(frame);
 
-    // Explicit request to watch: restart from the beginning and expose native controls (sound, pause).
-    const startPlayback = () => {
-      video.controls = true;
-      video.currentTime = 0;
-      video.play().catch(() => {});
-      video.focus({ preventScroll: true });
-    };
-
-    if (video.readyState > 0) {
-      startPlayback();
-    } else {
-      video.addEventListener("loadedmetadata", startPlayback, { once: true });
-    }
+    video.currentTime = 0;
+    video.play().catch(() => {});
+    video.focus({ preventScroll: true });
   };
 
   return (
@@ -3099,16 +2987,15 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
 
           <div className="ai-transformation-visual">
             <div className="ai-transformation-video-frame" id="ai-website-transformation-video" ref={videoFrameRef}>
-              <DeferredVideo
+              <VideoPreview
                 ariaLabel={
                   isEnglish
                     ? "Video transformation of an old e-commerce site into a premium digital experience"
                     : "Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
                 }
                 muted
-                loop
                 playsInline
-                playWhenVisible
+                poster="/videos/posters/ai-website-transformation.webp"
                 src="/videos/AI_Website_Transformation.mp4"
               />
             </div>
@@ -3157,7 +3044,7 @@ const buildContactMailto = ({ subject, body }) => {
     params.push(`body=${encodeURIComponent(body)}`);
   }
 
-  return `mailto:${businessContact.email}?${params.join("&")}`;
+  return publicActionHref(`mailto:${businessContact.email}?${params.join("&")}`);
 };
 
 const getContactMailLinks = (isEnglish = false) => {
@@ -3333,7 +3220,7 @@ function QuoteEmailPanel({ request, isEnglish = false }) {
             {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
           </button>
         ) : (
-          <a className="btn btn-secondary" href={email.href} onClick={() => trackQuoteEmailOpened(request)}>
+          <a className="btn btn-secondary" href={publicActionHref(email.href)} onClick={() => trackQuoteEmailOpened(request)}>
             {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
           </a>
         )}
@@ -3358,33 +3245,20 @@ function AuditVideoCard({ compact = false, isEnglish = false }) {
     trackAuditCta(auditEvents.videoPlay, compact ? "audit_landing_video" : "homepage_spotlight_video");
   };
 
-  const playVideo = (event) => {
+  const toggleVideo = (event) => {
     const video = event.currentTarget.querySelector("video");
-
-    if (video) {
-      video.play().catch(() => {});
-    }
-  };
-
-  const pauseVideo = (event) => {
-    const video = event.currentTarget.querySelector("video");
-
-    if (video) {
-      video.pause();
-    }
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
   };
 
   return (
     <div
       className={`audit-video-card premium-card gradient-border${compact ? " is-compact" : ""}`}
-      onMouseEnter={playVideo}
-      onMouseLeave={pauseVideo}
-      onBlur={pauseVideo}
-      onClick={playVideo}
+      onClick={toggleVideo}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          playVideo(event);
+          toggleVideo(event);
         }
       }}
       role="button"
@@ -3392,10 +3266,10 @@ function AuditVideoCard({ compact = false, isEnglish = false }) {
       aria-label={isEnglish ? "Play the Digital Lab Audit preview video" : "Lire l’aperçu vidéo Digital Lab Audit"}
     >
       <div className="project-media audit-video-media">
-        <DeferredVideo
+        <VideoPreview
           ariaLabel={isEnglish ? "Digital Lab Audit preview video" : "Aperçu vidéo Digital Lab Audit"}
           muted
-          loop
+          controls={false}
           onPlay={trackVideoPlay}
           playsInline
           poster={auditVideoPoster}
@@ -3514,8 +3388,8 @@ function AuditLandingPage({ onNavigate }) {
             <p className="audit-beta-note">L’équipe Digital Lab traite votre demande et vous recontacte.</p>
             <p className="audit-secondary-link">
               <a
-                href={auditAppUrl}
-                target="_blank"
+                href={publicActionHref(auditAppUrl)}
+                target={standbyActionsDisabled ? undefined : "_blank"}
                 rel="noreferrer"
                 onClick={() => trackEvent(auditEvents.externalLaunch, {
                   cta_location: "audit_landing_direct_app",
@@ -3688,7 +3562,7 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
           <div className="footer-links">
             <a
               className="footer-contact-link"
-              href={`mailto:${businessContact.email}`}
+              href={publicActionHref(`mailto:${businessContact.email}`)}
               aria-label={isEnglish ? "Email Digital Lab" : "Envoyer un e-mail à Digital Lab"}
             >
               <ContactIcon type="mail" />
@@ -3798,7 +3672,7 @@ function LegalNoticePage({ onNavigate }) {
                 <p>SIRET : 105 759 286 00021</p>
                 <p>Code APE : 6201Z</p>
                 <p>Besançon, France</p>
-                <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+                <p>Email : <a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a></p>
                 <p>Téléphone : <a href={businessContact.phoneHref}>{businessContact.phoneDisplay}</a></p>
                 <p>Site : <a href={businessContact.url}>{businessContact.url}</a></p>
               </article>
@@ -3857,14 +3731,14 @@ function PrivacyPolicyPage({ onNavigate }) {
                 <p>Entrepreneure individuelle</p>
                 <p>SIREN : 105 759 286</p>
                 <p>Besançon, France</p>
-                <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+                <p>Email : <a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a></p>
               </article>
 
               <article>
                 <h2>2. Données collectées sur le site</h2>
                 <p>
                   Pour contacter Digital Lab directement, vous pouvez écrire à
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Digital Lab traite alors les
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>. Digital Lab traite alors les
                   données que vous envoyez volontairement par e-mail, notamment vos coordonnées, votre message et les
                   informations utiles au traitement de votre demande.
                 </p>
@@ -4044,7 +3918,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                 </p>
                 <p>
                   Vous pouvez demander la suppression de vos données personnelles à
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>, sous réserve des
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>, sous réserve des
                   obligations légales de conservation. Les durées propres à la mesure d’audience sont indiquées à la section 3.
                 </p>
                 <p>
@@ -4073,7 +3947,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                 </p>
                 <p>
                   Pour exercer vos droits, contactez Digital Lab à l’adresse suivante :
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Une réponse vous est
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>. Une réponse vous est
                   apportée dans un délai d’un mois.
                 </p>
                 <p>
@@ -4337,8 +4211,6 @@ function PortfolioShowcaseCard({ card, isEnglish = false, revealDelay }) {
     <article
       className={`glass-card project-card premium-card gradient-border soft-hover${revealClassName}`}
       style={revealDelay === undefined ? undefined : { "--reveal-delay": revealDelay }}
-      onMouseEnter={handleProjectEnter}
-      onMouseLeave={handleProjectLeave}
     >
       <div className="project-media showcase-media">
         <img
@@ -4349,9 +4221,8 @@ function PortfolioShowcaseCard({ card, isEnglish = false, revealDelay }) {
           decoding="async"
         />
         {card.video && (
-          <DeferredVideo
+          <VideoPreview
             muted
-            loop
             playsInline
             poster={card.image}
             src={card.video}
@@ -4870,8 +4741,6 @@ function EnglishHomePage({ onNavigate }) {
               <article
                 className="glass-card project-card premium-card gradient-border soft-hover"
                 key={project.title}
-                onMouseEnter={handleProjectEnter}
-                onMouseLeave={handleProjectLeave}
               >
                 <div className="project-media">
                   {project.image ? (
@@ -4894,9 +4763,8 @@ function EnglishHomePage({ onNavigate }) {
                     <div className="project-placeholder"></div>
                   )}
                   {project.video && (
-                    <DeferredVideo
+                    <VideoPreview
                       muted
-                      loop
                       playsInline
                       poster={getOptimizedImage(project.image).src}
                       src={project.video}
@@ -5210,7 +5078,7 @@ function EnglishHomePage({ onNavigate }) {
             </div>
 
             <div className="contact-link-list" role="group" aria-label="Digital Lab contact details">
-              <a href={`mailto:${businessContact.email}`} aria-label="Email Digital Lab">
+              <a href={publicActionHref(`mailto:${businessContact.email}`)} aria-label="Email Digital Lab">
                 <ContactIcon type="mail" />
                 <span>{businessContact.email}</span>
               </a>
@@ -5300,13 +5168,13 @@ function ProjectCasePage({ project, onNavigate }) {
               <h1>{project.title}</h1>
               <p>{project.subtitle}</p>
               <div className="case-actions">
-                <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
+                <a className="btn btn-primary" href={publicActionHref(`mailto:${businessContact.email}`)}>
                   {project.cta}
                 </a>
                 {project.demoUrl && (
                   <a
                     className="btn btn-secondary"
-                    href={project.demoUrl}
+                    href={publicActionHref(project.demoUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -5324,10 +5192,8 @@ function ProjectCasePage({ project, onNavigate }) {
 
             <div className="case-media">
               {project.video ? (
-                <DeferredVideo
-                  autoPlay
+                <VideoPreview
                   muted
-                  loop
                   playsInline
                   poster={getOptimizedImage(project.image).src}
                   src={project.video}
@@ -5397,7 +5263,7 @@ function ProjectCasePage({ project, onNavigate }) {
             <span>Votre projet</span>
             <h2>Créer une version claire, utile et testable.</h2>
             <p>Parlez-moi de votre idée : je vous répondrai avec une première piste claire et concrète.</p>
-            <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
+            <a className="btn btn-primary" href={publicActionHref(`mailto:${businessContact.email}`)}>
               Demander une démo
             </a>
           </div>
@@ -8954,8 +8820,6 @@ function App() {
                   className="glass-card project-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={project.title}
                   style={{ "--reveal-delay": `${(index + 1) * 90}ms` }}
-                  onMouseEnter={handleProjectEnter}
-                  onMouseLeave={handleProjectLeave}
                 >
                   <div className="project-media">
                     {project.image ? (
@@ -8978,9 +8842,8 @@ function App() {
                       <div className="project-placeholder"></div>
                     )}
                     {project.video && (
-                      <DeferredVideo
+                      <VideoPreview
                         muted
-                        loop
                         playsInline
                         poster={getOptimizedImage(project.image).src}
                         src={project.video}
@@ -9428,7 +9291,7 @@ function App() {
               </div>
 
               <div className="contact-link-list" role="group" aria-label="Coordonnées Digital Lab">
-                <a href={`mailto:${businessContact.email}`} aria-label="Envoyer un e-mail à Digital Lab">
+                <a href={publicActionHref(`mailto:${businessContact.email}`)} aria-label="Envoyer un e-mail à Digital Lab">
                   <ContactIcon type="mail" />
                   <span>{businessContact.email}</span>
                 </a>

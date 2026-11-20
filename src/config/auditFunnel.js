@@ -1,3 +1,5 @@
+import { publicActionHref } from "./standby.js";
+
 const funnelUrl = "https://a59f-contact.systeme.io/audit-gratuit";
 
 const locations = new Set([
@@ -25,5 +27,5 @@ export function auditFunnelHref(location) {
     utm_campaign: "audit_gratuit",
     utm_content: location,
   }).toString();
-  return url.href;
+  return publicActionHref(url.href);
 }
