@@ -31,10 +31,12 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { preview } from "vite";
 import { seoRoutes } from "../seo-routes.config.js";
+import { cloudflareBuild } from "../cloudflare-build.config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
-const distDir = join(rootDir, "dist");
+const standby = cloudflareBuild(process.argv[2]);
+const distDir = join(rootDir, standby?.outDir ?? "dist");
 
 const SITE_URL = "https://www.digitallab.studio";
 const PREVIEW_PORT = 4319;
@@ -73,12 +75,14 @@ const BLOCKED_HOST_PATTERNS = [
 ];
 
 const routesToPrerender = ["/", ...seoRoutes];
+const retiredRoutes = ["/login", "/dashboard", "/espace-client", "/admin", "/signup", "/sign-up", "/register"];
+const routesToWrite = standby ? [...routesToPrerender, ...retiredRoutes] : routesToPrerender;
 
 // "/" and "/en" (the English homepage) are the only two routes whose
 // canonical URL carries a trailing slash — every other route's canonical is
 // slash-free (see pageMetadata / servicePages in src/App.jsx).
 const expectedCanonicalFor = (route) => {
-  if (route === "/") return `${SITE_URL}/`;
+  if (route === "/" || retiredRoutes.includes(route)) return `${SITE_URL}/`;
   if (route === "/en") return `${SITE_URL}/en/`;
   return `${SITE_URL}${route}`;
 };
@@ -181,7 +185,8 @@ async function main() {
 
   const previewServer = await preview({
     root: rootDir,
-    preview: { port: PREVIEW_PORT, strictPort: true },
+    ...(standby && { mode: process.argv[2] }),
+    preview: { port: standby ? 0 : PREVIEW_PORT, strictPort: true },
   });
   const baseUrl = previewServer.resolvedUrls.local[0].replace(/\/$/, "");
 
@@ -192,7 +197,7 @@ async function main() {
   const failures = [];
 
   try {
-    for (const route of routesToPrerender) {
+    for (const route of routesToWrite) {
       const { title, canonical, rootChildCount, html, pageErrors } = await renderRoute(
         context,
         baseUrl,
@@ -213,7 +218,7 @@ async function main() {
       } else if (canonical !== expectedCanonical) {
         routeFailures.push(`canonical mismatch: expected "${expectedCanonical}", got "${canonical}"`);
       }
-      if (route !== "/" && canonical === expectedCanonicalFor("/")) {
+      if (route !== "/" && !retiredRoutes.includes(route) && canonical === expectedCanonicalFor("/")) {
         routeFailures.push("canonical points to the homepage instead of this route");
       }
       if (rootChildCount === 0) {
@@ -235,7 +240,7 @@ async function main() {
     // Section 9 — sanity pass: reload every file we just wrote (over the
     // now-mutated dist/) and confirm the client bundle still mounts cleanly
     // on top of the prerendered markup, with no page errors.
-    for (const route of routesToPrerender) {
+    for (const route of routesToWrite) {
       if (failures.some((failure) => failure.route === route)) {
         continue;
       }

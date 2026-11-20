@@ -13162,3 +13162,11 @@ html {
   .estimator-options.is-packages { display: grid; grid-template-columns: 1fr; }
   .estimator-options.is-packages button { border-radius: 16px; }
 }
+
+.project-media video[controls],
+.case-media video,
+.audit-video-card .audit-video-media video {
+  object-fit: contain;
+  opacity: 1;
+  transform: none;
+}

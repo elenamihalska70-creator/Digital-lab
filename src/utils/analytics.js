@@ -1,5 +1,6 @@
 import { isTrackingAllowed } from "./trackingEnvironment.js";
 import { deleteCookies } from "./consent.js";
+import { standbyTest } from "../config/standby.js";
 
 export const GA_MEASUREMENT_ID = "G-DPEYZ4C8BD";
 const GTAG_SCRIPT_ID = "google-analytics-gtag";
@@ -59,6 +60,7 @@ export const isGoogleAnalyticsEnabled = () => analyticsEnabled;
 // Returns true when GA4 is active on this page after the call.
 export const initializeGoogleAnalytics = () => {
   if (
+    standbyTest ||
     typeof window === "undefined" ||
     !isTrackingAllowed({ hostname: window.location.hostname, isProductionBuild: import.meta.env.PROD })
   ) {

@@ -2,58 +2,66 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import Sitemap from 'vite-plugin-sitemap'
 import { seoRoutes } from './seo-routes.config.js'
+import { webVideos } from './video-build.config.js'
+import { cloudflareBuild } from './cloudflare-build.config.js'
 
 const siteUrl = 'https://www.digitallab.studio'
 const pages = seoRoutes
 
 // https://vite.dev/config/
-export default defineConfig(({ command, isPreview }) => ({
-  define: {
-    'import.meta.env.DL_LOCAL_PORTAL_DEV_SERVER': JSON.stringify(command === 'serve' && !isPreview),
-  },
-  plugins: [
-    react(),
-    Sitemap({
-      hostname: siteUrl,
-      dynamicRoutes: pages,
-      // Note: vite-plugin-sitemap normalizes every dynamicRoutes entry
-      // through path.parse(), which strips trailing slashes — so the sitemap
-      // <loc> for "/en" comes out as ".../en" even though its canonical URL
-      // is ".../en/". scripts/prerender.mjs patches just that one entry
-      // after this plugin runs (see fixEnglishHomepageSitemapSlash()).
-      changefreq: {
-        '/': 'weekly',
-        '/en': 'weekly',
-        '/audit-site-web': 'weekly',
-        '/projects/microassist': 'monthly',
-        '/projects/socle-local': 'monthly',
-        '/projects/microassist-expert': 'monthly',
-        '/projects/assistant-reservation-ia': 'monthly',
-        '/services/automatisation-pme': 'monthly',
-        '/services/chatbot-ia': 'monthly',
-        '/services/gestion-reseaux-sociaux': 'monthly',
-        '/services/creation-site-web': 'monthly',
-        '/services/creation-site-web-besancon': 'monthly',
-        '/mentions-legales': 'yearly',
-      },
-      priority: {
-        '/': 1,
-        '/en': 0.9,
-        '/audit-site-web': 0.95,
-        '/projects/microassist': 0.7,
-        '/projects/socle-local': 0.7,
-        '/projects/microassist-expert': 0.7,
-        '/projects/assistant-reservation-ia': 0.7,
-        '/services/automatisation-pme': 0.7,
-        '/services/chatbot-ia': 0.7,
-        '/services/gestion-reseaux-sociaux': 0.8,
-        '/services/creation-site-web': 0.7,
-        '/services/creation-site-web-besancon': 0.65,
-        '/mentions-legales': 0.3,
-      },
-      lastmod: new Date(),
-      generateRobotsTxt: false,
-      readable: true,
-    }),
-  ],
-}))
+export default defineConfig(({ command, isPreview, mode }) => {
+  const standby = cloudflareBuild(mode)
+  return {
+    ...(standby && { build: { outDir: standby.outDir } }),
+    define: {
+      'import.meta.env.DL_LOCAL_PORTAL_DEV_SERVER': JSON.stringify(command === 'serve' && !isPreview),
+    },
+    plugins: [
+      react(),
+      webVideos(),
+      Sitemap({
+        ...(standby && { outDir: standby.outDir }),
+        hostname: siteUrl,
+        dynamicRoutes: pages,
+        // Note: vite-plugin-sitemap normalizes every dynamicRoutes entry
+        // through path.parse(), which strips trailing slashes — so the sitemap
+        // <loc> for "/en" comes out as ".../en" even though its canonical URL
+        // is ".../en/". scripts/prerender.mjs patches just that one entry
+        // after this plugin runs (see fixEnglishHomepageSitemapSlash()).
+        changefreq: {
+          '/': 'weekly',
+          '/en': 'weekly',
+          '/audit-site-web': 'weekly',
+          '/projects/microassist': 'monthly',
+          '/projects/socle-local': 'monthly',
+          '/projects/microassist-expert': 'monthly',
+          '/projects/assistant-reservation-ia': 'monthly',
+          '/services/automatisation-pme': 'monthly',
+          '/services/chatbot-ia': 'monthly',
+          '/services/gestion-reseaux-sociaux': 'monthly',
+          '/services/creation-site-web': 'monthly',
+          '/services/creation-site-web-besancon': 'monthly',
+          '/mentions-legales': 'yearly',
+        },
+        priority: {
+          '/': 1,
+          '/en': 0.9,
+          '/audit-site-web': 0.95,
+          '/projects/microassist': 0.7,
+          '/projects/socle-local': 0.7,
+          '/projects/microassist-expert': 0.7,
+          '/projects/assistant-reservation-ia': 0.7,
+          '/services/automatisation-pme': 0.7,
+          '/services/chatbot-ia': 0.7,
+          '/services/gestion-reseaux-sociaux': 0.8,
+          '/services/creation-site-web': 0.7,
+          '/services/creation-site-web-besancon': 0.65,
+          '/mentions-legales': 0.3,
+        },
+        lastmod: new Date(),
+        generateRobotsTxt: false,
+        readable: true,
+      }),
+    ],
+  }
+})
