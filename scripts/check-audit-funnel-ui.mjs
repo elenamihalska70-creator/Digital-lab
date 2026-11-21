@@ -28,7 +28,7 @@ try {
       const request = route.request();
       const url = new URL(request.url());
       return url.origin === origin && ["GET", "HEAD"].includes(request.method())
-        && !["image", "media", "font"].includes(request.resourceType())
+        && (!["image", "media", "font"].includes(request.resourceType()) || url.pathname === "/videos/digitallab-audit-site-web.mp4")
         ? route.continue()
         : route.abort();
     });
@@ -69,6 +69,19 @@ try {
     await page.getByRole("button", { name: "Enregistrer mes choix", exact: true }).click();
     await page.locator("#google-analytics-gtag").waitFor({ state: "attached" });
     assert.deepEqual(await auditEvents(), [], "consent grant did not replay the denied click");
+
+    const spotlight = page.locator(".audit-spotlight-section .audit-video-card");
+    const video = spotlight.locator("video");
+    const play = spotlight.getByRole("button", { name: "Lire l’aperçu vidéo Digital Lab Audit" });
+    await play.click();
+    await video.evaluate(element => new Promise(resolve => element.requestVideoFrameCallback(resolve)));
+    await video.evaluate(element => element.pause());
+    await play.click();
+    await video.evaluate(element => new Promise(resolve => element.requestVideoFrameCallback(resolve)));
+    const plays = await page.evaluate(() => (window.dataLayer ?? []).map(entry => Array.from(entry))
+      .filter(([kind, name]) => kind === "event" && name === "audit_video_play"));
+    assert.equal(plays.length, 1, "Audit video plays are tracked once per card");
+    assert.equal(plays[0][2].cta_location, "homepage_spotlight_video");
 
     if (mobile) await page.getByRole("button", { name: "Ouvrir le menu" }).click();
     await popupClick(link("global_nav"));
