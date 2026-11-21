@@ -578,6 +578,7 @@ const businessContact = {
 const siteUrl = "https://www.digitallab.studio";
 const auditVideoSrc = "/videos/digitallab-audit-site-web.mp4";
 const auditVideoPoster = "/projects/digitallab-audit-site-poster.webp";
+const transformationPoster = "/videos/posters/ai-website-transformation.webp";
 
 const auditBenefits = [
   "Un score clair",
@@ -1477,7 +1478,7 @@ const auditFunnelLinkProps = (location) => ({
   onClick: () => trackAuditFunnelClick(location),
 });
 
-function VideoPreview({ ariaLabel, controls = true, muted = true, onPlay, onPlaying, onPause, onEnded, onEmptied, playsInline = true, portfolio, poster, ref, src }) {
+function VideoPreview({ ariaLabel, controls = true, muted = true, onPlay, onPlaying, onPause, onEnded, onEmptied, playsInline = true, hoverPreview, poster, ref, src }) {
   return (
     <video
       ref={ref}
@@ -1490,7 +1491,8 @@ function VideoPreview({ ariaLabel, controls = true, muted = true, onPlay, onPlay
       onEnded={onEnded}
       onEmptied={onEmptied}
       playsInline={playsInline}
-      data-portfolio-poster={portfolio ? "" : undefined}
+      data-hover-preview={hoverPreview ? "" : undefined}
+      data-preview-poster={hoverPreview ? "" : undefined}
       poster={poster}
       preload="none"
       src={src}
@@ -1498,54 +1500,54 @@ function VideoPreview({ ariaLabel, controls = true, muted = true, onPlay, onPlay
   );
 }
 
-let activePortfolioVideo;
-let portfolioHover;
+let activeHoverPreview;
+let hoverAttempt;
 
-function resetPortfolioVideo(video) {
-  if (portfolioHover?.video === video) portfolioHover = undefined;
-  if (activePortfolioVideo === video) activePortfolioVideo = undefined;
-  video.setAttribute("data-portfolio-poster", "");
+function resetHoverPreview(video) {
+  if (hoverAttempt?.video === video) hoverAttempt = undefined;
+  if (activeHoverPreview === video) activeHoverPreview = undefined;
+  video.setAttribute("data-preview-poster", "");
   video.pause();
   // Restart resource selection with preload="none" to restore the native poster.
   video.load();
 }
 
-function selectPortfolioVideo(video) {
-  if (activePortfolioVideo && activePortfolioVideo !== video) {
-    resetPortfolioVideo(activePortfolioVideo);
+function selectHoverPreview(video) {
+  if (activeHoverPreview && activeHoverPreview !== video) {
+    resetHoverPreview(activeHoverPreview);
   }
-  activePortfolioVideo = video;
+  activeHoverPreview = video;
 }
 
-function playPortfolioHover(event) {
+function startPreviewHover(event) {
   if (event.pointerType !== "mouse" ||
       !window.matchMedia("(hover: hover) and (pointer: fine)").matches ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   const video = event.currentTarget.querySelector("video");
   if (!video?.paused) return;
-  selectPortfolioVideo(video);
+  selectHoverPreview(video);
   const hover = { video };
-  portfolioHover = hover;
+  hoverAttempt = hover;
   video.muted = true;
   video.play().catch(() => {
-    if (portfolioHover === hover) resetPortfolioVideo(video);
+    if (hoverAttempt === hover) resetHoverPreview(video);
   });
 }
 
-function stopPortfolioHover(event) {
-  if (event.pointerType === "mouse" && portfolioHover && event.currentTarget.contains(portfolioHover.video)) {
-    resetPortfolioVideo(portfolioHover.video);
+function stopPreviewHover(event) {
+  if (event.pointerType === "mouse" && hoverAttempt && event.currentTarget.contains(hoverAttempt.video)) {
+    resetHoverPreview(hoverAttempt.video);
   }
 }
 
-function PortfolioVideo(props) {
+function HoverPreview({ onPlay, playLabel, ...props }) {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const previewRef = useCallback((video) => {
     videoRef.current = video;
     return () => {
-      if (activePortfolioVideo === video) resetPortfolioVideo(video);
+      if (activeHoverPreview === video) resetHoverPreview(video);
       videoRef.current = null;
     };
   }, []);
@@ -1554,26 +1556,30 @@ function PortfolioVideo(props) {
     <>
       <VideoPreview
         {...props}
-        portfolio
+        hoverPreview
         ref={previewRef}
         onPlay={(event) => {
           if (event.currentTarget.paused) return;
-          selectPortfolioVideo(event.currentTarget);
+          selectHoverPreview(event.currentTarget);
           setPlaying(true);
+          onPlay?.(event);
         }}
         onPause={showPlayButton}
-        onPlaying={(event) => event.currentTarget.removeAttribute("data-portfolio-poster")}
+        onPlaying={(event) => {
+          if (!event.currentTarget.paused) event.currentTarget.removeAttribute("data-preview-poster");
+        }}
         onEnded={showPlayButton}
         onEmptied={showPlayButton}
       />
       {!playing && (
         <button
-          className="portfolio-video-play"
+          className="hover-preview-play"
           type="button"
-          aria-label={props.ariaLabel}
+          aria-label={playLabel ?? props.ariaLabel}
           onClick={() => {
             const video = videoRef.current;
             if (!video) return;
+            selectHoverPreview(video);
             video.play().catch(() => {});
             video.focus({ preventScroll: true });
           }}
@@ -3026,6 +3032,7 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
     event.preventDefault();
     scrollToElementWithHeaderOffset(frame);
 
+    selectHoverPreview(video);
     video.currentTime = 0;
     video.play().catch(() => {});
     video.focus({ preventScroll: true });
@@ -3079,8 +3086,15 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
           </div>
 
           <div className="ai-transformation-visual">
-            <div className="ai-transformation-video-frame" id="ai-website-transformation-video" ref={videoFrameRef}>
-              <VideoPreview
+            <div
+              className="ai-transformation-video-frame"
+              id="ai-website-transformation-video"
+              ref={videoFrameRef}
+              onPointerEnter={startPreviewHover}
+              onPointerLeave={stopPreviewHover}
+            >
+              <img className="hover-preview-artwork" src={transformationPoster} alt="" loading="lazy" />
+              <HoverPreview
                 ariaLabel={
                   isEnglish
                     ? "Video transformation of an old e-commerce site into a premium digital experience"
@@ -3088,7 +3102,7 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
                 }
                 muted
                 playsInline
-                poster="/videos/posters/ai-website-transformation.webp"
+                poster={transformationPoster}
                 src="/videos/AI_Website_Transformation.mp4"
               />
             </div>
@@ -3338,33 +3352,18 @@ function AuditVideoCard({ compact = false, isEnglish = false }) {
     trackAuditCta(auditEvents.videoPlay, compact ? "audit_landing_video" : "homepage_spotlight_video");
   };
 
-  const toggleVideo = (event) => {
-    const video = event.currentTarget.querySelector("video");
-    if (video.paused) video.play().catch(() => {});
-    else video.pause();
-  };
-
   return (
     <div
       className={`audit-video-card premium-card gradient-border${compact ? " is-compact" : ""}`}
-      onClick={toggleVideo}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          toggleVideo(event);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={isEnglish ? "Play the Digital Lab Audit preview video" : "Lire l’aperçu vidéo Digital Lab Audit"}
+      onPointerEnter={startPreviewHover}
+      onPointerLeave={stopPreviewHover}
     >
       <div className="project-media audit-video-media">
-        <VideoPreview
+        <img className="hover-preview-artwork" src={auditVideoPoster} alt="" loading="lazy" />
+        <HoverPreview
           ariaLabel={isEnglish ? "Digital Lab Audit preview video" : "Aperçu vidéo Digital Lab Audit"}
-          muted
-          controls={false}
+          playLabel={isEnglish ? "Play the Digital Lab Audit preview video" : "Lire l’aperçu vidéo Digital Lab Audit"}
           onPlay={trackVideoPlay}
-          playsInline
           poster={auditVideoPoster}
           src={auditVideoSrc}
         />
@@ -4304,8 +4303,8 @@ function PortfolioShowcaseCard({ card, isEnglish = false, revealDelay }) {
     <article
       className={`glass-card project-card premium-card gradient-border soft-hover${revealClassName}`}
       style={revealDelay === undefined ? undefined : { "--reveal-delay": revealDelay }}
-      onPointerEnter={playPortfolioHover}
-      onPointerLeave={stopPortfolioHover}
+      onPointerEnter={startPreviewHover}
+      onPointerLeave={stopPreviewHover}
     >
       <div className="project-media showcase-media">
         <img
@@ -4316,7 +4315,7 @@ function PortfolioShowcaseCard({ card, isEnglish = false, revealDelay }) {
           decoding="async"
         />
         {card.video && (
-          <PortfolioVideo
+          <HoverPreview
             muted
             playsInline
             poster={card.image}
@@ -4836,8 +4835,8 @@ function EnglishHomePage({ onNavigate }) {
               <article
                 className="glass-card project-card premium-card gradient-border soft-hover"
                 key={project.title}
-                onPointerEnter={playPortfolioHover}
-                onPointerLeave={stopPortfolioHover}
+                onPointerEnter={startPreviewHover}
+                onPointerLeave={stopPreviewHover}
               >
                 <div className="project-media">
                   {project.image ? (
@@ -4860,7 +4859,7 @@ function EnglishHomePage({ onNavigate }) {
                     <div className="project-placeholder"></div>
                   )}
                   {project.video && (
-                    <PortfolioVideo
+                    <HoverPreview
                       muted
                       playsInline
                       poster={getOptimizedImage(project.image).src}
@@ -8917,8 +8916,8 @@ function App() {
                   className="glass-card project-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={project.title}
                   style={{ "--reveal-delay": `${(index + 1) * 90}ms` }}
-                  onPointerEnter={playPortfolioHover}
-                  onPointerLeave={stopPortfolioHover}
+                  onPointerEnter={startPreviewHover}
+                  onPointerLeave={stopPreviewHover}
                 >
                   <div className="project-media">
                     {project.image ? (
@@ -8941,7 +8940,7 @@ function App() {
                       <div className="project-placeholder"></div>
                     )}
                     {project.video && (
-                      <PortfolioVideo
+                      <HoverPreview
                         muted
                         playsInline
                         poster={getOptimizedImage(project.image).src}

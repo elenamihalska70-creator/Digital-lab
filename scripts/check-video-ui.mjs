@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { preview } from "vite";
 import { chromium } from "playwright";
 
@@ -17,50 +19,80 @@ const waitForPlayback = (video) => video.evaluate(element => Promise.race([
   new Promise((_, reject) => setTimeout(() => reject(new Error("No decoded frame")), 10000)),
 ]));
 
-async function checkPortfolio(page, origin, mobile, requested) {
-  for (const path of ["/", "/en/"]) {
-    await page.mouse.move(0, 0);
-    await page.goto(origin + path, { waitUntil: "load" });
-    const first = page.locator('.project-card video[src="/videos/microassist.mp4"]');
-    const second = page.locator('.project-card video[src="/videos/microassist-expert.mp4"]');
-    const firstCard = first.locator("xpath=ancestor::article");
-    const secondCard = second.locator("xpath=ancestor::article");
-    requested.length = 0;
-    await first.scrollIntoViewIfNeeded();
-    assert.equal(await first.evaluate(video => video.readyState), 0);
-    assert.equal(await first.evaluate(video => video.paused), true);
-    assert.equal(await first.evaluate(video => getComputedStyle(video).opacity), "0");
-    assert.deepEqual(requested, []);
+const previewContexts = [
+  ["microassist", '.project-card video[src="/videos/microassist.mp4"]'],
+  ["transformation", "#ai-website-transformation-video video"],
+  ["audit", ".audit-spotlight-section .audit-video-card video"],
+];
 
-    if (mobile) {
-      await firstCard.getByRole("button", { name: await first.getAttribute("aria-label"), exact: true }).tap();
-      assert.ok((await waitForPlayback(first)).every(value => value > 0));
-      await secondCard.getByRole("button", { name: await second.getAttribute("aria-label"), exact: true }).tap();
-      assert.ok((await waitForPlayback(second)).every(value => value > 0));
-      assert.deepEqual(await first.evaluate(video => [video.paused, video.currentTime]), [true, 0]);
-      assert.equal(await page.locator(".project-card video").evaluateAll(videos => videos.filter(video => !video.paused).length), 1);
-    } else {
-      await firstCard.locator("h3").hover();
-      assert.ok((await waitForPlayback(first)).every(value => value > 0));
-      assert.equal(await first.evaluate(video => video.muted), true);
-      await page.mouse.move(0, 0);
-      await secondCard.evaluate(card => card.scrollIntoView({ block: "center", behavior: "instant" }));
-      await secondCard.locator("h3").hover();
-      assert.ok((await waitForPlayback(second)).every(value => value > 0));
-      assert.equal(await page.locator(".project-card video").evaluateAll(videos => videos.filter(video => !video.paused).length), 1);
-      await page.mouse.move(0, 0);
-      for (const video of [first, second]) {
-        assert.deepEqual(await video.evaluate(element => [element.paused, element.currentTime, element.seeking]), [true, 0, false]);
-        assert.ok(await video.getAttribute("poster"));
-        await page.waitForFunction(src => getComputedStyle(document.querySelector(`video[src="${src}"]`)).opacity === "0",
-          await video.getAttribute("src"));
+async function assertPoster(video, showing) {
+  await video.evaluate((element, expected) => new Promise((resolve, reject) => {
+    const artwork = element.parentElement.querySelector("img");
+    const expires = performance.now() + 3000;
+    const check = () => {
+      if (artwork?.complete && artwork.naturalWidth &&
+          getComputedStyle(artwork).visibility === (expected ? "visible" : "hidden") &&
+          getComputedStyle(element).visibility === (expected ? "hidden" : "visible")) {
+        resolve();
+      } else if (performance.now() > expires) {
+        reject(new Error(`Expected ${expected ? "artwork" : "video"} for ${element.currentSrc || element.src}; paused=${element.paused}; video=${getComputedStyle(element).visibility}; artwork=${getComputedStyle(artwork).visibility}`));
       }
-      await page.emulateMedia({ reducedMotion: "reduce" });
-      requested.length = 0;
-      await firstCard.locator("h3").hover();
-      assert.equal(await first.evaluate(video => video.paused), true);
-      assert.deepEqual(requested, []);
-      await page.emulateMedia({ reducedMotion: "no-preference" });
+      else requestAnimationFrame(check);
+    };
+    check();
+  }), showing);
+}
+
+async function checkHomePreviews(page, origin, mobile, requested, screenshots) {
+  for (const path of ["/", "/en/"]) {
+    await page.goto("about:blank");
+    await page.mouse.move(0, 0);
+    requested.length = 0;
+    await page.goto(origin + path, { waitUntil: "load" });
+    let previous;
+    for (const [name, selector] of previewContexts) {
+      if (!mobile) await page.mouse.move(0, 0);
+      const video = page.locator(selector);
+      const target = video.locator("..");
+      const artwork = video.locator("..").locator("img");
+      await artwork.evaluate(element => element.scrollIntoView({block: "center", behavior: "instant"}));
+      // Finish reveal and scroll transitions before moving the pointer into the card.
+      await target.screenshot({ animations: "disabled" });
+      await assertPoster(video, true);
+      assert.equal(await video.evaluate(element => element.readyState), 0);
+      const shot = screenshots && path === "/" && !mobile ? phase =>
+        artwork.locator("..").screenshot({path: join(screenshots, `${name}-${phase}.png`)}) : async () => {};
+      await shot("poster");
+      if (!previous) assert.deepEqual(requested, []);
+      if (mobile) {
+        await target.locator(".hover-preview-play").tap();
+      } else {
+        await target.hover({ position: { x: 16, y: 16 } });
+      }
+      assert.ok((await waitForPlayback(video)).every(value => value > 0));
+      await assertPoster(video, false);
+      assert.equal(await video.evaluate(element => element.muted), true);
+      assert.equal(await page.locator("video[data-hover-preview]").evaluateAll(videos => videos.filter(element => !element.paused).length), 1);
+      if (previous) {
+        assert.deepEqual(await previous.evaluate(element => [element.paused, element.currentTime]), [true, 0]);
+        await assertPoster(previous, true);
+      }
+      await shot("playing");
+      if (!mobile) {
+        await page.mouse.move(0, 0);
+        assert.deepEqual(await video.evaluate(element => [element.paused, element.currentTime]), [true, 0]);
+        await assertPoster(video, true);
+        await shot("reset");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        const before = requested.length;
+        await target.hover({ position: { x: 16, y: 16 } });
+        assert.equal(await video.evaluate(element => element.paused), true);
+        assert.equal(requested.length, before);
+        await assertPoster(video, true);
+        await page.mouse.move(0, 0);
+        await page.emulateMedia({ reducedMotion: "no-preference" });
+      }
+      previous = video;
     }
   }
 }
@@ -87,6 +119,7 @@ try {
         });
         const page = await context.newPage();
         for (const [path, name] of samples) {
+          await page.goto("about:blank");
           await page.mouse.move(0, 0);
           requested.length = 0;
           await page.goto(origin + path, { waitUntil: "load" });
@@ -116,9 +149,11 @@ try {
             await frame.catch(() => {});
           }
         }
-        await checkPortfolio(page, origin, mobile, requested);
+        const screenshots = outDir === "cloudflare-TEST.local" ? process.env.VIDEO_SCREENSHOTS : undefined;
+        if (screenshots) await mkdir(screenshots, { recursive: true });
+        await checkHomePreviews(page, origin, mobile, requested, screenshots);
         await context.close();
-        console.log(`${outDir} ${mobile ? "mobile" : "desktop"}: all 7 posters and clips decoded; no idle downloads; FR/EN portfolio interaction passed`);
+        console.log(`${outDir} ${mobile ? "mobile" : "desktop"}: all 7 posters and clips decoded; no idle downloads; FR/EN portfolio, transformation and Audit interaction passed`);
       }
     } finally {
       await server.close();
