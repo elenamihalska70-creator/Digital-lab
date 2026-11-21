@@ -1,0 +1,164 @@
+name: Cloudflare standby review
+
+on:
+  pull_request:
+    branches: [main, feat/dl-video-ux-04]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full SHA of the selected main commit
+        required: true
+        type: string
+      deploy_test:
+        description: Upload TEST to the ci-test preview alias after review
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: digital-lab-cloudflare-standby-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify:
+    if: github.repository == 'elenamihalska70-creator/Digital-lab' && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      test_sha256: ${{ steps.package.outputs.test_sha256 }}
+    steps:
+      - name: Validate the manual request
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "$GITHUB_REF" == refs/heads/main ]]
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_SHA" == "$GITHUB_SHA" ]]
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Confirm the exact checkout
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - name: Install locked dependencies and Chromium system libraries
+        run: |
+          npm ci
+          npx --no-install playwright install-deps chromium
+      - name: Unit and release gates
+        run: |
+          npm test
+          npm run check:release
+          npm run check:privacy-date
+      - name: Build all variants locally
+        run: |
+          npm run build
+          npm run build:cloudflare -- TEST
+          npm run build:cloudflare -- FAILOVER
+      - name: Run public and standby browser regressions
+        run: |
+          npm run check:pricing:ui
+          npm run check:audit-funnel:ui
+          node scripts/check-portal-ui.mjs
+          node scripts/check-cloudflare-ui.mjs
+          node scripts/check-video-ui.mjs
+      - name: Validate and package separate artifacts
+        id: package
+        run: |
+          run_id="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p standby-artifacts/TEST standby-artifacts/FAILOVER
+          for mode in TEST FAILOVER; do
+            directory="cloudflare-${mode}.local"
+            marker="$directory/_standby-artifact.json"
+            jq --arg commit "$GITHUB_SHA" --arg run "$run_id" '. + {commit: $commit, run: $run}' "$marker" > "$marker.tmp"
+            mv "$marker.tmp" "$marker"
+            node scripts/check-cloudflare-release.mjs artifact "$directory" "$mode" "$GITHUB_SHA" "$run_id"
+            tar -czf "standby-artifacts/$mode/$mode-$GITHUB_SHA.tar.gz" -C "$directory" .
+            (cd "standby-artifacts/$mode" && sha256sum "$mode-$GITHUB_SHA.tar.gz" > SHA256SUMS)
+          done
+          read -r test_sha256 _ < standby-artifacts/TEST/SHA256SUMS
+          printf 'test_sha256=%s\n' "$test_sha256" >> "$GITHUB_OUTPUT"
+          printf 'Verified build for %s, run %s.\n' "$GITHUB_SHA" "$run_id" >> "$GITHUB_STEP_SUMMARY"
+      - if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: TEST-${{ github.sha }}-${{ github.run_attempt }}
+          path: standby-artifacts/TEST/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: FAILOVER-DO-NOT-DEPLOY-${{ github.sha }}-${{ github.run_attempt }}
+          path: standby-artifacts/FAILOVER/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  deploy-test:
+    if: github.repository == 'elenamihalska70-creator/Digital-lab' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.ref_protected && inputs.deploy_test == true
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: cloudflare-test
+      url: https://ci-test.digital-lab-backup.pages.dev
+    steps:
+      - name: Require explicit environment activation
+        env:
+          DEPLOY_ENABLED: ${{ vars.CLOUDFLARE_TEST_DEPLOY_ENABLED }}
+        run: test "$DEPLOY_ENABLED" = true
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: TEST-${{ github.sha }}-${{ github.run_attempt }}
+          path: received-test
+      - name: Verify TEST checksum, mode and run identity
+        env:
+          EXPECTED_CHECKSUM: ${{ needs.verify.outputs.test_sha256 }}
+        run: |
+          [[ "$EXPECTED_CHECKSUM" =~ ^[a-f0-9]{64}$ ]]
+          (cd received-test && printf '%s  %s\n' "$EXPECTED_CHECKSUM" "TEST-$GITHUB_SHA.tar.gz" | sha256sum --check --strict)
+          mkdir verified-test
+          tar -xzf "received-test/TEST-$GITHUB_SHA.tar.gz" --no-same-owner --no-same-permissions -C verified-test
+          node scripts/check-cloudflare-release.mjs artifact verified-test TEST "$GITHUB_SHA" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Install locked deploy tooling without Cloudflare credentials
+        run: npm ci --prefix .github/wrangler --ignore-scripts --no-audit --no-fund
+      - name: Publish only to the ci-test preview branch
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+          WRANGLER_LOG: info
+        run: |
+          node scripts/check-cloudflare-release.mjs preview-guard
+          upload_root="$(mktemp -d "$RUNNER_TEMP/pages-preview.XXXXXX")"
+          mv verified-test "$upload_root/site"
+          cd "$upload_root"
+          "$GITHUB_WORKSPACE/.github/wrangler/node_modules/.bin/wrangler" pages deploy site \
+            --project-name digital-lab-backup --branch ci-test \
+            --commit-hash "$GITHUB_SHA" --commit-dirty=false
+      - name: Check the resulting preview without credentials
+        run: node scripts/check-cloudflare-release.mjs smoke "$GITHUB_SHA" "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+      - name: Record deployment outcome
+        if: always()
+        env:
+          DEPLOY_STATUS: ${{ job.status }}
+        run: |
+          printf 'Cloudflare TEST preview for %s: %s.\n' "$GITHUB_SHA" "$DEPLOY_STATUS" >> "$GITHUB_STEP_SUMMARY"
