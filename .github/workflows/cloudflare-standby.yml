@@ -71,6 +71,8 @@ jobs:
           node scripts/check-portal-ui.mjs
           node scripts/check-cloudflare-ui.mjs
           node scripts/check-video-ui.mjs
+      - name: Check project carousel behavior
+        run: node scripts/check-carousel-ui.mjs
       - name: Validate and package separate artifacts
         id: package
         run: |
