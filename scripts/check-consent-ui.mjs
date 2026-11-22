@@ -453,21 +453,28 @@ try {
     await s.go("/politique-de-confidentialite");
     const text = await s.page.locator("main").textContent();
     for (const needle of ["Google Analytics", "Gérer les cookies", "_ga", "désactivée par défaut", "Microsoft Clarity n’est pas chargé", "_clck",
-      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 17 novembre 2026",
+      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Version non publiée — date de publication à confirmer.",
       // DL-PRIVACY-FINAL-01: account data, legal bases, recipients, transfers and retention.
       "Continuer avec Google", "article 6.1.b", "article 6.1.f", "article 6.1.c", "4. Destinataires et hébergement", "Vercel Inc.",
       "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure",
       // DL-PRIVACY-FINAL-02: verified Supabase region, OVHcloud mailbox, Gmail as an additional recipient.
       "région eu-west-1 (Irlande)", "n’exclut pas que certaines données soient traitées", "boîte de messagerie professionnelle",
-      "Google (Gmail)", "peuvent également être acheminés ou copiés",
+      "Google (Gmail)", "boîte principale OVHcloud Zimbra", "compte Gmail personnel (@gmail.com)",
+      "et non Google Workspace", "avec conservation d’une copie dans Zimbra",
+      "deux messageries", "applicables à Gmail grand public",
       // DL-PRIVACY-RELEASE-02: section 8 states the actual retention (kept until deletion, no automatic deletion).
       "à ce jour, jusqu’à leur suppression", "Aucune suppression automatique n’est actuellement en place",
       "sous réserve des obligations légales de conservation",
+      "Les durées de conservation dépendent de la nature des informations et de leur finalité",
+      "soumises à une obligation légale de conservation sont distinguées des copies",
+      "Une demande d’effacement est examinée", "applicables à la défense de droits",
       // DL-PRIVACY-SIMPLIFY-01: account management under 6.1.b; legitimate interest only for security and follow-up.
       "relève de ces mêmes mesures précontractuelles ou du contrat", "la sécurité des accès et le suivi des échanges",
       "L’ancien espace client a été retiré du site public", "Les données déjà enregistrées restent conservées",
       "données d’authentification", "profil et rôle associé", "messages, documents, devis",
-      "Pour demander l’accès à ces données, contactez Digital Lab par e-mail"]) {
+      "Pour demander l’accès à ces données, contactez Digital Lab par e-mail",
+      "paramètres de campagne (UTM)", "il ne gère pas les choix", "applicables au formulaire externe",
+      "Les services techniques"]) {
       assert.ok(text.includes(needle), needle);
     }
     assert.ok(!text.includes("compte client ouvert sans prestation en cours"), "no legitimate interest for account management");

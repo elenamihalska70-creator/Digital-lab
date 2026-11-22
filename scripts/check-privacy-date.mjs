@@ -2,9 +2,9 @@
 //
 // Run on the day the new notice is published, just before the production deployment:
 //   npm run check:privacy-date
-// It fails while PRIVACY_POLICY_LAST_UPDATED (src/App.jsx) is still the date of the notice that predates
-// the consent update, is not a real calendar date, or lies in the future. It is deliberately NOT part of
-// CI or check:release: until publication it is expected to fail, and no future date may be invented.
+// It fails while the date is unset, belongs to the previous notice, is invalid, or is in the future.
+// Required jobs.verify runs this gate: an unpublished candidate must fail it.
+// A passing date check validates syntax/calendar only, never actual publication evidence.
 import { readFile } from "node:fs/promises";
 
 const PRE_CONSENT_NOTICE_DATE = "2026-09-01";
@@ -16,6 +16,7 @@ const fail = (message) => {
   process.exit(1);
 };
 
+if (/const PRIVACY_POLICY_LAST_UPDATED = null;/.test(source)) fail("The new policy is unpublished. Finalize a fixed owner-approved release date and browser assertion before release.");
 if (!match) fail("PRIVACY_POLICY_LAST_UPDATED (YYYY-MM-DD) not found in src/App.jsx.");
 const value = match[1];
 const [year, month, day] = value.split("-").map(Number);

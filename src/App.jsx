@@ -44,10 +44,9 @@ import { buildQuoteMailto } from "./utils/quoteMailto";
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
-// "Dernière mise à jour" of the privacy policy (ISO date). PRE-RELEASE: still the date of the notice
-// that predates DL-PRIVACY-CONSENT-01. Set it to the actual publication day just before the production
-// deployment; `npm run check:privacy-date` fails until then (docs/DL-PRIVACY-CONSENT-01.md).
-const PRIVACY_POLICY_LAST_UPDATED = "2026-11-17";
+// Unpublished policy: keep the date unset until an owner-authorized release window.
+// Set a reviewed, fixed ISO date and matching browser assertion before release; never derive it at build time.
+const PRIVACY_POLICY_LAST_UPDATED = null;
 const frenchMonths = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const formatFrenchDate = (isoDate) => {
   const [year, month, day] = isoDate.split("-").map(Number);
@@ -3838,7 +3837,10 @@ function PrivacyPolicyPage({ onNavigate }) {
                   Pour demander un Audit Gratuit, vous pouvez utiliser le formulaire hébergé sur Systeme.io. Il recueille
                   votre adresse e-mail et l’adresse du site à auditer. Des données techniques liées à l’accès au
                   formulaire ou à son utilisation peuvent également être traitées. Une demande d’audit ne vaut pas
-                  consentement à recevoir des e-mails de prospection ou une newsletter.
+                  consentement à recevoir des e-mails de prospection ou une newsletter. Les liens vers ce formulaire externe
+                  comportent des paramètres de campagne (UTM) indiquant la provenance Digital Lab et l’emplacement du lien.
+                  Le bandeau de choix sur les cookies de Digital Lab concerne ce site ; il ne gère pas les choix
+                  applicables au formulaire externe.
                 </p>
                 <p>
                   L’ancien espace client a été retiré du site public. Les données déjà enregistrées restent conservées :
@@ -3919,8 +3921,8 @@ function PrivacyPolicyPage({ onNavigate }) {
               <article>
                 <h2>4. Destinataires et hébergement</h2>
                 <p>
-                  Vos données sont destinées à Digital Lab. Elles ne sont ni vendues ni louées. Les prestataires techniques
-                  suivants les traitent pour le compte de Digital Lab, dans la limite de leur mission :
+                  Vos données sont destinées à Digital Lab. Elles ne sont ni vendues ni louées. Les services techniques
+                  utilisés pour l’hébergement, la conservation des données ou le traitement des demandes sont les suivants :
                 </p>
                 <ul>
                   <li>
@@ -3943,10 +3945,14 @@ function PrivacyPolicyPage({ onNavigate }) {
                   </li>
                 </ul>
                 <p>
-                  Google (Gmail) : les e-mails adressés à {businessContact.email} peuvent également être acheminés ou copiés
-                  vers une messagerie Gmail utilisée par Digital Lab pour traiter sa correspondance professionnelle. Google
-                  reçoit alors ces messages en tant que destinataire supplémentaire et les traite selon ses propres conditions
-                  et sa politique de confidentialité.
+                  Les e-mails adressés à {businessContact.email} sont reçus dans la boîte principale OVHcloud Zimbra.
+                  Un transfert vers un compte Gmail personnel (@gmail.com), et non Google Workspace, est activé,
+                  avec conservation d’une copie dans Zimbra. La correspondance est donc traitée et conservée dans les
+                  deux messageries pour permettre à Digital Lab de répondre aux demandes et d’en assurer le suivi.
+                  Google (Gmail) reçoit les messages transférés en tant que destinataire supplémentaire et les traite
+                  selon les conditions et la politique de confidentialité applicables à Gmail grand public.
+                  Les protections contractuelles propres à Google Workspace ne sont pas présentées comme applicables
+                  à ce compte personnel.
                 </p>
                 <p>
                   Pour les connexions précédemment effectuées avec « Continuer avec Google », Google traite les informations de connexion selon sa propre
@@ -4004,6 +4010,12 @@ function PrivacyPolicyPage({ onNavigate }) {
                 <h2>8. Conservation et sécurité</h2>
                 <p>Digital Lab applique un principe de minimisation des données personnelles.</p>
                 <p>
+                  Les durées de conservation dépendent de la nature des informations et de leur finalité. Les pièces
+                  soumises à une obligation légale de conservation sont distinguées des copies qui ne sont plus nécessaires.
+                  Une demande d’effacement est examinée en tenant compte des obligations de conservation et des exceptions
+                  applicables à la défense de droits.
+                </p>
+                <p>
                   Les informations relatives aux demandes, aux échanges et aux espaces clients sont conservées pendant la
                   relation avec Digital Lab et, à ce jour, jusqu’à leur suppression. Aucune suppression automatique n’est
                   actuellement en place.
@@ -4052,7 +4064,7 @@ function PrivacyPolicyPage({ onNavigate }) {
 
               <article>
                 <h2>11. Mise à jour de la politique</h2>
-                <p>Dernière mise à jour : {formatFrenchDate(PRIVACY_POLICY_LAST_UPDATED)}.</p>
+                <p>{PRIVACY_POLICY_LAST_UPDATED ? `Dernière mise à jour : ${formatFrenchDate(PRIVACY_POLICY_LAST_UPDATED)}.` : "Version non publiée — date de publication à confirmer."}</p>
                 <p>
                   Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
                   internes de Digital Lab.
