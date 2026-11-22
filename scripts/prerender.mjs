@@ -32,6 +32,7 @@ import { chromium } from "playwright";
 import { preview } from "vite";
 import { seoRoutes } from "../seo-routes.config.js";
 import { cloudflareBuild } from "../cloudflare-build.config.js";
+import { releaseIdentity } from "./release-identity.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
@@ -302,6 +303,8 @@ async function main() {
     process.exitCode = 1;
     return;
   }
+
+  if (!standby) writeFileSync(join(distDir, "_release.json"), JSON.stringify(releaseIdentity(process.env)) + "\n");
 
   console.log(`\nPrerendered ${routesToPrerender.length} routes successfully.`);
 }

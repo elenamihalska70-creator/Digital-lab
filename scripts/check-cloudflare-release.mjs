@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { pathToFileURL } from "node:url";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -25,7 +26,7 @@ function markerMatches(marker, mode, commit, run) {
   }
 }
 
-async function inspectArtifact(directory, mode, commit, run) {
+export async function inspectArtifact(directory, mode, commit, run) {
   assert.ok(Object.hasOwn(markerModes, mode));
   markerMatches(JSON.parse(await readFile(join(directory, markerFile))), mode, commit, run);
   const headers = await readFile(join(directory, "_headers"), "utf8");
@@ -137,7 +138,9 @@ async function smoke(commit, run) {
   console.log(`Verified TEST preview: ${origin}`);
 }
 
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 if (command === "artifact" && [2, 4].includes(args.length)) await inspectArtifact(...args);
 else if (command === "preview-guard" && args.length === 0) await verifyPreviewBranch();
 else if (command === "smoke" && args.length === 2) await smoke(...args);
 else throw new Error("Use artifact <directory> <mode> [commit run], preview-guard, or smoke <commit> <run>.");
+}
