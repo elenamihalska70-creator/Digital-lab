@@ -453,17 +453,20 @@ try {
     await s.go("/politique-de-confidentialite");
     const text = await s.page.locator("main").textContent();
     for (const needle of ["Google Analytics", "Gérer les cookies", "_ga", "désactivée par défaut", "Microsoft Clarity n’est pas chargé", "_clck",
-      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Version non publiée — date de publication à confirmer.",
+      "Base légale : votre consentement", "sous-traitant", "réclamation à la CNIL", "portabilité", "Dernière mise à jour : 27 novembre 2026.",
       // DL-PRIVACY-FINAL-01: account data, legal bases, recipients, transfers and retention.
       "Continuer avec Google", "article 6.1.b", "article 6.1.f", "article 6.1.c", "4. Destinataires et hébergement", "Vercel Inc.",
-      "Supabase Pte. Ltd", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure",
+      "Supabase : comptes existants", "Vercel est établi aux États-Unis", "OVHcloud", "clauses contractuelles types", "Aucune suppression automatique", "12. Google API disclosure",
       // DL-PRIVACY-FINAL-02: verified Supabase region, OVHcloud mailbox, Gmail as an additional recipient.
       "région eu-west-1 (Irlande)", "n’exclut pas que certaines données soient traitées", "boîte de messagerie professionnelle",
       "Google (Gmail)", "boîte principale OVHcloud Zimbra", "compte Gmail personnel (@gmail.com)",
       "et non Google Workspace", "avec conservation d’une copie dans Zimbra",
       "deux messageries", "applicables à Gmail grand public",
-      // DL-PRIVACY-RELEASE-02: section 8 states the actual retention (kept until deletion, no automatic deletion).
-      "à ce jour, jusqu’à leur suppression", "Aucune suppression automatique n’est actuellement en place",
+      // DL-PR20-PRIVACY-CORRECTIONS-01: approved criteria and manual handling.
+      "leur finalité et leur nécessité", "examinées manuellement par la responsable de Digital Lab",
+      "Les demandes sont traitées manuellement par Olena Mykhalska — Digital Lab",
+      "à compter de la réception de votre demande", "ce délai peut être prolongé de deux mois",
+      "vous en êtes informé dans le premier mois, avec les motifs de la prolongation", "Aucune suppression automatique n’est actuellement en place",
       "sous réserve des obligations légales de conservation",
       "Les durées de conservation dépendent de la nature des informations et de leur finalité",
       "soumises à une obligation légale de conservation sont distinguées des copies",
@@ -481,6 +484,9 @@ try {
     // No retention promise that is not implemented.
     for (const promise of ["uniquement pendant la durée nécessaire", "conservées pendant la durée de la relation", "3 ans", "10 ans"]) {
       assert.ok(!text.includes(promise), "unimplemented retention promise: " + promise);
+    }
+    for (const unsupported of ["Supabase Pte. Ltd", "société Supabase contractante", "principaux centres de traitement", "jusqu’à leur suppression"]) {
+      assert.ok(!text.includes(unsupported), "unsupported privacy statement: " + unsupported);
     }
     // No overclaim: the region is where the project is deployed, not a guarantee that all processing stays there.
     assert.ok(!/(uniquement|exclusivement) en Irlande/.test(text), "no Ireland-only processing claim");

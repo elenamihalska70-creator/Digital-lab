@@ -44,9 +44,9 @@ import { buildQuoteMailto } from "./utils/quoteMailto";
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
-// Unpublished policy: keep the date unset until an owner-authorized release window.
+// Owner-approved planned publication: 2026-11-27; the mandatory date gate rejects future dates.
 // Set a reviewed, fixed ISO date and matching browser assertion before release; never derive it at build time.
-const PRIVACY_POLICY_LAST_UPDATED = null;
+const PRIVACY_POLICY_LAST_UPDATED = "2026-11-27";
 const frenchMonths = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const formatFrenchDate = (isoDate) => {
   const [year, month, day] = isoDate.split("-").map(Number);
@@ -3930,7 +3930,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                     de connexion nécessaires à l’affichage des pages (adresse IP, pages demandées).
                   </li>
                   <li>
-                    Supabase (Supabase Pte. Ltd, Singapour) : comptes existants, base de données de l’ancien espace client et
+                    Supabase : comptes existants, base de données de l’ancien espace client et
                     stockage privé des documents. Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande).
                   </li>
                   <li>
@@ -3960,8 +3960,7 @@ function PrivacyPolicyPage({ onNavigate }) {
                   utilisations des services Google (messagerie, connexion, mesure d’audience) sont distinctes.
                 </p>
                 <p>
-                  Transferts hors de l’Union européenne : Vercel indique que ses principaux centres de traitement se situent
-                  aux États-Unis, et la société Supabase contractante est établie à Singapour ; le déploiement du projet
+                  Transferts hors de l’Union européenne : Vercel est établi aux États-Unis. Le déploiement du projet
                   Supabase en Irlande n’exclut pas que certaines données soient traitées ou consultées hors de l’Union
                   européenne. Ces deux prestataires indiquent encadrer les transferts de données depuis l’Union européenne
                   par les clauses contractuelles types de la Commission européenne. Les e-mails acheminés vers Gmail peuvent
@@ -4016,9 +4015,10 @@ function PrivacyPolicyPage({ onNavigate }) {
                   applicables à la défense de droits.
                 </p>
                 <p>
-                  Les informations relatives aux demandes, aux échanges et aux espaces clients sont conservées pendant la
-                  relation avec Digital Lab et, à ce jour, jusqu’à leur suppression. Aucune suppression automatique n’est
-                  actuellement en place.
+                  Les informations relatives aux demandes, aux échanges et aux anciens espaces clients sont conservées selon
+                  leur finalité et leur nécessité, en tenant compte des obligations légales et de la défense de droits.
+                  Leur conservation et les demandes d’effacement sont examinées manuellement par la responsable de Digital Lab.
+                  Aucune suppression automatique n’est actuellement en place.
                 </p>
                 <p>
                   Vous pouvez demander la suppression de vos données personnelles à
@@ -4051,8 +4051,10 @@ function PrivacyPolicyPage({ onNavigate }) {
                 </p>
                 <p>
                   Pour exercer vos droits, contactez Digital Lab à l’adresse suivante :
-                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>. Une réponse vous est
-                  apportée dans un délai d’un mois.
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>. Les demandes sont traitées manuellement par Olena Mykhalska — Digital Lab.
+                  Une réponse vous est apportée dans un délai d’un mois à compter de la réception de votre demande.
+                  Si la complexité ou le nombre de demandes le nécessite, ce délai peut être prolongé de deux mois ;
+                  vous en êtes informé dans le premier mois, avec les motifs de la prolongation.
                 </p>
                 <p>
                   Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL :
