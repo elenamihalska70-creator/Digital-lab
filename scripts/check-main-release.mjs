@@ -7,7 +7,17 @@ export class Pending extends Error {}
 export function identity(env) {
   assert.equal(env.GITHUB_REPOSITORY, repository);
   assert.equal(env.GITHUB_REF, "refs/heads/main");
-  assert.equal(env.GITHUB_EVENT_NAME, "push");
+  const manual = env.GITHUB_EVENT_NAME === "workflow_dispatch";
+  if (manual) {
+    assert.equal(
+      env.SYNC_STANDBY,
+      "true",
+      "Manual standby sync requires explicit authorization",
+    );
+    assert.equal(env.EXPECTED_SHA, env.GITHUB_SHA, "Manual expected_sha mismatch");
+  } else {
+    assert.equal(env.GITHUB_EVENT_NAME, "push");
+  }
   assert.equal(env.GITHUB_REF_PROTECTED, "true");
   assert.match(env.GITHUB_SHA ?? "", /^[a-f0-9]{40}$/);
   assert.match(env.GITHUB_RUN_ID ?? "", /^[1-9][0-9]*$/);
@@ -16,6 +26,7 @@ export function identity(env) {
     sha: env.GITHUB_SHA,
     run: env.GITHUB_RUN_ID,
     attempt: env.GITHUB_RUN_ATTEMPT,
+    ...(manual ? { event: "workflow_dispatch" } : {}),
   };
 }
 export async function verifyRelease(id, api, primary) {
@@ -25,7 +36,8 @@ export async function verifyRelease(id, api, primary) {
   const run = await api("/actions/runs/" + id.run);
   assert.equal(run.head_sha, id.sha);
   assert.equal(run.head_branch, "main");
-  assert.equal(run.event, "push");
+  assert.ok(["push", "workflow_dispatch"].includes(id.event ?? "push"));
+  assert.equal(run.event, id.event ?? "push");
   assert.equal(run.path, ".github/workflows/cloudflare-standby.yml");
   assert.equal(String(run.run_attempt), id.attempt, "Superseded run attempt");
   const jobs = await api(

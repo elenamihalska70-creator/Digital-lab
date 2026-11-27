@@ -11,6 +11,11 @@ on:
         description: Full SHA of the selected main commit
         required: true
         type: string
+      sync_standby:
+        description: Synchronize the verified Vercel Production SHA to standby preview
+        required: true
+        type: boolean
+        default: false
       deploy_test:
         description: Upload TEST to the ci-test preview alias after review
         required: true
@@ -172,7 +177,10 @@ jobs:
           printf 'Cloudflare TEST preview for %s: %s.\n' "$GITHUB_SHA" "$DEPLOY_STATUS" >> "$GITHUB_STEP_SUMMARY"
 
   sync-standby:
-    if: github.repository == 'elenamihalska70-creator/Digital-lab' && github.event_name == 'push' && github.ref == 'refs/heads/main' && github.ref_protected && vars.CLOUDFLARE_STANDBY_SYNC_ENABLED == 'true'
+    env:
+      SYNC_STANDBY: ${{ inputs.sync_standby }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+    if: github.repository == 'elenamihalska70-creator/Digital-lab' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.sync_standby == true && inputs.expected_sha == github.sha)) && github.ref == 'refs/heads/main' && github.ref_protected && vars.CLOUDFLARE_STANDBY_SYNC_ENABLED == 'true'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 25
