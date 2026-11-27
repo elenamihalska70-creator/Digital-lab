@@ -228,7 +228,9 @@ try {
       await section.locator(".repair-details summary").click();
       await description.fill(problem); await content.getByRole("button").first().click();
       const audit = await page.evaluate(() => window.repairAudit);
-      assert.ok(audit.events.some(event => event[1] === "estimator_quote_request"));
+      // DL-PRIVACY-CONSENT-01: no analytics call at all without consent (stubbed gtag stays unused). The GA4
+      // payload privacy of the repair fields with consent is checked in check-consent-ui.mjs.
+      assert.deepEqual(audit.events, []);
       const analytics = JSON.stringify(audit.events);
       for (const privateText of [publicUrl, problem, "synthetic-secret-only"]) {
         assert.ok(!analytics.includes(privateText));

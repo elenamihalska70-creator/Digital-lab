@@ -37,7 +37,7 @@ export function AILabCarousel({ images, name, isEnglish = false }) {
     const timer = window.setInterval(() => setSlide((previous) => {
       const next = (previous.index + 1) % images.length;
       return { index: next, loaded: [...new Set([...previous.loaded, next])] };
-    }), 5000);
+    }), 3750);
     return () => window.clearInterval(timer);
   }, [paused, hovered, focused, reducedMotion, visible, images.length]);
 

@@ -15,7 +15,11 @@ import {
 } from "./services/contactRequests";
 import { supabase } from "./services/auth";
 import { getProfileForUser } from "./services/profiles";
+import { auditFunnelHref } from "./config/auditFunnel";
+import { publicActionHref, standbyActionsDisabled } from "./config/standby";
+import { isPortalPath, portalEnabled } from "./config/portal";
 import { trackEvent, trackPageView } from "./utils/analytics";
+import { isCurrentConsentUiEnabled, openConsentPreferences } from "./utils/consent";
 import {
   getPlanMonthlyPrice,
   REELS_OFFERS,
@@ -40,6 +44,14 @@ import { buildQuoteMailto } from "./utils/quoteMailto";
 const auditLandingPath = "/audit-site-web";
 const legalNoticePath = "/mentions-legales";
 const privacyPolicyPath = "/politique-de-confidentialite";
+// Owner-approved planned publication: 2026-11-27; the mandatory date gate rejects future dates.
+// Set a reviewed, fixed ISO date and matching browser assertion before release; never derive it at build time.
+const PRIVACY_POLICY_LAST_UPDATED = "2026-11-27";
+const frenchMonths = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const formatFrenchDate = (isoDate) => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return `${day === 1 ? "1er" : day} ${frenchMonths[month - 1]} ${year}`;
+};
 const socialMediaServicePath = "/services/gestion-reseaux-sociaux";
 // Tax mention for every public price (one-off projects, subscriptions, Reels,
 // meta description, request summary). Configured only in config/taxMention.js;
@@ -50,11 +62,8 @@ const withTaxMention = (price, isEnglish = false) => {
   const mention = isEnglish ? priceTax.shortEn : priceTax.short;
   return mention ? `${price} ${mention}` : price;
 };
-const privatePaths = ["/login", "/dashboard", "/espace-client", "/admin", "/design-system"];
-const configuredAuditUrl = import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
-const auditAppUrl = configuredAuditUrl;
-const auditLaunchHref = auditAppUrl || auditLandingPath;
-const isAuditAppUrlConfigured = Boolean(configuredAuditUrl);
+const configuredAuditUrl = import.meta.env.MODE.startsWith("cloudflare-") ? "" : import.meta.env.VITE_DIGITAL_LAB_AUDIT_URL?.trim() ?? "";
+const auditAppUrl = configuredAuditUrl || "https://audit.digitallab.studio";
 
 const services = [
   {
@@ -322,7 +331,7 @@ const services = [
 ];
 
 const navLinks = [
-  { label: "Audit gratuit", href: auditLaunchHref, emphasized: true },
+  { label: "Audit gratuit", href: auditFunnelHref("global_nav"), auditFunnel: true, emphasized: true },
   { label: "Services", href: "/#services" },
   { label: "Réseaux sociaux", href: socialMediaServicePath },
   { label: "Projets", href: "/#projets" },
@@ -553,12 +562,12 @@ const businessContact = {
   positioning: "Solutions digitales pour PME",
   expertise: "WordPress • IA • SEO • Automatisation",
   founderLabel: "Fondatrice",
-  email: "contact@digitallab.studio",
-  phoneDisplay: "+33 7 66 78 43 31",
-  phoneHref: "tel:+33766784331",
-  telephone: "+33766784331",
+  email: standbyActionsDisabled ? "standby@example.invalid" : "contact@digitallab.studio",
+  phoneDisplay: standbyActionsDisabled ? "—" : "+33 7 66 78 43 31",
+  phoneHref: publicActionHref("tel:+33766784331"),
+  telephone: standbyActionsDisabled ? undefined : "+33766784331",
   siteDisplay: "www.digitallab.studio",
-  url: "https://www.digitallab.studio",
+  url: publicActionHref("https://www.digitallab.studio"),
   linkedin: "https://www.linkedin.com/in/olena-mykhalska/",
   github: "https://github.com/ElenaMihalska70-Creator",
   instagram: "https://www.instagram.com/digital.lab.fr/",
@@ -567,7 +576,8 @@ const businessContact = {
 
 const siteUrl = "https://www.digitallab.studio";
 const auditVideoSrc = "/videos/digitallab-audit-site-web.mp4";
-const auditVideoPoster = "/logo-digital-lab.png";
+const auditVideoPoster = "/projects/digitallab-audit-site-poster.webp";
+const transformationPoster = "/videos/posters/ai-website-transformation.webp";
 
 const auditBenefits = [
   "Un score clair",
@@ -592,12 +602,9 @@ const auditDeliverables = [
 ];
 
 const auditEvents = {
-  navClick: "audit_nav_click",
-  homeCta: "audit_home_cta_click",
-  landingCta: "audit_landing_cta_click",
+  funnelClick: "audit_funnel_cta_click",
   externalLaunch: "audit_external_app_click",
   videoPlay: "audit_video_play",
-  footerCta: "audit_footer_cta_click",
   assistanceClick: "audit_assistance_click",
 };
 
@@ -1021,8 +1028,8 @@ const servicePages = [
     cta: {
       title: "Un site clair, qui reflète votre activité",
       text: "Parlons de votre projet de site ou de refonte : je vous propose une première piste concrète, adaptée à votre activité.",
-      primaryLabel: "Faire un diagnostic gratuit",
-      primaryHref: auditLandingPath,
+      primaryLabel: "Demander mon audit gratuit",
+      auditLocation: "creation",
       secondaryLabel: "Me contacter directement",
       secondaryHref: "/#contact",
     },
@@ -1089,8 +1096,8 @@ const servicePages = [
     cta: {
       title: "Un site clair, construit à distance avec vous",
       text: "Parlons de votre projet de site ou de refonte à Besançon : je vous propose une première piste concrète, adaptée à votre activité.",
-      primaryLabel: "Faire un diagnostic gratuit",
-      primaryHref: auditLandingPath,
+      primaryLabel: "Demander mon audit gratuit",
+      auditLocation: "besancon",
       secondaryLabel: "Me contacter directement",
       secondaryHref: "/#contact",
     },
@@ -1180,30 +1187,6 @@ const getServiceFromPath = (pathname) => {
   }
 
   return servicePages.find((servicePage) => servicePage.slug === match[1]) ?? null;
-};
-
-const handleProjectEnter = (event) => {
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-
-  if (reducedMotion || !canHover) {
-    return;
-  }
-
-  const video = event.currentTarget.querySelector("video");
-
-  if (video) {
-    video.play().catch(() => {});
-  }
-};
-
-const handleProjectLeave = (event) => {
-  const video = event.currentTarget.querySelector("video");
-
-  if (video) {
-    video.pause();
-    video.currentTime = 0;
-  }
 };
 
 const isExternalLink = (href) => href.startsWith("http");
@@ -1357,7 +1340,7 @@ const applyPageMetadata = (pathname) => {
 
   const isUnknownProjectPath = isProjectPath && !project;
   const isUnknownServicePath = isServicePath && !servicePage;
-  const isPrivatePath = privatePaths.includes(pathname);
+  const isPrivatePath = isPortalPath(pathname) || pathname === "/design-system";
   setMetaContent(
     'meta[name="robots"]',
     isPrivatePath || isUnknownProjectPath || isUnknownServicePath ? "noindex, nofollow" : "index, follow",
@@ -1478,114 +1461,132 @@ const applyPageMetadata = (pathname) => {
 const trackAuditCta = (eventName, location) => {
   trackEvent(eventName, {
     cta_location: location,
-    destination_type: isAuditAppUrlConfigured ? "external_audit_app" : "configuration_fallback",
+    destination_type: configuredAuditUrl ? "external_audit_app" : "configuration_fallback",
   });
 };
 
-const handleAuditLaunchClick = (event, { eventName, location, onNavigate }) => {
-  trackAuditCta(eventName, location);
+const trackAuditFunnelClick = (location) => trackEvent(auditEvents.funnelClick, {
+  cta_location: location,
+  destination_type: "systeme_io_funnel",
+});
 
-  if (isAuditAppUrlConfigured) {
-    trackAuditCta(auditEvents.externalLaunch, location);
-    return;
-  }
+const auditFunnelLinkProps = (location) => ({
+  href: auditFunnelHref(location),
+  target: standbyActionsDisabled ? undefined : "_blank",
+  rel: "noreferrer",
+  onClick: () => trackAuditFunnelClick(location),
+});
 
-  event.preventDefault();
-  onNavigate(auditLandingPath);
-};
-
-function DeferredVideo({
-  ariaLabel,
-  autoPlay = false,
-  className,
-  loop = false,
-  muted = true,
-  onPlay,
-  playWhenVisible = false,
-  playsInline = true,
-  poster,
-  src,
-}) {
-  const videoRef = useRef(null);
-  const [isSourceAttached, setIsSourceAttached] = useState(false);
-  const [hasVideoError, setHasVideoError] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setReduceMotion(mediaQuery.matches);
-
-    updatePreference();
-    mediaQuery.addEventListener("change", updatePreference);
-
-    return () => mediaQuery.removeEventListener("change", updatePreference);
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-
-    if (!video || isSourceAttached || hasVideoError) {
-      return undefined;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setIsSourceAttached(true);
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsSourceAttached(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "420px 0px", threshold: 0.01 },
-    );
-
-    observer.observe(video);
-
-    return () => observer.disconnect();
-  }, [hasVideoError, isSourceAttached]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-
-    if (!video || !playWhenVisible || !isSourceAttached || reduceMotion || hasVideoError) {
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      },
-      { rootMargin: "160px 0px", threshold: 0.28 },
-    );
-
-    observer.observe(video);
-
-    return () => observer.disconnect();
-  }, [hasVideoError, isSourceAttached, playWhenVisible, reduceMotion]);
-
+function VideoPreview({ ariaLabel, controls = true, muted = true, onPlay, onPlaying, onPause, onEnded, onEmptied, playsInline = true, hoverPreview, poster, ref, src }) {
   return (
     <video
-      ref={videoRef}
+      ref={ref}
       aria-label={ariaLabel}
-      autoPlay={!reduceMotion && autoPlay ? true : undefined}
-      className={className}
-      loop={loop}
+      controls={controls}
       muted={muted}
-      onError={() => setHasVideoError(true)}
       onPlay={onPlay}
+      onPlaying={onPlaying}
+      onPause={onPause}
+      onEnded={onEnded}
+      onEmptied={onEmptied}
       playsInline={playsInline}
+      data-hover-preview={hoverPreview ? "" : undefined}
+      data-preview-poster={hoverPreview ? "" : undefined}
       poster={poster}
-      preload={isSourceAttached ? "metadata" : "none"}
-      src={isSourceAttached && !hasVideoError ? src : undefined}
-    ></video>
+      preload="none"
+      src={src}
+    />
+  );
+}
+
+let activeHoverPreview;
+let hoverAttempt;
+
+function resetHoverPreview(video) {
+  if (hoverAttempt?.video === video) hoverAttempt = undefined;
+  if (activeHoverPreview === video) activeHoverPreview = undefined;
+  video.setAttribute("data-preview-poster", "");
+  video.pause();
+  // Restart resource selection with preload="none" to restore the native poster.
+  video.load();
+}
+
+function selectHoverPreview(video) {
+  if (activeHoverPreview && activeHoverPreview !== video) {
+    resetHoverPreview(activeHoverPreview);
+  }
+  activeHoverPreview = video;
+}
+
+function startPreviewHover(event) {
+  if (event.pointerType !== "mouse" ||
+      !window.matchMedia("(hover: hover) and (pointer: fine)").matches ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const video = event.currentTarget.querySelector("video");
+  if (!video?.paused) return;
+  selectHoverPreview(video);
+  const hover = { video };
+  hoverAttempt = hover;
+  video.muted = true;
+  video.play().catch(() => {
+    if (hoverAttempt === hover) resetHoverPreview(video);
+  });
+}
+
+function stopPreviewHover(event) {
+  if (event.pointerType === "mouse" && hoverAttempt && event.currentTarget.contains(hoverAttempt.video)) {
+    resetHoverPreview(hoverAttempt.video);
+  }
+}
+
+function HoverPreview({ onPlay, playLabel, ...props }) {
+  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const previewRef = useCallback((video) => {
+    videoRef.current = video;
+    return () => {
+      if (activeHoverPreview === video) resetHoverPreview(video);
+      videoRef.current = null;
+    };
+  }, []);
+  const showPlayButton = () => setPlaying(false);
+  return (
+    <>
+      <VideoPreview
+        {...props}
+        hoverPreview
+        ref={previewRef}
+        onPlay={(event) => {
+          if (event.currentTarget.paused) return;
+          selectHoverPreview(event.currentTarget);
+          setPlaying(true);
+          onPlay?.(event);
+        }}
+        onPause={showPlayButton}
+        onPlaying={(event) => {
+          if (!event.currentTarget.paused) event.currentTarget.removeAttribute("data-preview-poster");
+        }}
+        onEnded={showPlayButton}
+        onEmptied={showPlayButton}
+      />
+      {!playing && (
+        <button
+          className="hover-preview-play"
+          type="button"
+          aria-label={playLabel ?? props.ariaLabel}
+          onClick={() => {
+            const video = videoRef.current;
+            if (!video) return;
+            selectHoverPreview(video);
+            video.play().catch(() => {});
+            video.focus({ preventScroll: true });
+          }}
+        >
+          <span aria-hidden="true">▶</span>
+        </button>
+      )}
+    </>
   );
 }
 
@@ -2335,6 +2336,7 @@ const trackQuoteEmailOpened = (request) => {
 
 // Opens a mailto: link from a user gesture without leaving the page.
 const openMailtoLink = (href, privateDetails = false) => {
+  if (standbyActionsDisabled) return;
   if (privateDetails) {
     // No mailto anchor with private details for automatic outbound-link analytics to inspect.
     window.open(href, "_self", "noopener");
@@ -2810,7 +2812,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               {repairInvalid && <p id={`${idPrefix}-repair-request-error`} className="repair-error">
                 {t("Corrigez les champs signalés avant de demander un devis.", "Correct the marked fields before requesting a quote.")}
               </p>}
-              {isRepairProject && <a className="btn btn-secondary repair-email" href={`mailto:${businessContact.email}`}>
+              {isRepairProject && <a className="btn btn-secondary repair-email" href={publicActionHref(`mailto:${businessContact.email}`)}>
                 {t("Écrire par email", "Contact by email")}
               </a>}
               <button className="btn btn-secondary summary-details-button" type="button"
@@ -3006,7 +3008,7 @@ function UnifiedEstimator({ isEnglish = false, variant = "home", preset = null, 
               "Can't find exactly what you need? Describe your project in your own words, even if it's still unclear.",
             )}
           </p>
-          <a href={`mailto:${businessContact.email}`} aria-label={t(`Écrire à ${businessContact.email}`, `Email ${businessContact.email}`)}>
+          <a href={publicActionHref(`mailto:${businessContact.email}`)} aria-label={t(`Écrire à ${businessContact.email}`, `Email ${businessContact.email}`)}>
             {businessContact.email}
           </a>
         </div>
@@ -3029,19 +3031,10 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
     event.preventDefault();
     scrollToElementWithHeaderOffset(frame);
 
-    // Explicit request to watch: restart from the beginning and expose native controls (sound, pause).
-    const startPlayback = () => {
-      video.controls = true;
-      video.currentTime = 0;
-      video.play().catch(() => {});
-      video.focus({ preventScroll: true });
-    };
-
-    if (video.readyState > 0) {
-      startPlayback();
-    } else {
-      video.addEventListener("loadedmetadata", startPlayback, { once: true });
-    }
+    selectHoverPreview(video);
+    video.currentTime = 0;
+    video.play().catch(() => {});
+    video.focus({ preventScroll: true });
   };
 
   return (
@@ -3092,17 +3085,23 @@ function AIWebsiteTransformationSection({ isEnglish = false }) {
           </div>
 
           <div className="ai-transformation-visual">
-            <div className="ai-transformation-video-frame" id="ai-website-transformation-video" ref={videoFrameRef}>
-              <DeferredVideo
+            <div
+              className="ai-transformation-video-frame"
+              id="ai-website-transformation-video"
+              ref={videoFrameRef}
+              onPointerEnter={startPreviewHover}
+              onPointerLeave={stopPreviewHover}
+            >
+              <img className="hover-preview-artwork" src={transformationPoster} alt="" loading="lazy" />
+              <HoverPreview
                 ariaLabel={
                   isEnglish
                     ? "Video transformation of an old e-commerce site into a premium digital experience"
                     : "Transformation vidéo d’un ancien site e-commerce en expérience digitale premium"
                 }
                 muted
-                loop
                 playsInline
-                playWhenVisible
+                poster={transformationPoster}
                 src="/videos/AI_Website_Transformation.mp4"
               />
             </div>
@@ -3151,7 +3150,7 @@ const buildContactMailto = ({ subject, body }) => {
     params.push(`body=${encodeURIComponent(body)}`);
   }
 
-  return `mailto:${businessContact.email}?${params.join("&")}`;
+  return publicActionHref(`mailto:${businessContact.email}?${params.join("&")}`);
 };
 
 const getContactMailLinks = (isEnglish = false) => {
@@ -3327,7 +3326,7 @@ function QuoteEmailPanel({ request, isEnglish = false }) {
             {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
           </button>
         ) : (
-          <a className="btn btn-secondary" href={email.href} onClick={() => trackQuoteEmailOpened(request)}>
+          <a className="btn btn-secondary" href={publicActionHref(email.href)} onClick={() => trackQuoteEmailOpened(request)}>
             {email.fitsInMailto ? t("Ouvrir l’e-mail", "Open the e-mail") : t("Ouvrir l’e-mail, puis coller", "Open the e-mail, then paste")}
           </a>
         )}
@@ -3352,46 +3351,18 @@ function AuditVideoCard({ compact = false, isEnglish = false }) {
     trackAuditCta(auditEvents.videoPlay, compact ? "audit_landing_video" : "homepage_spotlight_video");
   };
 
-  const playVideo = (event) => {
-    const video = event.currentTarget.querySelector("video");
-
-    if (video) {
-      video.play().catch(() => {});
-    }
-  };
-
-  const pauseVideo = (event) => {
-    const video = event.currentTarget.querySelector("video");
-
-    if (video) {
-      video.pause();
-    }
-  };
-
   return (
     <div
       className={`audit-video-card premium-card gradient-border${compact ? " is-compact" : ""}`}
-      onMouseEnter={playVideo}
-      onMouseLeave={pauseVideo}
-      onBlur={pauseVideo}
-      onClick={playVideo}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          playVideo(event);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={isEnglish ? "Play the Digital Lab Audit preview video" : "Lire l’aperçu vidéo Digital Lab Audit"}
+      onPointerEnter={startPreviewHover}
+      onPointerLeave={stopPreviewHover}
     >
       <div className="project-media audit-video-media">
-        <DeferredVideo
+        <img className="hover-preview-artwork" src={auditVideoPoster} alt="" loading="lazy" />
+        <HoverPreview
           ariaLabel={isEnglish ? "Digital Lab Audit preview video" : "Aperçu vidéo Digital Lab Audit"}
-          muted
-          loop
+          playLabel={isEnglish ? "Play the Digital Lab Audit preview video" : "Lire l’aperçu vidéo Digital Lab Audit"}
           onPlay={trackVideoPlay}
-          playsInline
           poster={auditVideoPoster}
           src={auditVideoSrc}
         />
@@ -3401,13 +3372,6 @@ function AuditVideoCard({ compact = false, isEnglish = false }) {
 }
 
 function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
-  const handleLandingClick = (event) => {
-    handleAuditLaunchClick(event, {
-      eventName: auditEvents.homeCta,
-      location: "homepage_spotlight",
-      onNavigate,
-    });
-  };
   const displayedAuditBenefits = isEnglish ? englishAuditBenefits : auditBenefits;
 
   return (
@@ -3416,11 +3380,11 @@ function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
         <div className="audit-spotlight-copy">
           <div className="section-heading">
             <span>{isEnglish ? "Free diagnostic" : "Diagnostic gratuit"}</span>
-            <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site inspire-t-il vraiment confiance ?"}</h2>
+            <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site attire des visiteurs, mais pas assez de clients ?"}</h2>
             <p>
               {isEnglish
                 ? "Identify the main obstacles related to visibility, trust, security, and conversion, then discover the actions to prioritize."
-                : "Identifiez les principaux freins liés à la visibilité, à la confiance, à la sécurité et à la conversion, puis découvrez les actions à traiter en priorité."}
+                : "Découvrez gratuitement les points à améliorer : SEO, performance, expérience utilisateur et conversion."}
             </p>
           </div>
 
@@ -3436,28 +3400,23 @@ function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
           <div className="audit-actions">
             <a
               className="btn btn-primary"
-              href={auditLaunchHref}
-              target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-              rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-              onClick={handleLandingClick}
+              {...auditFunnelLinkProps("homepage_spotlight")}
             >
-              {isEnglish ? "Start my free audit" : "Lancer mon audit gratuit"} <strong>→</strong>
+              {isEnglish ? "Request my free audit" : "Demander mon audit gratuit"} <strong>→</strong>
             </a>
           </div>
 
-          {isAuditAppUrlConfigured && (
-            <p className="audit-secondary-link">
-              <a
-                href={auditLandingPath}
-                onClick={(event) => {
-                  event.preventDefault();
-                  onNavigate(auditLandingPath);
-                }}
-              >
-                {isEnglish ? "See how the audit works →" : "Découvrir comment fonctionne l’audit →"}
-              </a>
-            </p>
-          )}
+          <p className="audit-secondary-link">
+            <a
+              href={auditLandingPath}
+              onClick={(event) => {
+                event.preventDefault();
+                onNavigate(auditLandingPath);
+              }}
+            >
+              {isEnglish ? "See how the audit works →" : "Découvrir comment fonctionne l’audit →"}
+            </a>
+          </p>
         </div>
 
         <AuditVideoCard isEnglish={isEnglish} />
@@ -3467,20 +3426,6 @@ function AuditSpotlightSection({ onNavigate, isEnglish = false }) {
 }
 
 function AuditLandingPage({ onNavigate }) {
-  useEffect(() => {
-    if (!isAuditAppUrlConfigured) {
-      console.warn("Digital Lab Audit launch URL is not configured.");
-    }
-  }, []);
-
-  const handleLaunchClick = () => {
-    trackAuditCta(auditEvents.landingCta, "audit_landing_primary");
-
-    if (isAuditAppUrlConfigured) {
-      trackAuditCta(auditEvents.externalLaunch, "audit_landing_primary");
-    }
-  };
-
   return (
     <main className="audit-page fade-in-page">
       <section className="audit-landing-hero">
@@ -3503,23 +3448,18 @@ function AuditLandingPage({ onNavigate }) {
 
             <div className="audit-offer-row">
               <span className="audit-offer-badge">Diagnostic gratuit offert par Digital Lab</span>
-              <span className="audit-beta-badge">Version bêta</span>
             </div>
 
-            <h1>Découvrez gratuitement ce qui freine votre site</h1>
+            <h1>Votre site attire des visiteurs, mais pas assez de clients ?</h1>
             <p>
-              Un diagnostic Digital Lab pour comprendre ce qui limite la confiance, la visibilité et les demandes
-              clients, avec des priorités expliquées simplement.
+              Découvrez gratuitement les points à améliorer : SEO, performance, expérience utilisateur et conversion.
             </p>
             <div className="audit-landing-actions" id="audit-launch">
               <a
                 className="btn btn-primary"
-                href={auditLaunchHref}
-                target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-                rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-                onClick={handleLaunchClick}
+                {...auditFunnelLinkProps("audit_landing_primary")}
               >
-                Lancer mon audit gratuit <strong>→</strong>
+                Demander mon audit gratuit <strong>→</strong>
               </a>
             </div>
 
@@ -3536,24 +3476,20 @@ function AuditLandingPage({ onNavigate }) {
               ))}
             </ul>
 
-            <p className="audit-beta-note">
-              Version bêta gratuite — capacité quotidienne limitée pendant la phase de test.
+            <p className="audit-beta-note">L’équipe Digital Lab traite votre demande et vous recontacte.</p>
+            <p className="audit-secondary-link">
+              <a
+                href={publicActionHref(auditAppUrl)}
+                target={standbyActionsDisabled ? undefined : "_blank"}
+                rel="noreferrer"
+                onClick={() => trackEvent(auditEvents.externalLaunch, {
+                  cta_location: "audit_landing_direct_app",
+                  destination_type: "external_audit_app",
+                })}
+              >
+                Ouvrir l’application Digital Lab Audit (bêta) →
+              </a>
             </p>
-            {!isAuditAppUrlConfigured && (
-              <div className="audit-availability-note" role="status">
-                <p>L’audit gratuit sera bientôt rouvert aux nouveaux tests bêta.</p>
-                <a
-                  href="/#contact"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    trackAuditCta(auditEvents.assistanceClick, "audit_landing_beta_contact");
-                    onNavigate("/#contact");
-                  }}
-                >
-                  Demander un accès testeur
-                </a>
-              </div>
-            )}
           </div>
 
           <AuditVideoCard compact />
@@ -3649,25 +3585,16 @@ function AuditLandingPage({ onNavigate }) {
   );
 }
 
-function AuditFooterReminder({ onNavigate, isEnglish = false }) {
+function AuditFooterReminder({ isEnglish = false }) {
   return (
     <section className="audit-footer-reminder" aria-label={isEnglish ? "Free audit reminder" : "Rappel audit gratuit"}>
       <div className="section-inner audit-footer-reminder-inner">
-        <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site inspire-t-il vraiment confiance ?"}</h2>
+        <h2>{isEnglish ? "Does your site really inspire trust?" : "Votre site attire des visiteurs, mais pas assez de clients ?"}</h2>
         <a
           className="btn btn-primary"
-          href={auditLaunchHref}
-          target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-          rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-          onClick={(event) => {
-            handleAuditLaunchClick(event, {
-              eventName: auditEvents.footerCta,
-              location: "footer_reminder",
-              onNavigate,
-            });
-          }}
+          {...auditFunnelLinkProps("footer_reminder")}
         >
-          {isEnglish ? "Start my free audit" : "Lancer mon audit gratuit"}
+          {isEnglish ? "Request my free audit" : "Demander mon audit gratuit"}
         </a>
       </div>
     </section>
@@ -3726,7 +3653,7 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
           <div className="footer-links">
             <a
               className="footer-contact-link"
-              href={`mailto:${businessContact.email}`}
+              href={publicActionHref(`mailto:${businessContact.email}`)}
               aria-label={isEnglish ? "Email Digital Lab" : "Envoyer un e-mail à Digital Lab"}
             >
               <ContactIcon type="mail" />
@@ -3796,12 +3723,18 @@ function SiteFooter({ onNavigate, isEnglish = false }) {
           }}>
             {isEnglish ? "Legal notice" : "Mentions légales"}
           </a>
-          <a href={privacyPolicyPath} onClick={(event) => {
+          {/* The policy exists in French only: the English label and hreflang say so. */}
+          <a href={privacyPolicyPath} hrefLang={isEnglish ? "fr" : undefined} onClick={(event) => {
             event.preventDefault();
             onNavigate(privacyPolicyPath);
           }}>
-            {isEnglish ? "Privacy policy" : "Politique de confidentialité"}
+            {isEnglish ? "Privacy policy (in French)" : "Politique de confidentialité"}
           </a>
+          {isCurrentConsentUiEnabled() && (
+            <button className="footer-consent-button" type="button" aria-haspopup="dialog" onClick={openConsentPreferences}>
+              {isEnglish ? "Cookie settings" : "Gérer les cookies"}
+            </button>
+          )}
         </nav>
       </div>
     </footer>
@@ -3830,7 +3763,7 @@ function LegalNoticePage({ onNavigate }) {
                 <p>SIRET : 105 759 286 00021</p>
                 <p>Code APE : 6201Z</p>
                 <p>Besançon, France</p>
-                <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+                <p>Email : <a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a></p>
                 <p>Téléphone : <a href={businessContact.phoneHref}>{businessContact.phoneDisplay}</a></p>
                 <p>Site : <a href={businessContact.url}>{businessContact.url}</a></p>
               </article>
@@ -3851,8 +3784,8 @@ function LegalNoticePage({ onNavigate }) {
               <article>
                 <h2>Données personnelles</h2>
                 <p>
-                  Les informations envoyées par email ou via un formulaire sont utilisées uniquement pour répondre
-                  aux demandes de contact.
+                  Les informations envoyées par e-mail ou précédemment transmises via l’ancien espace client sont utilisées uniquement
+                  pour répondre à vos demandes et assurer le suivi de vos projets.
                 </p>
                 <p>
                   Pour plus de détails, consultez la <a href={privacyPolicyPath} onClick={(event) => {
@@ -3889,31 +3822,154 @@ function PrivacyPolicyPage({ onNavigate }) {
                 <p>Entrepreneure individuelle</p>
                 <p>SIREN : 105 759 286</p>
                 <p>Besançon, France</p>
-                <p>Email : <a href={`mailto:${businessContact.email}`}>{businessContact.email}</a></p>
+                <p>Email : <a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a></p>
               </article>
 
               <article>
                 <h2>2. Données collectées sur le site</h2>
                 <p>
-                  Le site ne propose plus de formulaire de contact public : pour toute demande, vous écrivez directement à
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>. Digital Lab traite alors les
+                  Pour contacter Digital Lab directement, vous pouvez écrire à
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>. Digital Lab traite alors les
                   données que vous envoyez volontairement par e-mail, notamment vos coordonnées, votre message et les
                   informations utiles au traitement de votre demande.
                 </p>
                 <p>
-                  Si vous disposez d’un espace client, Digital Lab traite également les informations que vous y échangez
-                  (messages, documents, devis), ainsi que les demandes envoyées auparavant via l’ancien formulaire du site,
-                  qui restent consultables dans votre espace client et par Digital Lab.
+                  Pour demander un Audit Gratuit, vous pouvez utiliser le formulaire hébergé sur Systeme.io. Il recueille
+                  votre adresse e-mail et l’adresse du site à auditer. Des données techniques liées à l’accès au
+                  formulaire ou à son utilisation peuvent également être traitées. Une demande d’audit ne vaut pas
+                  consentement à recevoir des e-mails de prospection ou une newsletter. Les liens vers ce formulaire externe
+                  comportent des paramètres de campagne (UTM) indiquant la provenance Digital Lab et l’emplacement du lien.
+                  Le bandeau de choix sur les cookies de Digital Lab concerne ce site ; il ne gère pas les choix
+                  applicables au formulaire externe.
                 </p>
                 <p>
-                  Le site utilise également Google Analytics afin de mesurer l’audience et d’améliorer l’expérience de navigation.
-                  Des données techniques peuvent être traitées à cette occasion, comme les pages consultées, le type d’appareil,
-                  le navigateur, des informations de performance et des identifiants de mesure associés aux cookies analytics.
+                  L’ancien espace client a été retiré du site public. Les données déjà enregistrées restent conservées :
+                  adresse e-mail, données d’authentification (mot de passe non lisible par Digital Lab ou informations
+                  transmises par Google pour la connexion), profil et rôle associé (client ou administrateur), demandes
+                  (y compris celles de l’ancien formulaire), messages, documents, devis et éventuels commentaires de refus.
+                  Pour demander l’accès à ces données, contactez Digital Lab par e-mail (section 10).
+                </p>
+                <p>
+                  Bases légales : la réponse à vos demandes de devis ou d’information repose sur les mesures précontractuelles
+                  prises à votre demande (article 6.1.b du RGPD) ; les échanges, documents et devis liés à une prestation
+                  commandée reposent sur l’exécution du contrat (article 6.1.b) ; la gestion des comptes existants liés
+                  à ces demandes relève de ces mêmes mesures précontractuelles ou du contrat (article 6.1.b) ;
+                  la sécurité des accès et le suivi des échanges avec les personnes qui ont contacté Digital Lab
+                  reposent sur l’intérêt légitime de Digital Lab (article 6.1.f) ; la
+                  conservation des documents exigés par la réglementation, notamment comptable, repose sur une obligation
+                  légale (article 6.1.c). La mesure d’audience repose uniquement sur votre consentement (section 3).
+                </p>
+                <p>
+                  Uniquement avec votre accord, le site utilise également un outil de mesure d’audience (Google Analytics),
+                  décrit à la section 3.
+                </p>
+              </article>
+
+              <article id="cookies">
+                <h2>3. Cookies et mesure d’audience</h2>
+                <p>
+                  La mesure d’audience est facultative et désactivée par défaut. Elle n’est chargée qu’après votre accord,
+                  donné dans le bandeau « Vos choix sur les cookies ». Sans accord, ou en cas de refus, elle n’est pas chargée
+                  et le site fonctionne normalement.
+                </p>
+                <p>
+                  Mesure d’audience — Google Analytics (Google) : pages consultées, provenance de la visite, type d’appareil
+                  et de navigateur, localisation approximative, et utilisation du simulateur de prix (services et formules
+                  choisis, jamais les textes saisis). Cookies déposés : _ga et _ga_… Les signaux publicitaires et la
+                  personnalisation des annonces sont désactivés.
+                </p>
+                <p>
+                  Les adresses de site, descriptions de problème, adresses e-mail, noms et messages que vous saisissez ne sont
+                  pas inclus dans les mesures envoyées à Google Analytics. La mesure n’est pas activée lorsque l’adresse de
+                  la page contient des éléments de connexion (par exemple au retour d’une connexion avec Google ou d’un lien
+                  de réinitialisation du mot de passe).
+                </p>
+                <p>
+                  Le site n’utilise pas d’outil d’enregistrement de session : Microsoft Clarity n’est pas chargé. Les cookies
+                  Clarity (_clck, _clsk) déposés sur ce site lors de visites antérieures sont supprimés.
+                </p>
+                <p>
+                  Éléments nécessaires, sans consentement : la mémorisation de votre choix sur votre appareil (stockage local
+                  « dl-consent », renouvelé au plus tard tous les 6 mois).
+                </p>
+                <p>
+                  Vous pouvez modifier ou retirer votre consentement à tout moment avec le bouton « Gérer les cookies » en bas
+                  de page. Le retrait arrête la mesure d’audience et supprime les cookies Google Analytics déposés sur ce site.
+                </p>
+                <p>
+                  Base légale : votre consentement (article 82 de la loi Informatique et Libertés pour les cookies, article
+                  6.1.a du RGPD pour les données). Le retrait du consentement ne remet pas en cause les traitements effectués
+                  avant ce retrait.
+                </p>
+                <p>
+                  Rôle du prestataire et transferts hors de l’Union européenne : Google indique agir en tant que sous-traitant
+                  pour Google Analytics, et ne pas enregistrer ni conserver les adresses IP dans Google Analytics. Les données
+                  peuvent être traitées aux États-Unis ; Google indique s’appuyer sur le Data Privacy Framework UE–États-Unis
+                  et, le cas échéant, sur les clauses contractuelles types de la Commission européenne.
+                </p>
+                <p>
+                  Durées de conservation : selon Google, les cookies _ga et _ga_… expirent par défaut au bout de 2 ans ; la
+                  durée de conservation des données détaillées est un paramètre du compte Google Analytics, qui ne peut pas
+                  dépasser 14 mois (les rapports statistiques agrégés ne sont pas concernés par cette limite).
+                </p>
+                <p>
+                  Google traite ces données selon sa propre politique de confidentialité :
+                  {" "}<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">policies.google.com/privacy</a>.
                 </p>
               </article>
 
               <article>
-                <h2>3. Utilisation des services Google</h2>
+                <h2>4. Destinataires et hébergement</h2>
+                <p>
+                  Vos données sont destinées à Digital Lab. Elles ne sont ni vendues ni louées. Les services techniques
+                  utilisés pour l’hébergement, la conservation des données ou le traitement des demandes sont les suivants :
+                </p>
+                <ul>
+                  <li>
+                    Vercel Inc. (États-Unis) : hébergement du site. Comme tout hébergeur, Vercel traite les données techniques
+                    de connexion nécessaires à l’affichage des pages (adresse IP, pages demandées).
+                  </li>
+                  <li>
+                    Supabase : comptes existants, base de données de l’ancien espace client et
+                    stockage privé des documents. Le projet Supabase de Digital Lab est déployé dans la région eu-west-1 (Irlande).
+                  </li>
+                  <li>
+                    OVHcloud (France) : fournisseur de la boîte de messagerie professionnelle {businessContact.email}.
+                  </li>
+                  <li>
+                    Systeme.io (ITACWT Limited, Irlande) : service technique utilisé pour héberger le formulaire Audit
+                    Gratuit, enregistrer les demandes et gérer les contacts associés, envoyer un e-mail de confirmation
+                    à la personne qui fait la demande et notifier Digital Lab par e-mail. Digital Lab reste responsable
+                    du traitement des demandes d’audit de ses prospects.
+                    {" "}<a href="https://systeme.io/fr/privacy-policy" target="_blank" rel="noopener noreferrer">Politique de confidentialité de Systeme.io</a>.
+                  </li>
+                </ul>
+                <p>
+                  Les e-mails adressés à {businessContact.email} sont reçus dans la boîte principale OVHcloud Zimbra.
+                  Un transfert vers un compte Gmail personnel (@gmail.com), et non Google Workspace, est activé,
+                  avec conservation d’une copie dans Zimbra. La correspondance est donc traitée et conservée dans les
+                  deux messageries pour permettre à Digital Lab de répondre aux demandes et d’en assurer le suivi.
+                  Google (Gmail) reçoit les messages transférés en tant que destinataire supplémentaire et les traite
+                  selon les conditions et la politique de confidentialité applicables à Gmail grand public.
+                  Les protections contractuelles propres à Google Workspace ne sont pas présentées comme applicables
+                  à ce compte personnel.
+                </p>
+                <p>
+                  Pour les connexions précédemment effectuées avec « Continuer avec Google », Google traite les informations de connexion selon sa propre
+                  politique de confidentialité. Google Analytics n’est utilisé qu’avec votre accord (section 3). Ces
+                  utilisations des services Google (messagerie, connexion, mesure d’audience) sont distinctes.
+                </p>
+                <p>
+                  Transferts hors de l’Union européenne : Vercel est établi aux États-Unis. Le déploiement du projet
+                  Supabase en Irlande n’exclut pas que certaines données soient traitées ou consultées hors de l’Union
+                  européenne. Ces deux prestataires indiquent encadrer les transferts de données depuis l’Union européenne
+                  par les clauses contractuelles types de la Commission européenne. Les e-mails acheminés vers Gmail peuvent
+                  également être traités par Google hors de l’Union européenne.
+                </p>
+              </article>
+
+              <article>
+                <h2>5. Utilisation des services Google</h2>
                 <p>
                   Une automatisation privée et interne de Digital Lab peut accéder à certains services Google lorsque cela est
                   nécessaire à l’organisation et à la publication de contenus Digital Lab.
@@ -3925,19 +3981,20 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>4. Finalités</h2>
+                <h2>6. Finalités</h2>
                 <p>Les données sont utilisées pour les finalités suivantes :</p>
                 <ul>
                   <li>planification du contenu Digital Lab ;</li>
                   <li>préparation des publications ;</li>
                   <li>publication du contenu Digital Lab ;</li>
                   <li>suivi du statut des publications ;</li>
-                  <li>réponse aux demandes reçues par e-mail ou via l’espace client, et suivi des demandes déjà enregistrées.</li>
+                  <li>réponse aux demandes reçues par e-mail ou via le formulaire Audit Gratuit et suivi des demandes déjà enregistrées ;</li>
+                  <li>gestion des comptes, des documents et des devis conservés, et sécurité des accès.</li>
                 </ul>
               </article>
 
               <article>
-                <h2>5. Limitation d’accès</h2>
+                <h2>7. Limitation d’accès</h2>
                 <p>
                   L’automatisation fonctionne uniquement avec les fichiers et tableaux explicitement sélectionnés ou fournis
                   par Digital Lab.
@@ -3949,10 +4006,24 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>6. Conservation et sécurité</h2>
+                <h2>8. Conservation et sécurité</h2>
+                <p>Digital Lab applique un principe de minimisation des données personnelles.</p>
                 <p>
-                  Digital Lab applique un principe de minimisation des données et conserve les informations uniquement pendant
-                  la durée nécessaire aux finalités décrites dans cette politique.
+                  Les durées de conservation dépendent de la nature des informations et de leur finalité. Les pièces
+                  soumises à une obligation légale de conservation sont distinguées des copies qui ne sont plus nécessaires.
+                  Une demande d’effacement est examinée en tenant compte des obligations de conservation et des exceptions
+                  applicables à la défense de droits.
+                </p>
+                <p>
+                  Les informations relatives aux demandes, aux échanges et aux anciens espaces clients sont conservées selon
+                  leur finalité et leur nécessité, en tenant compte des obligations légales et de la défense de droits.
+                  Leur conservation et les demandes d’effacement sont examinées manuellement par la responsable de Digital Lab.
+                  Aucune suppression automatique n’est actuellement en place.
+                </p>
+                <p>
+                  Vous pouvez demander la suppression de vos données personnelles à
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>, sous réserve des
+                  obligations légales de conservation. Les durées propres à la mesure d’audience sont indiquées à la section 3.
                 </p>
                 <p>
                   Des mesures techniques raisonnables sont mises en place pour protéger les accès et limiter les risques.
@@ -3961,7 +4032,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>7. Révocation de l’accès Google</h2>
+                <h2>9. Révocation de l’accès Google</h2>
                 <p>
                   L’accès accordé aux services Google peut être révoqué à tout moment depuis la page de gestion des autorisations
                   Google : <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">
@@ -3971,21 +4042,31 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>8. Droits RGPD</h2>
+                <h2>10. Droits RGPD</h2>
                 <p>
                   Conformément au RGPD, vous pouvez demander l’accès, la rectification, l’effacement ou la limitation du
-                  traitement de vos données. Vous pouvez également vous opposer à certains traitements lorsque la réglementation
-                  le permet.
+                  traitement de vos données, ainsi que leur portabilité. Vous pouvez également vous opposer à certains
+                  traitements lorsque la réglementation le permet, et retirer à tout moment votre consentement aux cookies
+                  facultatifs avec le bouton « Gérer les cookies » en bas de page.
                 </p>
                 <p>
                   Pour exercer vos droits, contactez Digital Lab à l’adresse suivante :
-                  {" "}<a href={`mailto:${businessContact.email}`}>{businessContact.email}</a>.
+                  {" "}<a href={publicActionHref(`mailto:${businessContact.email}`)}>{businessContact.email}</a>. Les demandes sont traitées manuellement par Olena Mykhalska — Digital Lab.
+                  Une réponse vous est apportée dans un délai d’un mois à compter de la réception de votre demande.
+                  Si la complexité ou le nombre de demandes le nécessite, ce délai peut être prolongé de deux mois ;
+                  vous en êtes informé dans le premier mois, avec les motifs de la prolongation.
+                </p>
+                <p>
+                  Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation à la CNIL :
+                  {" "}<a href="https://www.cnil.fr/fr/adresser-une-plainte" target="_blank" rel="noopener noreferrer">
+                    www.cnil.fr/fr/adresser-une-plainte
+                  </a>.
                 </p>
               </article>
 
               <article>
-                <h2>9. Mise à jour de la politique</h2>
-                <p>Dernière mise à jour : 1er septembre 2026.</p>
+                <h2>11. Mise à jour de la politique</h2>
+                <p>{PRIVACY_POLICY_LAST_UPDATED ? `Dernière mise à jour : ${formatFrenchDate(PRIVACY_POLICY_LAST_UPDATED)}.` : "Version non publiée — date de publication à confirmer."}</p>
                 <p>
                   Cette politique peut être mise à jour en cas d’évolution du site, des services utilisés ou des automatisations
                   internes de Digital Lab.
@@ -3993,7 +4074,7 @@ function PrivacyPolicyPage({ onNavigate }) {
               </article>
 
               <article>
-                <h2>10. Google API disclosure</h2>
+                <h2>12. Google API disclosure</h2>
                 <p>
                   L’utilisation et le transfert vers toute autre application des informations reçues depuis les APIs Google
                   respectent la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">
@@ -4178,20 +4259,20 @@ const englishProjects = projects.map((project, index) => ({
 const portfolioShowcaseCards = {
   audit: {
     title: "Digital Lab Audit",
-    image: "/projects/digitallab-audit-site-poster.webp",
+    image: auditVideoPoster,
     video: auditVideoSrc,
-    href: auditLaunchHref,
+    href: auditFunnelHref("homepage_portfolio"),
     fr: {
       description:
         "Diagnostic gratuit de site web pour petites structures : visibilité, confiance, sécurité, RGPD, performance et conversion, avec un score et un plan d’action priorisé.",
       tags: ["Audit", "SEO", "RGPD", "Bêta"],
-      cta: "Lancer mon audit gratuit",
+      cta: "Demander mon audit gratuit",
     },
     en: {
       description:
         "A free website diagnostic for small businesses: visibility, trust, security, GDPR, performance, and conversion, with a score and a prioritized action plan.",
       tags: ["Audit", "SEO", "GDPR", "Beta"],
-      cta: "Start my free audit",
+      cta: "Request my free audit",
     },
   },
   automation: {
@@ -4215,18 +4296,13 @@ const portfolioShowcaseCards = {
   },
 };
 
-function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDelay }) {
+function PortfolioShowcaseCard({ card, isEnglish = false, revealDelay }) {
   const copy = isEnglish ? card.en : card.fr;
   const title = copy.title || card.title;
   const isExternal = isExternalLink(card.href);
   const revealClassName = revealDelay === undefined ? "" : " reveal-on-scroll reveal-card";
 
   const handleClick = (event) => {
-    if (card === portfolioShowcaseCards.audit) {
-      handleAuditLaunchClick(event, { eventName: auditEvents.homeCta, location: "homepage_portfolio", onNavigate });
-      return;
-    }
-
     if (card.video) return;
 
     const target = document.querySelector(card.href);
@@ -4241,8 +4317,8 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
     <article
       className={`glass-card project-card premium-card gradient-border soft-hover${revealClassName}`}
       style={revealDelay === undefined ? undefined : { "--reveal-delay": revealDelay }}
-      onMouseEnter={handleProjectEnter}
-      onMouseLeave={handleProjectLeave}
+      onPointerEnter={startPreviewHover}
+      onPointerLeave={stopPreviewHover}
     >
       <div className="project-media showcase-media">
         <img
@@ -4253,9 +4329,8 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
           decoding="async"
         />
         {card.video && (
-          <DeferredVideo
+          <HoverPreview
             muted
-            loop
             playsInline
             poster={card.image}
             src={card.video}
@@ -4280,6 +4355,7 @@ function PortfolioShowcaseCard({ card, isEnglish = false, onNavigate, revealDela
             target={isExternal || card.video ? "_blank" : undefined}
             rel={isExternal || card.video ? "noreferrer" : undefined}
             onClick={handleClick}
+            {...(card === portfolioShowcaseCards.audit ? auditFunnelLinkProps("homepage_portfolio") : {})}
           >
             {copy.cta}
           </a>
@@ -4651,14 +4727,6 @@ function EnglishHomePage({ onNavigate }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [quoteRequest, setQuoteRequest] = useState(null);
 
-  const handleAuditClick = (event) => {
-    handleAuditLaunchClick(event, {
-      eventName: auditEvents.homeCta,
-      location: "en_homepage_hero",
-      onNavigate,
-    });
-  };
-
   return (
     <main>
       <section className="hero">
@@ -4699,13 +4767,10 @@ function EnglishHomePage({ onNavigate }) {
 
           <div className="hero-buttons">
             <a
-              href={auditLaunchHref}
               className="btn btn-primary"
-              target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-              rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-              onClick={handleAuditClick}
+              {...auditFunnelLinkProps("en_homepage_hero")}
             >
-              Start my free audit <strong>→</strong>
+              Request my free audit <strong>→</strong>
             </a>
 
             <a href="#en-services" className="btn btn-secondary">
@@ -4779,13 +4844,13 @@ function EnglishHomePage({ onNavigate }) {
           </div>
 
           <div className="cards-grid project-grid">
-            <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} isEnglish onNavigate={onNavigate} />
+            <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} isEnglish />
             {englishProjects.map((project) => (
               <article
                 className="glass-card project-card premium-card gradient-border soft-hover"
                 key={project.title}
-                onMouseEnter={handleProjectEnter}
-                onMouseLeave={handleProjectLeave}
+                onPointerEnter={startPreviewHover}
+                onPointerLeave={stopPreviewHover}
               >
                 <div className="project-media">
                   {project.image ? (
@@ -4808,9 +4873,8 @@ function EnglishHomePage({ onNavigate }) {
                     <div className="project-placeholder"></div>
                   )}
                   {project.video && (
-                    <DeferredVideo
+                    <HoverPreview
                       muted
-                      loop
                       playsInline
                       poster={getOptimizedImage(project.image).src}
                       src={project.video}
@@ -4839,7 +4903,7 @@ function EnglishHomePage({ onNavigate }) {
                 </div>
               </article>
             ))}
-            <PortfolioShowcaseCard card={portfolioShowcaseCards.automation} isEnglish onNavigate={onNavigate} />
+            <PortfolioShowcaseCard card={portfolioShowcaseCards.automation} isEnglish />
           </div>
 
           <div className="ai-roadmap glass-section premium-card premium-card-subtle gradient-border soft-hover">
@@ -5124,7 +5188,7 @@ function EnglishHomePage({ onNavigate }) {
             </div>
 
             <div className="contact-link-list" role="group" aria-label="Digital Lab contact details">
-              <a href={`mailto:${businessContact.email}`} aria-label="Email Digital Lab">
+              <a href={publicActionHref(`mailto:${businessContact.email}`)} aria-label="Email Digital Lab">
                 <ContactIcon type="mail" />
                 <span>{businessContact.email}</span>
               </a>
@@ -5214,13 +5278,13 @@ function ProjectCasePage({ project, onNavigate }) {
               <h1>{project.title}</h1>
               <p>{project.subtitle}</p>
               <div className="case-actions">
-                <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
+                <a className="btn btn-primary" href={publicActionHref(`mailto:${businessContact.email}`)}>
                   {project.cta}
                 </a>
                 {project.demoUrl && (
                   <a
                     className="btn btn-secondary"
-                    href={project.demoUrl}
+                    href={publicActionHref(project.demoUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -5238,10 +5302,8 @@ function ProjectCasePage({ project, onNavigate }) {
 
             <div className="case-media">
               {project.video ? (
-                <DeferredVideo
-                  autoPlay
+                <VideoPreview
                   muted
-                  loop
                   playsInline
                   poster={getOptimizedImage(project.image).src}
                   src={project.video}
@@ -5311,7 +5373,7 @@ function ProjectCasePage({ project, onNavigate }) {
             <span>Votre projet</span>
             <h2>Créer une version claire, utile et testable.</h2>
             <p>Parlez-moi de votre idée : je vous répondrai avec une première piste claire et concrète.</p>
-            <a className="btn btn-primary" href={`mailto:${businessContact.email}`}>
+            <a className="btn btn-primary" href={publicActionHref(`mailto:${businessContact.email}`)}>
               Demander une démo
             </a>
           </div>
@@ -5370,8 +5432,9 @@ function ServicePage({ servicePage, onNavigate }) {
             <div className="case-actions">
               <a
                 className="btn btn-primary"
-                href={servicePage.cta.primaryHref}
-                onClick={handleNavigateTo(servicePage.cta.primaryHref)}
+                {...(servicePage.cta.auditLocation
+                  ? auditFunnelLinkProps(`${servicePage.cta.auditLocation}_hero`)
+                  : { href: servicePage.cta.primaryHref, onClick: handleNavigateTo(servicePage.cta.primaryHref) })}
               >
                 {servicePage.cta.primaryLabel}
               </a>
@@ -5532,8 +5595,9 @@ function ServicePage({ servicePage, onNavigate }) {
             <p>{servicePage.cta.text}</p>
             <a
               className="btn btn-primary"
-              href={servicePage.cta.primaryHref}
-              onClick={handleNavigateTo(servicePage.cta.primaryHref)}
+              {...(servicePage.cta.auditLocation
+                ? auditFunnelLinkProps(`${servicePage.cta.auditLocation}_footer`)
+                : { href: servicePage.cta.primaryHref, onClick: handleNavigateTo(servicePage.cta.primaryHref) })}
             >
               {servicePage.cta.primaryLabel}
             </a>
@@ -7595,6 +7659,11 @@ function AuthModal({ onClose }) {
         >
           {mode === "signup" ? "J’ai déjà un compte" : "Créer un compte email"}
         </button>
+
+        <p className="auth-privacy-note">
+          Vos données de connexion servent uniquement à gérer votre espace client.{" "}
+          <a href={privacyPolicyPath}>Politique de confidentialité</a>
+        </p>
       </section>
     </div>
   );
@@ -7809,7 +7878,7 @@ function SiteHeader({
           {navLinks.map((link, index) => (
             <a
               className={`${visibleActiveHref === link.href ? "is-active" : ""}${link.emphasized ? " nav-link-emphasis" : ""}`.trim()}
-              href={link.href}
+              href={link.auditFunnel && isAuditPage ? auditFunnelHref("audit_page_nav") : link.href}
               target={isExternalLink(link.href) ? "_blank" : undefined}
               rel={isExternalLink(link.href) ? "noreferrer" : undefined}
               key={link.href}
@@ -7821,8 +7890,8 @@ function SiteHeader({
                   : undefined
               }
               onClick={(event) => {
-                if (link.label === "Audit gratuit") {
-                  trackAuditCta(auditEvents.navClick, isAuditPage ? "audit_page_nav" : "global_nav");
+                if (link.auditFunnel) {
+                  trackAuditFunnelClick(isAuditPage ? "audit_page_nav" : "global_nav");
                 }
 
                 if (isExternalLink(link.href)) {
@@ -7836,12 +7905,7 @@ function SiteHeader({
               {isEnglishPath ? englishNavLabels[index] : link.label}
             </a>
           ))}
-          {/* LOT DL 2.5.4.4 — groups the CTA/auth/switcher cluster so desktop
-              CSS can place it on the header's top row next to the brand,
-              while .navbar-menu's nav links form their own row below. On
-              mobile this wrapper is display:contents (see App.css), so it's
-              invisible to layout and the dropdown list is byte-identical to
-              before: same flat children, same order, same behavior. */}
+          {/* Desktop places these actions next to the brand. Mobile flattens the wrapper. */}
           <div className="navbar-actions">
           <a
             className="navbar-cta"
@@ -7856,7 +7920,7 @@ function SiteHeader({
           >
             {isEnglishPath ? "Discuss my project" : isAuditPage ? "Besoin d’aide ?" : "Parler de mon projet"}
           </a>
-          {session ? (
+          {portalEnabled && (session ? (
             <div className="navbar-auth-state">
               <span title={userEmail}>{userDisplayName}</span>
               <button
@@ -7945,7 +8009,7 @@ function SiteHeader({
                 {isEnglishPath ? "Sign in" : "Connexion"}
               </button>
             </div>
-          )}
+          ))}
 
           <div className="lang-switcher" role="group" aria-label="Choisir la langue du site / Choose site language">
             <a
@@ -8154,9 +8218,9 @@ function App() {
     }
   };
 
-  const isDashboardPath = pathname === "/dashboard" || pathname === "/espace-client";
-  const isLoginPath = pathname === "/login";
-  const isAdminPath = pathname === "/admin";
+  const isDashboardPath = portalEnabled && (pathname === "/dashboard" || pathname === "/espace-client");
+  const isLoginPath = portalEnabled && pathname === "/login";
+  const isAdminPath = portalEnabled && pathname === "/admin";
   const isDesignSystemPath = pathname === "/design-system";
   const isAuditLandingPath = pathname === auditLandingPath;
 
@@ -8423,6 +8487,26 @@ function App() {
     };
   }, [pathname]);
 
+  if (!portalEnabled && isPortalPath(pathname)) {
+    return (
+      <>
+        <SiteHeader onNavigate={navigate} pathname={pathname} />
+        <main className="client-page">
+          <section className="client-hero">
+            <div className="case-shell">
+              <div className="client-panel">
+                <h1>L’espace client n’est plus accessible en ligne</h1>
+                <p>Pour toute question sur votre projet, contactez Digital Lab par e-mail.</p>
+                <a className="btn btn-primary" href={getContactMailLinks().secondary}>Contacter Digital Lab</a>
+              </div>
+            </div>
+          </section>
+        </main>
+        <SiteFooter onNavigate={navigate} />
+      </>
+    );
+  }
+
   if (pathname.startsWith("/projects/")) {
     return (
       <>
@@ -8665,7 +8749,7 @@ function App() {
 
         <AuditLandingPage onNavigate={navigate} />
 
-        <AuditFooterReminder onNavigate={navigate} />
+        <AuditFooterReminder />
         <SiteFooter onNavigate={navigate} />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
         <AuthToast message={authToast} onClose={clearAuthToast} />
@@ -8691,7 +8775,7 @@ function App() {
 
         <EnglishHomePage onNavigate={navigate} />
 
-        <AuditFooterReminder onNavigate={navigate} isEnglish />
+        <AuditFooterReminder isEnglish />
         <SiteFooter onNavigate={navigate} isEnglish />
         {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
         <AuthToast message={authToast} onClose={clearAuthToast} />
@@ -8752,19 +8836,10 @@ function App() {
 
             <div className="hero-buttons">
               <a
-                href={auditLaunchHref}
                 className="btn btn-primary"
-                target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-                rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-                onClick={(event) => {
-                  handleAuditLaunchClick(event, {
-                    eventName: auditEvents.homeCta,
-                    location: "homepage_hero",
-                    onNavigate: navigate,
-                  });
-                }}
+                {...auditFunnelLinkProps("homepage_hero")}
               >
-                Lancer mon audit gratuit <strong>→</strong>
+                Demander mon audit gratuit <strong>→</strong>
               </a>
 
               <a href="#services" className="btn btn-secondary">
@@ -8849,14 +8924,14 @@ function App() {
             </div>
 
             <div className="cards-grid project-grid">
-              <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} onNavigate={navigate} revealDelay="0ms" />
+              <PortfolioShowcaseCard card={portfolioShowcaseCards.audit} revealDelay="0ms" />
               {projects.map((project, index) => (
                 <article
                   className="glass-card project-card premium-card gradient-border soft-hover reveal-on-scroll reveal-card"
                   key={project.title}
                   style={{ "--reveal-delay": `${(index + 1) * 90}ms` }}
-                  onMouseEnter={handleProjectEnter}
-                  onMouseLeave={handleProjectLeave}
+                  onPointerEnter={startPreviewHover}
+                  onPointerLeave={stopPreviewHover}
                 >
                   <div className="project-media">
                     {project.image ? (
@@ -8879,9 +8954,8 @@ function App() {
                       <div className="project-placeholder"></div>
                     )}
                     {project.video && (
-                      <DeferredVideo
+                      <HoverPreview
                         muted
-                        loop
                         playsInline
                         poster={getOptimizedImage(project.image).src}
                         src={project.video}
@@ -8924,7 +8998,6 @@ function App() {
               ))}
               <PortfolioShowcaseCard
                 card={portfolioShowcaseCards.automation}
-                onNavigate={navigate}
                 revealDelay={`${(projects.length + 1) * 90}ms`}
               />
             </div>
@@ -9330,7 +9403,7 @@ function App() {
               </div>
 
               <div className="contact-link-list" role="group" aria-label="Coordonnées Digital Lab">
-                <a href={`mailto:${businessContact.email}`} aria-label="Envoyer un e-mail à Digital Lab">
+                <a href={publicActionHref(`mailto:${businessContact.email}`)} aria-label="Envoyer un e-mail à Digital Lab">
                   <ContactIcon type="mail" />
                   <span>{businessContact.email}</span>
                 </a>
@@ -9385,21 +9458,12 @@ function App() {
 
       <a
         className={`mobile-sticky-cta${isMobileCtaVisible ? " is-visible" : ""}`}
-        href={auditLaunchHref}
-        target={isExternalLink(auditLaunchHref) ? "_blank" : undefined}
-        rel={isExternalLink(auditLaunchHref) ? "noreferrer" : undefined}
-        onClick={(event) => {
-          handleAuditLaunchClick(event, {
-            eventName: auditEvents.homeCta,
-            location: "homepage_mobile_sticky",
-            onNavigate: navigate,
-          });
-        }}
+        {...auditFunnelLinkProps("homepage_mobile_sticky")}
       >
         Audit gratuit
       </a>
 
-      <AuditFooterReminder onNavigate={navigate} />
+      <AuditFooterReminder />
       <SiteFooter onNavigate={navigate} />
       {isAuthOpen && <AuthModal onClose={closeAuthModal} />}
       <AuthToast message={authToast} onClose={clearAuthToast} />
