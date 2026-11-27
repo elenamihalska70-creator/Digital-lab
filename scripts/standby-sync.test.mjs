@@ -664,3 +664,44 @@ test("standby smoke follows only bounded same-origin redirects", async () => {
     /limit/,
   );
 });
+
+const manualEnv = { ...env, GITHUB_EVENT_NAME: "workflow_dispatch", SYNC_STANDBY: "true", EXPECTED_SHA: sha };
+const manualRun = { head_sha: sha, head_branch: "main", event: "workflow_dispatch", path: ".github/workflows/cloudflare-standby.yml", run_attempt: 1 };
+test("manual sync requires explicit true, exact SHA and protected main", () => {
+  for (const patch of [
+    { SYNC_STANDBY: undefined }, { SYNC_STANDBY: "false" }, { SYNC_STANDBY: "1" },
+    { EXPECTED_SHA: undefined }, { EXPECTED_SHA: "c".repeat(40) },
+    { GITHUB_REF: "refs/heads/feature" }, { GITHUB_REF_PROTECTED: "false" },
+  ]) assert.throws(() => identity({ ...manualEnv, ...patch }));
+});
+test("authorized manual request verifies the same production release", async () => {
+  const result = await verifyRelease(identity(manualEnv), apiFixture({ "/actions/runs/12": manualRun }), async () => marker);
+  assert.equal(result.event, "workflow_dispatch");
+  assert.equal(result.pricingRun, 55);
+  assert.equal(result.vercelDeployment, 6);
+  const simulation = scenario();
+  simulation.args.id = identity(manualEnv);
+  simulation.args.release = () => verifyRelease(simulation.args.id, apiFixture({ "/actions/runs/12": manualRun }), async () => marker);
+  const synced = await synchronize(simulation.args);
+  assert.equal(simulation.writes(), 1);
+  assert.equal(synced.smoke, "success");
+});
+test("manual request rejects stale main, missing CI/pricing and unpublished SHA", async () => {
+  const manualId = identity(manualEnv);
+  for (const patch of [
+    { "/branches/main": { protected: true, commit: { sha: "c".repeat(40) } } },
+    { "/branches/main": { protected: false, commit: { sha } } },
+    { "/actions/runs/12/attempts/1/jobs?per_page=100": { total_count: 0, jobs: [] } },
+    { ["/actions/workflows/pricing.yml/runs?event=push&head_sha=" + sha + "&per_page=100"]: { workflow_runs: [] } },
+    { ["/deployments?sha=" + sha + "&environment=Production&per_page=100"]: [] },
+    { "/actions/runs/12": { ...manualRun, event: "push" } },
+  ]) await assert.rejects(verifyRelease(manualId, apiFixture({ "/actions/runs/12": manualRun, ...patch }), async () => marker));
+  await assert.rejects(verifyRelease(manualId, apiFixture({ "/actions/runs/12": manualRun }), async () => ({ ...marker, commit: "c".repeat(40) })), Pending);
+  await assert.rejects(verifyRelease(id, apiFixture({ "/actions/runs/12": manualRun }), async () => marker));
+});
+test("workflow manual sync defaults off and retains independent switch and push path", async () => {
+  const w = (await readFile(new URL("../.github/workflows/cloudflare-standby.yml", import.meta.url), "utf8")).replaceAll("\r\n", "\n");
+  assert.match(w, /sync_standby:[\s\S]*?type: boolean\n        default: false/);
+  const sync = w.slice(w.indexOf("  sync-standby:"));
+  for (const guard of ["github.event_name == 'push' ||", "inputs.sync_standby == true", "inputs.expected_sha == github.sha", "github.ref_protected", "CLOUDFLARE_STANDBY_SYNC_ENABLED == 'true'", "SYNC_STANDBY: "+"${{ inputs.sync_standby }}", "EXPECTED_SHA: "+"${{ inputs.expected_sha }}"]) assert(sync.includes(guard), guard);
+});
